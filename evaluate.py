@@ -78,11 +78,27 @@ def check_no_generic_competitors(competitors: list[Competitor]) -> list[str]:
     return problems
 
 
-def run_checks(competitors: list[Competitor], consulted_urls: list[str]) -> list[str]:
-    """Run every check and return all problems found."""
+def check_competitor_count(competitors: list[Competitor], minimum: int) -> list[str]:
+    """Check that at least `minimum` competitors survived verification."""
+    if len(competitors) < minimum:
+        return [f"Expected at least {minimum} competitors, got {len(competitors)}."]
+    return []
+
+
+def run_checks(
+    competitors: list[Competitor],
+    consulted_urls: list[str],
+    minimum: int = 2,
+) -> list[str]:
+    """Run every check and return all problems found.
+
+    The default minimum is 2: a single competitor is not a competitive
+    landscape, and a report that presents one as such is misleading.
+    """
     return (
         check_sources_are_real(competitors, consulted_urls)
         + check_no_generic_competitors(competitors)
+        + check_competitor_count(competitors, minimum)
     )
 
 
@@ -105,6 +121,3 @@ def drop_fabricated_sources(
         competitor.sources = kept
 
     return removed
-
-
-def check_competitor_cou

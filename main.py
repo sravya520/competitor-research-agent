@@ -13,6 +13,7 @@ The flow:
 
 import sys
 
+import evaluate
 import pipeline
 import report as report_module
 from schemas import Competitor
@@ -31,11 +32,17 @@ def clean_input(prompt: str) -> str:
 def review_competitors(
     competitors: list[Competitor],
     excluded: list[tuple[str, str]],
+    problems: list[str],
 ) -> list[Competitor]:
     """Show what the system decided and let the human overrule it."""
     print("\n" + "=" * 64)
     print("REVIEW")
     print("=" * 64)
+
+    if problems:
+        print("\nAutomatic checks flagged:")
+        for problem in problems:
+            print(f"  ! {problem}")
 
     if excluded:
         print("\nAutomatically excluded by verification:")
@@ -99,10 +106,19 @@ def main() -> None:
     if research is None:
         sys.exit("The agent didn't finish within its allowed number of tool calls.")
 
-    # Step 2 — independent verification, then Step 3 — human review.
+    # Step 2 — independent verification.
     verifications = pipeline.verify_competitors(company_name, identity, research.competitors)
     verified, excluded = pipeline.apply_verifications(research.competitors, verifications)
-    final = review_competitors(verified, excluded)
+
+    # Automatic consistency checks. Detecting a fabricated citation isn't
+    # enough — a link that 404s still looks like evidence, so it is removed.
+    problems = evaluate.run_checks(verified, sources_consulted())
+    removed = evaluate.drop_fabricated_sources(verified, sources_consulted())
+    if removed:
+        problems.append(f"Removed {removed} fabricated source URL(s) from the report.")
+
+    # Step 3 — human review.
+    final = review_competitors(verified, excluded, problems)
 
     if not final:
         sys.exit("\nNo competitors remain, so there is no report to write.")

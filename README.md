@@ -38,7 +38,8 @@ flowchart TD
 | **Identify** | Confirms which company is meant. A URL, if given, outranks search results. | Researching a different company that shares the name |
 | **Research** | The agent chooses its own search queries, iterating until it has enough. | Stale training data; one fixed query missing the point |
 | **Verify** | A **separate** call re-checks each competitor: is it a real, named company, and is it comparable in scale? | Generic placeholders; competitors 50× the target's size |
-| **Review** | You see every competitor and every rejection, and can remove any. | Everything the automated checks missed |
+| **Check** | Deterministic checks: every cited URL must have actually been fetched; no competitor may be a generic category. | Fabricated or altered citations |
+| **Review** | You see every competitor, every rejection, and every flagged problem, and can remove any. | Everything the automated checks missed |
 | **Report** | Markdown with per-competitor sources, exclusions, and stated limitations. | Unverifiable claims presented as fact |
 
 ---
@@ -138,6 +139,9 @@ Matching verdicts to competitors by string equality on model-generated names bro
 **Sources are tracked in code, not by the model.**
 The model attributes sources per competitor, which is useful but fallible. Separately, the tools record every URL actually fetched. The report contains both: best-effort attribution, and a list that can't be misremembered.
 
+**Fabricated citations are detected automatically, then removed.**
+Because the tools record every URL genuinely fetched, any URL the model cites that isn't in that record was invented. This check found a real case: the model was handed `.../best-mvp-agencies-for-early-stage-products` and cited `.../best-mvp-**design**-agencies-for-early-stage-products` — a plausible-looking link that would 404. No human reading the report would have caught it, sitting as it was among five genuine URLs. Detection alone isn't enough, so fabricated citations are stripped before the report is written: a broken link still looks like evidence.
+
 **Retries are selective.**
 Only 429 and 5xx are retried, with exponential backoff. A 404 from a retired model name will fail identically forever; retrying it wastes quota.
 
@@ -154,6 +158,7 @@ pipeline.py    The three LLM steps: identify, research, verify
 prompts.py     All prompt text, with comments on why each constraint exists
 tools.py       search_web / extract_company_page, and source tracking
 schemas.py     Pydantic models defining every structured output
+evaluate.py    Automatic consistency checks (fabricated URLs, generic names)
 report.py      Markdown generation
 config.py      Clients, model choice, retry policy
 ```

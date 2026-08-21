@@ -8,6 +8,7 @@ themselves, and catch things a human reviewer reads straight past.
 """
 
 from schemas import Competitor
+from tools import looks_like_listicle
 
 # Words that signal a category rather than a company. Deliberately narrow:
 # plenty of real companies are called "... Studios" or "... Design", so only
@@ -100,6 +101,22 @@ def run_checks(
         + check_no_generic_competitors(competitors)
         + check_competitor_count(competitors, minimum)
     )
+
+
+def primary_source_ratio(competitors: list[Competitor]) -> float | None:
+    """Fraction of CITED sources that are not roundup/listicle content.
+
+    A metric, not a gate — it doesn't fail the suite, because discovering a
+    candidate's name via a listicle is legitimate. What matters is whether
+    listicles dominate the citations a reader is expected to trust. Returns
+    None when there are no citations to measure, rather than a misleading 0.
+    """
+    all_sources = [url for c in competitors for url in c.sources]
+    if not all_sources:
+        return None
+
+    primary = sum(1 for url in all_sources if not looks_like_listicle(url))
+    return primary / len(all_sources)
 
 
 def drop_fabricated_sources(

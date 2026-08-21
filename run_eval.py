@@ -19,8 +19,13 @@ def _names(competitors) -> list[str]:
     return [c.name for c in competitors]
 
 
-def run_case(case: dict) -> list[str]:
-    """Run one case. Returns a list of failures — empty means it passed."""
+def run_case(case: dict) -> tuple[list[str], float | None]:
+    """Run one case. Returns (failures, primary_source_ratio).
+
+    An empty failures list means the case passed. The ratio is None when
+    there was nothing to measure (the case stopped, or no sources were
+    cited).
+    """
     tools.reset_sources()
     failures: list[str] = []
 
@@ -33,17 +38,17 @@ def run_case(case: dict) -> list[str]:
                 f"Expected to stop on an ambiguous name, but confidently "
                 f"identified: {identity.description[:120]}"
             )
-        return failures
+        return failures, None
 
     if stopped:
         note = identity.ambiguity_note if identity else "no identity returned"
         failures.append(f"Expected a confident identification, but stopped: {note}")
-        return failures
+        return failures, None
 
     research = pipeline.research_competitors(case["company"], identity)
     if research is None:
         failures.append("Research step returned nothing (ran out of tool calls).")
-        return failures
+        return failures, None
 
     verifications = pipeline.verify_competitors(case["company"], identity, research.competitors)
     kept, _ = pipeline.apply_verifications(research.competitors, verifications)
@@ -66,7 +71,12 @@ def run_case(case: dict) -> list[str]:
         failures.append(f"Expected at least one of {wanted}, found none.")
 
     failures.extend(evaluate.run_checks(kept, tools.sources_consulted()))
-    return failures
+
+    ratio = evaluate.primary_source_ratio(kept)
+    if ratio is not None:
+        print(f"    primary sources: {ratio:.0%} of citations")
+
+    return failures, ratio
 
 
 def main() -> None:
@@ -81,6 +91,7 @@ def main() -> None:
 
     gates_passed = gates_total = 0
     notes: list[str] = []
+    ratios: list[float] = []
 
     for case in cases:
         informational = case.get("informational", False)
@@ -88,9 +99,12 @@ def main() -> None:
         print(f"\n=== [{label}] {case['id']} ({case['company']}) ===")
 
         try:
-            failures = run_case(case)
+            failures, ratio = run_case(case)
         except Exception as exc:  # a crash is a failure, not a reason to stop
-            failures = [f"Crashed: {type(exc).__name__}: {exc}"]
+            failures, ratio = [f"Crashed: {type(exc).__name__}: {exc}"], None
+
+        if ratio is not None:
+            ratios.append(ratio)
 
         if informational:
             # Reported, never fatal: this behaviour depends on live search.
@@ -113,6 +127,9 @@ def main() -> None:
             gates_passed += 1
 
     print(f"\n{gates_passed}/{gates_total} gate(s) passed.")
+    if ratios:
+        overall = sum(ratios) / len(ratios)
+        print(f"Primary-source ratio: {overall:.0%} average across {len(ratios)} run(s).")
     if notes:
         print(f"{len(notes)} informational case(s) differed — not failures:")
         for note in notes:

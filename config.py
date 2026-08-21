@@ -2,6 +2,7 @@
 
 import os
 
+import httpx
 from dotenv import load_dotenv
 from google import genai
 from google.genai import errors
@@ -27,10 +28,15 @@ def is_retryable_error(exception: BaseException) -> bool:
 
     A 404 (e.g. a retired model name) will fail identically forever, so
     retrying it just burns time and quota.
+
+    Also covers httpx.TransportError — a raw connection drop (found live,
+    via eval: RemoteProtocolError during a Tavily call). It carries no HTTP
+    status to check, but a dropped connection is inherently transient, so
+    it's always worth one more attempt.
     """
-    return isinstance(exception, errors.APIError) and exception.code in (
-        429, 500, 502, 503, 504,
-    )
+    if isinstance(exception, errors.APIError):
+        return exception.code in (429, 500, 502, 503, 504)
+    return isinstance(exception, httpx.TransportError)
 
 
 def log_retry(retry_state) -> None:

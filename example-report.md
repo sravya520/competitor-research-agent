@@ -4,203 +4,205 @@
 
 ## The company
 
-Sprout Design is a design studio founded by two IIT alumni, Ankit and Vidushi, combining modern tech tools and mindfulness to provide high-converting website design, product design (including MVPs), and design strategy for startups and growing companies.
+Sprout Design is a design studio founded by two IIT alumni, Ankit and Vidushi, combining modern tech tools and mindfulness to provide high-converting website design, product design, MVP development, and design strategy services for growing companies and startups.
 
 - **Location:** not established
 - **Identity anchored to:** https://sproutdesign.framer.website/
 
-## Competitors (5)
+## Competitors (4)
 
-### Eleken
+### Cieden
 
-**Why relevant:** Eleken is a prominent design agency serving tech startups and SaaS companies, overlapping directly with Sprout Design's target market of startups needing UI/UX, product design, and MVP support.
+**Why relevant:** Competes directly for early-to-mid stage startups looking for strategic UX/UI, product design, and MVP prototyping paired with business analysis and design systems.
 
-**Product / service:** Dedicated UI/UX design subscription model for SaaS and tech startups.
+**Product / service:** Digital product design, UI/UX design and strategy, UX research and audits, product discovery, brand identity, and Webflow development.
 
-**Target customers:** SaaS companies, tech startups, and funded scale-ups.
+**Target customers:** Early-stage startups, small-to-midsize businesses, and enterprises across fintech, healthtech, and SaaS.
 
-**Positioning:** A transparent, subscription-style product design partner built like a SaaS company, offering predictable monthly pricing for dedicated designers.
+**Positioning:** A research-driven product design studio focused on aligning user-centric design with fundamental business goals and metrics.
 
-**Pricing:** $3,799/month for part-time or $5,999/month for full-time dedicated design support.
-
-**Strengths:**
-
-- Highly transparent and predictable subscription pricing model
-- Deep specialization in SaaS products and startup velocity
-- Strong thought leadership and organic content presence in the startup design ecosystem
-
-**Weaknesses:**
-
-- Subscription model can be rigid if a startup only needs a quick, fixed-scope MVP sprint rather than ongoing monthly support
-- Focused primarily on UI/UX product design rather than broad marketing sites or deep brand strategy
-
-**Differentiators:**
-
-- Pioneered the 'design-as-a-subscription' model tailored specifically for SaaS product teams
-
-**Sources:**
-
-- https://www.eleken.co/blog-posts/eleken-pricing-model-explained
-- https://flowstep.ai/blog/ui-ux-design-agencies
-- https://foundey.com/blog/foundey-vs-eleken
-
-### Excited Agency
-
-**Why relevant:** Excited competes directly on the intersection of MVP design, UX strategy, and full-spectrum web development for early-stage and AI/SaaS startups.
-
-**Product / service:** Strategic design and development partner specializing in UX/UI, product design, branding, and custom web development.
-
-**Target customers:** SaaS and AI startups looking for an integrated design and build partner.
-
-**Positioning:** A comprehensive product partner that combines brand strategy, product thinking, and technical delivery under one roof.
-
-**Pricing:** Not publicly available
+**Pricing:** $50 - $99 / hr; minimum project size $10,000+
 
 **Strengths:**
 
-- Full-spectrum delivery covering UX strategy, UI design, branding, and custom code
-- Startup-aligned lean workflows and close discovery-to-handoff collaboration
-- Track record spanning multiple countries and digital products
+- Strong emphasis on upfront research and product discovery before wireframing
+- End-to-end capability covering both product UI/UX and marketing/Webflow presence
+- Consistent positive feedback on client communication and value for cost
 
 **Weaknesses:**
 
-- Positioning as a full-stack partner may create feature creep or higher entry costs for founders who only need pure visual or UX design
-- Relies heavily on agency-published case studies and blog content for market visibility
+- Higher minimum project sizes can price out very early pre-seed bootstrapped founders
+- Broad vertical spread can dilute deep hyper-niche domain expertise compared to focused SaaS shops
 
 **Differentiators:**
 
-- Blends deep brand strategy with technical custom web and product engineering in an integrated workflow
+- Combines UX research, business analysis, and Webflow implementation under one roof
+- Rigorous design system creation designed specifically for scaling startups
 
 **Sources:**
 
-- https://excited.agency/blog/saas-design-agencies-mvp-budget-for-startups
-- https://www.925studios.co/blog/best-product-design-agencies-mvp-development
+- https://cieden.com
+- https://cieden.com/ui-ux-for-startups
+- https://clutch.co/profile/cieden
 
-### UX Studio
+### Adam Fard UX Studio
 
-**Why relevant:** UX Studio is a well-known agency working extensively with early-stage tech startups and scale-ups, matching Sprout Design's focus on product design and conversion-focused UX.
+**Why relevant:** Positions itself specifically as a startup-focused UX design and MVP prototyping agency helping founders reduce churn, validate ideas, and drive high-converting product experiences.
 
-**Product / service:** UX/UI design, user research, product strategy, and design systems for digital products.
+**Product / service:** UX research, UI/UX design, MVP sprints, product strategy, and UX audits.
 
-**Target customers:** Tech startups, SaaS companies, and digital product teams.
+**Target customers:** B2B SaaS, fintech, and AI tech startups seeking conversion-focused product design.
 
-**Positioning:** Research-driven UX and product design agency that helps companies validate ideas and build intuitive digital experiences.
+**Positioning:** A metric-driven UX studio focused on maximizing user activation, reducing support costs, and driving measurable ROI for tech startups.
 
-**Pricing:** Minimum project sizes typically start around $10,000+.
+**Pricing:** Projects starting from $10,000; hourly rate $50 - $99 / hr; UX/UI packages starting at $3,100/month
 
 **Strengths:**
 
-- Strong emphasis on rigorous user research and data-backed UX decisions
-- Extensive portfolio of successful mobile and web applications for funded startups
-- Established reputation as a reliable European/global agency partner
+- Strong analytical orientation with an emphasis on measuring design ROI and conversion impact
+- Flexible engagement options ranging from fixed MVP sprints to monthly design retainers
+- Exceptional review ratings (5.0/5 on Clutch across dozens of reviews)
 
 **Weaknesses:**
 
-- Research-heavy approach can lengthen timelines for fast-moving founders looking for rapid MVP execution
-- Project-based pricing models may be less flexible than monthly subscription alternatives
+- Less emphasis on full-stack code implementation or complex engineering execution
+- Boutique team scale may limit concurrent bandwidth during peak tech funding seasons
 
 **Differentiators:**
 
-- Deep integration of academic-grade UX research methods into fast-paced startup product cycles
+- Explicit focus on pre-launch user validation and conversion rate optimization metrics
+- Low-barrier entry consulting sessions for early-stage founders
 
 **Sources:**
 
-- https://flowstep.ai/blog/ui-ux-design-agencies
+- https://adamfard.com/ux-consulting
+- https://adamfard.com/blog/ux-design-consulting-firms
+- https://clutch.co/profile/adam-fard-ux-studio
 
-### Foundey
+### ZeeFrames
 
-**Why relevant:** Foundey targets the exact same early-stage startup demographic, offering embedded senior design talent built for agile product development.
+**Why relevant:** Directly competes on high-speed MVP design, wireframing, and interactive prototyping tailored for early-stage founders who require rapid turnaround times and accessible pricing structures.
 
-**Product / service:** Embedded senior product design subscription service for fast-growing startups.
+**Product / service:** UI/UX design, UX research, wireframing, clickable high-fidelity prototypes, and product scoping.
 
-**Target customers:** Early-stage and growth-stage tech startups requiring senior design capacity without recruitment overhead.
+**Target customers:** Fast-growing startups, early-stage founders, and digital agencies.
 
-**Positioning:** A premium subscription alternative focused exclusively on senior talent with no junior handoffs or bureaucratic friction.
+**Positioning:** An agile, high-speed UI/UX design agency offering rapid activation and cost-effective scaling support for startups.
 
-**Pricing:** $6,000 to $7,000 per month for a dedicated embedded designer.
+**Pricing:** $25 - $49 / hr; minimum project size $1,000+
 
 **Strengths:**
 
-- Exclusively senior designers, eliminating the risk of junior staff handling core MVP workflows
-- Flexible, subscription-based integration directly into internal startup teams
-- Clear positioning against lower-tier design farms
+- Aggressive pricing and low minimum project thresholds accessible to bootstrapped startups
+- Rapid onboarding speed with design resources active within short windows
+- Extensive volume of completed MVP and multi-user application design projects
 
 **Weaknesses:**
 
-- Higher monthly price point than entry-level subscription agencies or freelance options
-- Narrower focus on ongoing product design rather than comprehensive marketing website creation
+- Lower price points can lead to perceptions of reduced strategic depth compared to premium boutique partners
+- Heavy reliance on offshore execution models which may require tighter asynchronous alignment
 
 **Differentiators:**
 
-- Strictly senior-only talent model embedded directly into client communication channels
+- Extremely competitive cost-to-speed ratio for standard wireframing and prototyping sprints
+- Dedicated multi-designer team extension packages for parallel workstreams
 
 **Sources:**
 
-- https://foundey.com/blog/foundey-vs-eleken
+- https://zeeframes.com
+- https://zeeframes.com/services/mvp-design
+- https://clutch.co/profile/zeeframes
 
-### Orbix Studio
+### Outcrowd
 
-**Why relevant:** Orbix Studio specializes in SaaS and AI product design with an explicit focus on MVP launches, aligning closely with Sprout Design's core service offerings.
+**Why relevant:** Serves tech startups looking for high-impact visual branding, landing page design, and conversion-oriented UI/UX for early-stage MVP launches and pitch decks.
 
-**Product / service:** Product design, UI/UX, Webflow builds, and branding tailored for SaaS and AI startups.
+**Product / service:** Brand identity, UI/UX design, website design and development, landing page sprints, and motion design.
 
-**Target customers:** Early-stage SaaS and AI startups preparing for market entry or fundraising.
+**Target customers:** Early-stage tech startups, AI productivity platforms, and web3/crypto ventures seeking standout visual differentiation.
 
-**Positioning:** Agile design partner focused on rapid MVP launches and high-converting marketing presence for emerging tech companies.
+**Positioning:** A bold, creative design agency that combines sharp brand strategy with high-punch digital interfaces to help startups stand out instantly.
 
-**Pricing:** Project-based pricing structured for early-stage and growth-stage startup budgets.
+**Pricing:** Projects starting from $5,000+; landing page design packages from $4,999
 
 **Strengths:**
 
-- Direct domain expertise in fast-moving SaaS and AI product paradigms
-- Combines product interface design with rapid Webflow implementation and branding
-- Optimized for speed-to-market during critical funding or launch windows
+- Exceptional visual style that helps early-stage startups capture attention immediately
+- Comprehensive coverage of both marketing touchpoints (landing pages, branding) and core product UI
+- Recognized design industry credentials and strong portfolio presence
 
 **Weaknesses:**
 
-- Boutique scale may limit bandwidth for concurrent large enterprise engagements
-- Visibility heavily tied to niche directory rankings and blog citations
+- Less suited for ultra-complex enterprise data architecture or heavy backend enterprise workflows
+- Strong stylistic bias toward vibrant aesthetics might not match conservative B2B enterprise buyers
 
 **Differentiators:**
 
-- Specialized fluency in designing and launching emerging AI-native user interfaces and workflows
+- Distinctive focus on high-impact visual branding and motion design that drives marketing conversions
+- Fixed-scope landing page and branding sprint packages designed for pre-seed velocity
 
 **Sources:**
 
-- https://www.925studios.co/blog/best-product-design-agencies-mvp-development
+- https://www.outcrowd.io
+- https://www.linkedin.com/company/outcrowd-network
 
 ## Market trends
 
-- Rise of subscription-based design models ('design-as-a-service') mirroring SaaS pricing to reduce friction for tech founders
-- Increased demand for specialized AI product design and prompt-interface UX as generative AI startups flood the market
-- Blurring lines between design agencies and technical builders, with clients increasingly expecting Webflow or full-stack handoff capabilities alongside UI/UX
-- Growing emphasis on lean MVP validation and conversion-optimized marketing sites over bloated, multi-month brand overhauls
+- Surge in demand for hybrid design-and-development partners as startups seek to eliminate handoff friction between UX designers and engineers.
+- Rapid adoption of subscription-based and fractional design retainers (replacing traditional project-fee models) to match fluctuating startup runways.
+- Integration of AI prototyping and AI workflow design as core service offerings rather than secondary add-ons.
+- Growing emphasis on conversion-driven landing pages and rapid MVP validation sprints ahead of full product builds.
 
 ## Gaps and opportunities
 
-- Combining technical founder empathy (e.g., IIT/engineering roots) with mindfulness and human-centric design to combat burnout and superficial aesthetics
-- Offering hybrid fixed-scope MVP sprints combined with flexible ongoing advisory retainers rather than forcing a rigid subscription or bloated enterprise contract
-- Bridging the gap between high-converting marketing websites and core product UX under a single unified boutique studio partner
+- Combining technical founder pedigree (such as engineering/IIT roots) directly with holistic mindfulness and psychological user alignment to build calmer, less friction-heavy software.
+- Offering transparent, all-in-one packages that seamlessly bridge high-converting marketing sites (Webflow) with functional MVP product development without agency bloat.
+- Providing emerging AI startups with dedicated domain expertise in translating complex machine learning models into intuitive, human-centered interfaces.
 
 ## Potential threats
 
-- Proliferation of unlimited design subscription platforms and low-cost offshore agencies driving down perceived market rates
-- Rapid commoditization of basic UI wireframing and landing page design driven by AI layout tools and automated template builders
-- Intense competition from established design subscription players like Eleken and specialized boutique studios vying for seed-stage budgets
+- Intense margin pressure from offshore agencies and subscription-based design platforms offering low-cost UI sprints.
+- Commoditization of basic wireframing and landing page design driven by advanced AI design tools and automated templates.
+- Economic volatility in early-stage venture funding leading founders to delay discretionary product strategy and design investments.
+
+## Excluded from this report
+
+Candidates that were considered and rejected, and why:
+
+- **Eleken** — Eleken is an established UI/UX design agency with over 50 employees and multiple enterprise-tier clients, making it too large compared to a boutique studio founded by two IIT alumni.
 
 ## All sources consulted
 
-- https://excited.agency/blog/saas-design-agencies-mvp-budget-for-startups
-- https://flowstep.ai/blog/ui-ux-design-agencies
+- https://adamfard.com/blog/ux-design-consulting-firms
+- https://adamfard.com/us/agencies/ui-ux
+- https://adamfard.com/ux-consulting
+- https://cieden.com
+- https://cieden.com/design-studio-for-startups
+- https://cieden.com/fintech-design-agencies
+- https://cieden.com/ui-ux-for-startups
+- https://clutch.co/profile/adam-fard-ux-studio
+- https://clutch.co/profile/cieden
+- https://clutch.co/profile/zeeframes
 - https://foundersworkshop.com/feeds/blog/startup-ux-mvp-agency-new-york
-- https://foundey.com/blog/foundey-vs-eleken
+- https://gev.design/resources/best-mvp-design-agencies-for-startups
+- https://globaluxagencies.com
 - https://sproutdesign.framer.website/
-- https://www.925studios.co/blog/best-product-design-agencies-mvp-development
-- https://www.925studios.co/blog/eleken-alternatives-startup-ui-ux-design-2026
+- https://thetopvoices.com/story/12-uiux-agencies-helping-startups-build-outstanding-products
+- https://tracxn.com/d/companies/adam-fard-ux-studio/__wAbkD8c4i2iZh0ZVsfACQr050aHSBfnT09Ww6TOccVI
+- https://www.awwwards.com/sites/zeeframes-ui-ux-design-agency
+- https://www.behance.net/outcrowd?locale=en_US
+- https://www.designrush.com/agency/profile/zeeframes
+- https://www.eleken.co
+- https://www.eleken.co/blog-posts/best-agencies-for-ui-ux-redesign-and-prototyping
 - https://www.eleken.co/blog-posts/design-agency-for-startups
-- https://www.eleken.co/blog-posts/eleken-pricing-model-explained
-- https://www.lazarev.agency/services/mvp-product-design
-- https://www.zmistandcopy.com/blog/case-study-eleken
+- https://www.eleken.co/blog-posts/ux-agency-new-york
+- https://www.linkedin.com/company/eleken
+- https://www.linkedin.com/company/outcrowd-network
+- https://www.outcrowd.io
+- https://www.theskinsfactory.com/uiux-design-blog/how-to-build-an-mvp-for-a-startup
+- https://www.zeeframes.com/insights/hire-affordable-super-fast-ui-ux-designers-active-in-24-hours
+- https://zeeframes.com
+- https://zeeframes.com/services/mvp-design
 
 ## Limitations
 

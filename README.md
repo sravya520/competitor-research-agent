@@ -143,7 +143,10 @@ The model attributes sources per competitor, which is useful but fallible. Separ
 Because the tools record every URL genuinely fetched, any URL the model cites that isn't in that record was invented. This check found a real case: the model was handed `.../best-mvp-agencies-for-early-stage-products` and cited `.../best-mvp-**design**-agencies-for-early-stage-products` — a plausible-looking link that would 404. No human reading the report would have caught it, sitting as it was among five genuine URLs. Detection alone isn't enough, so fabricated citations are stripped before the report is written: a broken link still looks like evidence.
 
 **Retries are selective.**
-Only 429 and 5xx are retried, with exponential backoff. A 404 from a retired model name will fail identically forever; retrying it wastes quota.
+429, 5xx, and raw connection drops (`httpx.TransportError`) are retried, with exponential backoff. A 404 from a retired model name is never retried — it will fail identically forever, so retrying it just wastes quota. Retries cover the tool calls themselves (`search_web`, `extract_company_page`), not just the top-level model calls — a gap found by a live `RemoteProtocolError` during evaluation, in a tool call that had no retry protection at all.
+
+**Listicle content is labelled at the source, and the research step can verify past it.**
+"Best agencies for X" content isn't concentrated on a few spam domains — the same domain (a real competitor's own blog) can host both their legitimate site and a self-ranking roundup. So instead of blocking domains, `search_web` tags each result whose URL path matches roundup patterns (`/blog/best-`, `-alternatives`, `-vs-`, `/resources/`), and the research step was given a second tool — `extract_company_page`, previously only used for identity — with instructions to fetch a promising candidate's own site once a listicle names them, rather than trust the listicle's stats. A new metric, `primary_source_ratio`, tracks what fraction of citations rest on non-roundup sources.
 
 **The report publishes what it rejected.**
 Most tools show only what they kept. This one lists every rejected candidate with the reason — automated *and* human — so a reader can audit the judgment, not just the conclusion.
@@ -165,6 +168,8 @@ The cases split into two tiers, and the distinction matters:
 - **Observations** — behaviour that genuinely varies between runs, reported but never failing the suite.
 
 That split exists because this system does live web searches. The same input can legitimately produce different results on different days — one run finds no single match for an ambiguous name and stops, another finds a registered entity and proceeds. Asserting on that would be testing what search indexed this morning, not testing this code. **A test that flakes for unrelated reasons teaches you to ignore it**, and then you ignore it when it catches something real.
+
+Each run also reports `primary_source_ratio` — the share of citations that are not roundup/listicle content — so a change to the search strategy can be judged by a number instead of a guess.
 
 ## Project structure
 
@@ -189,7 +194,7 @@ Prompts live in their own file deliberately: in an LLM application, most iterati
 
 Stated plainly here and in every generated report:
 
-- **Source quality is the weakest link.** Searching "best agencies for X" surfaces SEO-optimised marketing content, often published by a company that ranks itself first, with precise-sounding statistics that are unverifiable. Prompting reduces this but cannot fix it — it's a *retrieval* problem, and solving it properly means changing how search works, not what the prompt says.
+- **Source quality is improved but not solved.** Search results are still dominated by "best agencies for X" content by construction — that's what ranks for those queries. Labelling roundup content and giving the research step a way to verify candidates against their own site (see Design decisions) measurably raised the primary-source share in testing (roughly 85-90% on the reference cases, versus the earlier reports where nearly every citation traced to a listicle), but it is a mitigation, not a fix — the underlying bias in what the web publishes about small companies hasn't gone away.
 - **Scale comparison is a judgment call.** Verification catches obvious mismatches but not every borderline one.
 - **Coverage is not guaranteed.** The tool finds competitors that are findable; a strong competitor with no web presence will be missed.
 - **Small companies remain hard.** Without a URL, a company with a common name and thin web presence may be unidentifiable — by design, the tool stops rather than guessing.
@@ -198,8 +203,7 @@ Stated plainly here and in every generated report:
 
 ## Possible improvements
 
-- Search a company's own site directly instead of relying on listicles, to attack the source-quality problem at the retrieval layer
-- An evaluation set of known companies with hand-checked competitors, to measure changes rather than eyeball them
+- A dedicated company-search API (e.g. Crunchbase-style data) instead of general web search, to attack what labelling and extraction alone can't fix
 - A Streamlit interface so a non-technical founder can use it
 - Caching, so re-running a company doesn't re-spend search quota
 

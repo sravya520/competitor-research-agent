@@ -14,7 +14,7 @@ from schemas import CompanyIdentity, Competitor, CompetitorResearch, CompetitorV
 from tools import extract_company_page, search_web
 
 
-def _agent_config(response_schema, max_tool_calls: int, use_system_prompt: bool = True):
+def _agent_config(response_schema, tools: list, max_tool_calls: int, use_system_prompt: bool = True):
     """Config for a tool-using call that must return a validated object.
 
     max_tool_calls must be at least 2 for tool use to work at all: one unit
@@ -24,7 +24,7 @@ def _agent_config(response_schema, max_tool_calls: int, use_system_prompt: bool 
     """
     return types.GenerateContentConfig(
         system_instruction=SYSTEM_INSTRUCTION if use_system_prompt else None,
-        tools=[search_web],
+        tools=tools,
         automatic_function_calling=types.AutomaticFunctionCallingConfig(
             maximum_remote_calls=max_tool_calls,
         ),
@@ -55,17 +55,31 @@ def identify_company(company_name: str, company_url: str) -> CompanyIdentity | N
 
     chat = gemini_client.chats.create(
         model=MODEL,
-        config=_agent_config(CompanyIdentity, max_tool_calls=3, use_system_prompt=False),
+        config=_agent_config(
+            CompanyIdentity, tools=[search_web], max_tool_calls=3, use_system_prompt=False,
+        ),
     )
     response = _send(chat, prompts.identity_prompt(company_name, company_url, anchor_content))
     return response.parsed
 
 
 def research_competitors(company_name: str, identity: CompanyIdentity) -> CompetitorResearch | None:
-    """Find competitors, letting the model choose its own searches."""
+    """Find competitors, letting the model choose its own searches.
+
+    Given both search_web and extract_company_page: search alone tends to
+    surface "best agencies" roundup content (that's what ranks for those
+    queries), so once a listicle names a candidate, the model can extract
+    that company's own site to verify the claim rather than trust the
+    roundup's numbers — the same anchoring pattern that fixed identity,
+    applied to competitors.
+    """
     chat = gemini_client.chats.create(
         model=MODEL,
-        config=_agent_config(CompetitorResearch, max_tool_calls=6),
+        config=_agent_config(
+            CompetitorResearch,
+            tools=[search_web, extract_company_page],
+            max_tool_calls=8,
+        ),
     )
     response = _send(chat, prompts.research_prompt(company_name, identity))
     return response.parsed

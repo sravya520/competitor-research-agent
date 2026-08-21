@@ -59,8 +59,9 @@ Location: {identity.location or 'unknown'}
 Research the competitive landscape for THIS SPECIFIC company — not any
 other company that happens to share a similar name.
 
-Be economical — at most 3 searches total, then answer with what you have.
-Do not spend searches verifying every individual candidate.
+Be economical — roughly 2-3 searches to discover candidates, plus a small
+number of extractions to verify the most promising ones. Do not verify
+every single candidate; use judgment about which are worth confirming.
 
 Identify the top 5 most relevant competitors — genuinely comparable in
 scale and stage to {company_name}. Competitors do NOT need to be in the
@@ -79,14 +80,18 @@ search results you were given — that support what you say about them.
 Only cite a URL that genuinely appeared in your search results; never
 construct or guess at a URL.
 
-Be critical about SOURCE QUALITY. "Top 10 / best agencies" style
-listicles are usually marketing content published by a company that
-ranks itself highly — they are not independent research, and their
-precise-sounding statistics (success rates, retention percentages, exact
-team sizes) are frequently unverifiable or invented. Prefer a company's
-own website over such listicles. If a competitor's details rest on only
-one promotional listicle, say so plainly in why_relevant rather than
-repeating its numbers as established fact.
+You have TWO tools, and how you use them matters. Search results are
+often dominated by "best agencies" roundup content, marked inline as
+[ROUNDUP/LISTICLE CONTENT] — that content is fine for discovering a
+candidate's NAME, but its stats (success rates, retention percentages,
+exact team sizes) are frequently unverifiable or invented, since these
+pages are usually published by a company ranking itself first. When a
+listicle names a promising candidate, use extract_company_page on that
+company's OWN site (search for it if you don't already have the URL) to
+ground its actual profile — positioning, services, scale — in a primary
+source rather than in the roundup's claims. If a competitor's details
+still rest on only a listicle after trying this, say so plainly in
+why_relevant rather than repeating its numbers as established fact.
 
 Also summarize overall market trends, potential market gaps/opportunities,
 and potential threats for {company_name}.

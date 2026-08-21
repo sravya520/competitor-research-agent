@@ -5,7 +5,9 @@ be trustworthy: the model can misattribute which page supported which claim,
 but this list is written by our own code from the actual API responses.
 """
 
-from config import tavily_client
+from tenacity import retry
+
+from config import RETRY_SETTINGS, tavily_client
 
 _sources_consulted: set[str] = set()
 
@@ -21,6 +23,25 @@ def reset_sources() -> None:
     _sources_consulted.clear()
 
 
+# URL-path patterns typical of "best X agencies" roundup content. Domain
+# blocking doesn't work here — sites like excited.agency or 925studios.co are
+# real companies' own domains that also happen to publish listicles ranking
+# themselves first, so the same domain can be a legitimate competitor's site
+# in one context and an unreliable source in another. The path, not the
+# domain, is what actually signals "roundup content".
+_LISTICLE_MARKERS = ("best-", "top-", "-alternatives", "-vs-", "/resources/")
+
+
+def looks_like_listicle(url: str) -> bool:
+    """True if a URL's path matches typical "best agencies" roundup content.
+
+    Public (not prefixed `_`) because evaluate.py uses the same definition to
+    measure how much of a report's citations rest on this kind of source.
+    """
+    return any(marker in url.lower() for marker in _LISTICLE_MARKERS)
+
+
+@retry(**RETRY_SETTINGS)
 def search_web(query: str) -> str:
     """Search the web for current, real information.
 
@@ -36,7 +57,16 @@ def search_web(query: str) -> str:
 
     context = ""
     for result in response["results"]:
-        context += f"Title: {result['title']}\n"
+        # Labelled in code, not left for the model to judge from prose
+        # instructions alone — a deterministic tag is a smaller, more
+        # reliable ask than "please recognise marketing content".
+        tag = (
+            " [ROUNDUP/LISTICLE CONTENT — useful for discovering company "
+            "names, but do not treat its stats or claims as verified facts. "
+            "Use extract_company_page on the company's own site to confirm.]"
+            if looks_like_listicle(result["url"]) else ""
+        )
+        context += f"Title: {result['title']}{tag}\n"
         context += f"URL: {result['url']}\n"
         context += f"Content: {result['content']}\n\n"
         _sources_consulted.add(result["url"])
@@ -44,6 +74,7 @@ def search_web(query: str) -> str:
     return context
 
 
+@retry(**RETRY_SETTINGS)
 def extract_company_page(url: str) -> str:
     """Read the actual content of one specific page.
 

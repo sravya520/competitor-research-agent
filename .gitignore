@@ -1,0 +1,7 @@
+venv/
+.env
+__pycache__/
+*.pyc
+
+# Generated reports — one is committed as example-report.md
+report-*.md

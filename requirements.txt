@@ -2,3 +2,4 @@ google-genai
 python-dotenv
 tavily-python
 tenacity
+streamlit

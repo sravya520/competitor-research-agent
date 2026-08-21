@@ -11,6 +11,12 @@ from config import RETRY_SETTINGS, tavily_client
 
 _sources_consulted: set[str] = set()
 
+# Defaults to print(), which is what the CLI wants. A UI overrides this with
+# set_progress_hook so the same tool functions can report progress into a
+# web page instead of a terminal, without either caller knowing about the
+# other.
+_progress_hook = print
+
 
 def sources_consulted() -> list[str]:
     """Every URL actually fetched during this run, sorted."""
@@ -21,6 +27,12 @@ def reset_sources() -> None:
     """Clear the record. Needed when several companies run in one process,
     so one run's sources don't leak into the next one's checks."""
     _sources_consulted.clear()
+
+
+def set_progress_hook(hook) -> None:
+    """Redirect progress messages somewhere other than the terminal."""
+    global _progress_hook
+    _progress_hook = hook
 
 
 # URL-path patterns typical of "best X agencies" roundup content. Domain
@@ -52,7 +64,7 @@ def search_web(query: str) -> str:
     Args:
         query: The search query to look up.
     """
-    print(f"[search] {query}")
+    _progress_hook(f"[search] {query}")
     response = tavily_client.search(query, max_results=5)
 
     context = ""
@@ -82,7 +94,7 @@ def extract_company_page(url: str) -> str:
     page can't be read — "the page was blank" and "we couldn't open the page"
     are different facts, and the caller needs to tell them apart.
     """
-    print(f"[extract] {url}")
+    _progress_hook(f"[extract] {url}")
     response = tavily_client.extract(url)
 
     if not response["results"]:

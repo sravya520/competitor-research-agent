@@ -115,6 +115,33 @@ Passing a URL is optional but strongly recommended for small or common-named com
 
 A full generated report is committed as [`example-report.md`](example-report.md).
 
+### Web UI
+
+```bash
+streamlit run app.py
+```
+
+Same pipeline, browser-based: a form for the company and URL, live progress while it searches, checkboxes to remove competitors during review, and a download button for the finished report. `app.py` is the only file that imports Streamlit — the pipeline itself (`pipeline.py`, `evaluate.py`, `report.py`, `tools.py`) has no idea a UI exists, which is what lets both entry points share it.
+
+**Live version:** _add your deployed URL here once deployed_
+
+---
+
+## Deployment
+
+Deployed on [Streamlit Community Cloud](https://streamlit.io/cloud) — free, no card, deploys straight from this GitHub repo.
+
+1. Push to GitHub (already done if you're reading this here)
+2. At [share.streamlit.io](https://share.streamlit.io), sign in with GitHub → **New app** → pick this repo, branch `main`, main file `app.py`
+3. Under **Advanced settings → Secrets**, add:
+   ```toml
+   GEMINI_API_KEY = "your-key-here"
+   TAVILY_API_KEY = "your-key-here"
+   ```
+4. Deploy
+
+Locally, keys come from a `.env` file (gitignored). On Streamlit Cloud there is no `.env` — `app.py` bridges `st.secrets` into environment variables before the pipeline is imported, so `config.py` and the CLI never need to know which source they came from.
+
 ---
 
 ## Design decisions

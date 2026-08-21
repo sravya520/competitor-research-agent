@@ -1,7 +1,11 @@
 venv/
 .env
+.streamlit/secrets.toml
 __pycache__/
 *.pyc
 
 # Generated reports — one is committed as example-report.md
 report-*.md
+
+streamlit_out.log
+streamlit_err.log

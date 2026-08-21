@@ -4,6 +4,8 @@ An agentic AI tool that researches a startup's competitive landscape and produce
 
 Give it a company name — and optionally a URL — and it identifies the company, decides for itself what to search, finds comparable competitors, independently verifies them, asks you to approve the result, and writes a report that cites where every claim came from.
 
+**🔗 Live app: [competitor-research-agent-application.streamlit.app](https://competitor-research-agent-application.streamlit.app/)**
+
 ---
 
 ## Why this exists
@@ -123,7 +125,7 @@ streamlit run app.py
 
 Same pipeline, browser-based: a form for the company and URL, live progress while it searches, checkboxes to remove competitors during review, and a download button for the finished report. `app.py` is the only file that imports Streamlit — the pipeline itself (`pipeline.py`, `evaluate.py`, `report.py`, `tools.py`) has no idea a UI exists, which is what lets both entry points share it.
 
-**Live version:** _add your deployed URL here once deployed_
+**Live version:** [competitor-research-agent-application.streamlit.app](https://competitor-research-agent-application.streamlit.app/)
 
 ---
 

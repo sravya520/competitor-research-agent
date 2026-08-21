@@ -15,6 +15,12 @@ def sources_consulted() -> list[str]:
     return sorted(_sources_consulted)
 
 
+def reset_sources() -> None:
+    """Clear the record. Needed when several companies run in one process,
+    so one run's sources don't leak into the next one's checks."""
+    _sources_consulted.clear()
+
+
 def search_web(query: str) -> str:
     """Search the web for current, real information.
 

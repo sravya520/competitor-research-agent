@@ -150,6 +150,22 @@ Most tools show only what they kept. This one lists every rejected candidate wit
 
 ---
 
+## Testing a non-deterministic system
+
+```bash
+python run_eval.py              # every case
+python run_eval.py Duolingo     # one case
+```
+
+Regression cases live in `eval_cases.py`, and each one exists because the system once got it wrong — early runs returned global design giants as peers of a two-person studio, then CAD-drafting firms, then generic categories. Rather than defining the single "correct" competitor list for a company (which reasonable analysts would disagree about), each case asserts something narrower and checkable: *it must stop here*, or *it must not return these*.
+
+The cases split into two tiers, and the distinction matters:
+
+- **Gates** — stable assertions that should never break. No fabricated URLs, no generic categories, a well-known company returns real competitors.
+- **Observations** — behaviour that genuinely varies between runs, reported but never failing the suite.
+
+That split exists because this system does live web searches. The same input can legitimately produce different results on different days — one run finds no single match for an ambiguous name and stops, another finds a registered entity and proceeds. Asserting on that would be testing what search indexed this morning, not testing this code. **A test that flakes for unrelated reasons teaches you to ignore it**, and then you ignore it when it catches something real.
+
 ## Project structure
 
 ```
@@ -159,6 +175,8 @@ prompts.py     All prompt text, with comments on why each constraint exists
 tools.py       search_web / extract_company_page, and source tracking
 schemas.py     Pydantic models defining every structured output
 evaluate.py    Automatic consistency checks (fabricated URLs, generic names)
+eval_cases.py  Regression cases, each one a bug that actually happened
+run_eval.py    Runs the cases and reports gates vs. observations
 report.py      Markdown generation
 config.py      Clients, model choice, retry policy
 ```

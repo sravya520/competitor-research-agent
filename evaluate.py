@@ -105,3 +105,6 @@ def drop_fabricated_sources(
         competitor.sources = kept
 
     return removed
+
+
+def check_competitor_cou

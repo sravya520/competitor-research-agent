@@ -3,3 +3,5 @@ python-dotenv
 tavily-python
 tenacity
 streamlit
+pydantic
+httpx

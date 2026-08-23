@@ -43,7 +43,9 @@ probably means."""
 {anchor}
 
 Describe what this specific company actually does, who it serves, and
-where it is based — do not assume it is large or established.
+where it is based — do not assume it is large or established. If you can
+identify the company's own official website, include it in `website`;
+leave it unset rather than guessing if you're not sure.
 
 Be economical — at most 2 searches.
 """

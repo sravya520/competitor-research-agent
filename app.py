@@ -187,6 +187,10 @@ elif st.session_state["stage"] == "review":
 
     st.subheader("The company")
     st.write(identity.description)
+    st.caption(
+        f"Location: {identity.location or 'not established'}"
+        + (f" · Website: {identity.website}" if identity.website else "")
+    )
 
     if problems:
         st.warning("Automatic checks flagged:\n" + "\n".join(f"- {p}" for p in problems))

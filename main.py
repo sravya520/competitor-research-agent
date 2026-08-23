@@ -98,7 +98,9 @@ def main() -> None:
         print("\nStopping here rather than guessing which company you meant.")
         sys.exit("Try again with a more specific name, or pass the company's URL.")
 
-    print(f"\nConfirmed: {identity.description}\n")
+    print(f"\nConfirmed: {identity.description}")
+    print(f"Location: {identity.location or 'not established'}"
+          + (f" | Website: {identity.website}" if identity.website else "") + "\n")
 
     # Step 1 — research, with the agent choosing its own searches.
     research = pipeline.research_competitors(company_name, identity)

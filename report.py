@@ -80,6 +80,8 @@ def build_report(
         "",
         f"- **Location:** {identity.location or 'not established'}",
     ]
+    if identity.website:
+        lines.append(f"- **Website:** {identity.website}")
     if company_url:
         lines.append(f"- **Identity anchored to:** {company_url}")
     lines += ["", f"## Competitors ({len(competitors)})", ""]

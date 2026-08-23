@@ -26,6 +26,8 @@ for _key in ("GEMINI_API_KEY", "TAVILY_API_KEY"):
     if _key not in os.environ and _key in st.secrets:
         os.environ[_key] = st.secrets[_key]
 
+from google.genai import errors
+
 import evaluate
 import pipeline
 import report as report_module
@@ -73,58 +75,82 @@ if submitted:
         st.session_state["company_name"] = company_name.strip()
         st.session_state["company_url"] = company_url.strip()
 
-        with st.status("Identifying the company...", expanded=True) as status:
-            tools.set_progress_hook(status.write)
-            identity = pipeline.identify_company(
-                st.session_state["company_name"], st.session_state["company_url"]
-            )
-
-            if identity is None:
-                status.update(label="Could not confirm identity", state="error")
-                st.session_state["stage"] = "identity_failed"
-            elif not identity.confident_match:
-                status.update(label="Identity is ambiguous", state="error")
-                st.session_state["identity"] = identity
-                st.session_state["stage"] = "identity_ambiguous"
-            else:
-                status.update(label=f"Confirmed: {identity.description[:80]}...",
-                               state="complete")
-                st.session_state["identity"] = identity
-                st.session_state["stage"] = "researching"
-
-        if st.session_state["stage"] == "researching":
-            with st.status("Researching competitors...", expanded=True) as status:
+        # This app runs on ONE shared API key for every visitor -- there's no
+        # per-user quota. Free-tier limits are real and we hit them ourselves
+        # during development, so a visitor arriving after the key is already
+        # near its daily cap is an expected case, not a rare edge case. Catch
+        # it here and show a plain message instead of Streamlit's default
+        # crash screen -- retries (in config.py/tools.py/pipeline.py) already
+        # absorbed anything short-lived; an error reaching this point means
+        # they were exhausted, so retrying again immediately won't help.
+        try:
+            with st.status("Identifying the company...", expanded=True) as status:
                 tools.set_progress_hook(status.write)
-                research = pipeline.research_competitors(
-                    st.session_state["company_name"], identity
+                identity = pipeline.identify_company(
+                    st.session_state["company_name"], st.session_state["company_url"]
                 )
 
-                if research is None:
-                    status.update(label="Ran out of tool calls before finishing",
-                                   state="error")
-                    st.session_state["stage"] = "research_failed"
+                if identity is None:
+                    status.update(label="Could not confirm identity", state="error")
+                    st.session_state["stage"] = "identity_failed"
+                elif not identity.confident_match:
+                    status.update(label="Identity is ambiguous", state="error")
+                    st.session_state["identity"] = identity
+                    st.session_state["stage"] = "identity_ambiguous"
                 else:
-                    status.write("Independently verifying each competitor...")
-                    verifications = pipeline.verify_competitors(
-                        st.session_state["company_name"], identity, research.competitors
+                    status.update(label=f"Confirmed: {identity.description[:80]}...",
+                                   state="complete")
+                    st.session_state["identity"] = identity
+                    st.session_state["stage"] = "researching"
+
+            if st.session_state["stage"] == "researching":
+                with st.status("Researching competitors...", expanded=True) as status:
+                    tools.set_progress_hook(status.write)
+                    research = pipeline.research_competitors(
+                        st.session_state["company_name"], identity
                     )
-                    verified, excluded = pipeline.apply_verifications(
-                        research.competitors, verifications
-                    )
 
-                    problems = evaluate.run_checks(verified, tools.sources_consulted())
-                    removed = evaluate.drop_fabricated_sources(verified, tools.sources_consulted())
-                    if removed:
-                        problems.append(f"Removed {removed} fabricated source URL(s).")
+                    if research is None:
+                        status.update(label="Ran out of tool calls before finishing",
+                                       state="error")
+                        st.session_state["stage"] = "research_failed"
+                    else:
+                        status.write("Independently verifying each competitor...")
+                        verifications = pipeline.verify_competitors(
+                            st.session_state["company_name"], identity, research.competitors
+                        )
+                        verified, excluded = pipeline.apply_verifications(
+                            research.competitors, verifications
+                        )
 
-                    status.update(label=f"Found {len(verified)} verified competitor(s)",
-                                  state="complete")
+                        problems = evaluate.run_checks(verified, tools.sources_consulted())
+                        removed = evaluate.drop_fabricated_sources(verified, tools.sources_consulted())
+                        if removed:
+                            problems.append(f"Removed {removed} fabricated source URL(s).")
 
-                    st.session_state["research"] = research
-                    st.session_state["verified"] = verified
-                    st.session_state["excluded"] = excluded
-                    st.session_state["problems"] = problems
-                    st.session_state["stage"] = "review"
+                        status.update(label=f"Found {len(verified)} verified competitor(s)",
+                                      state="complete")
+
+                        st.session_state["research"] = research
+                        st.session_state["verified"] = verified
+                        st.session_state["excluded"] = excluded
+                        st.session_state["problems"] = problems
+                        st.session_state["stage"] = "review"
+
+        except errors.APIError as exc:
+            st.session_state["stage"] = "input"
+            if exc.code == 429:
+                st.error(
+                    "This demo has hit its free daily usage limit. Please "
+                    "try again later, or take a look at the source code on "
+                    "GitHub in the meantime."
+                )
+            else:
+                st.error(
+                    "Something went wrong talking to the research API "
+                    "(a temporary issue, not a bug in the report itself). "
+                    "Please try again in a moment."
+                )
 
 # --- Terminal states: identity failed / ambiguous / research failed ---
 if st.session_state["stage"] == "identity_failed":

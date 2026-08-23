@@ -130,6 +130,7 @@ if submitted:
                         # After stripping fabricated URLs above, not before --
                         # a fake source shouldn't count toward corroboration.
                         problems += evaluate.check_source_corroboration(verified)
+                        problems += evaluate.check_precise_claims_are_corroborated(verified)
 
                         status.update(label=f"Found {len(verified)} verified competitor(s)",
                                       state="complete")

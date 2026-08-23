@@ -121,6 +121,7 @@ def main() -> None:
     # a fake source counting toward "2 independent domains" would be worse
     # than not checking at all.
     problems += evaluate.check_source_corroboration(verified)
+    problems += evaluate.check_precise_claims_are_corroborated(verified)
 
     # Step 3 — human review.
     final = review_competitors(verified, excluded, problems)

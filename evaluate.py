@@ -7,6 +7,7 @@ categories. Checks like these cost nothing to run, never disagree with
 themselves, and catch things a human reviewer reads straight past.
 """
 
+import re
 from urllib.parse import urlparse
 
 from schemas import Competitor
@@ -127,6 +128,57 @@ def check_source_corroboration(
             problems.append(
                 f"{competitor.name}'s profile rests on a single source "
                 f"domain — not independently corroborated."
+            )
+    return problems
+
+
+# Precise-sounding percentages and dollar figures — "92% implementation
+# success rate", "$1,200/mo" — are exactly the shape of the uncitable
+# marketing statistics found in a real self-ranking listicle during
+# development. Precision alone doesn't prove invention; precision plus a
+# single source is the pattern that fooled a careful human reader that time.
+_PRECISE_STAT = re.compile(r"\d{1,3}\s?%|\$\s?[\d,]+(?:k\b|K\b|/mo|/month)?")
+
+
+def find_uncorroborated_precise_claim(
+    competitor: Competitor,
+    minimum_domains: int = 2,
+) -> str | None:
+    """The matched figure (e.g. '92%') if the profile has one AND rests on
+    a single source, else None. Shared by the check below and report.py, so
+    the report's inline warning and the review-time flag never disagree."""
+    text = " ".join([
+        competitor.pricing or "",
+        competitor.why_relevant,
+        " ".join(competitor.strengths),
+        " ".join(competitor.weaknesses),
+    ])
+    match = _PRECISE_STAT.search(text)
+    if match and source_domain_count(competitor) < minimum_domains:
+        return match.group()
+    return None
+
+
+def check_precise_claims_are_corroborated(
+    competitors: list[Competitor],
+    minimum_domains: int = 2,
+) -> list[str]:
+    """Flag oddly specific statistics that rest on a single source.
+
+    Not proof of fabrication — a real, precise figure can genuinely come
+    from one page. This is a heightened version of check_source_corroboration
+    for the specific claim shape most associated, in practice, with invented
+    marketing copy: something that SOUNDS measured and precise but has
+    nothing independently backing it up.
+    """
+    problems: list[str] = []
+    for competitor in competitors:
+        stat = find_uncorroborated_precise_claim(competitor, minimum_domains)
+        if stat:
+            problems.append(
+                f"{competitor.name}'s profile cites a precise figure "
+                f"({stat!r}) backed by only one source — treat it as an "
+                f"unverified claim, not an established fact."
             )
     return problems
 

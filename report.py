@@ -7,7 +7,7 @@ is more useful to a founder than one that projects false confidence.
 
 from datetime import date
 
-from evaluate import source_domain_count
+from evaluate import find_uncorroborated_precise_claim, source_domain_count
 from schemas import CompanyIdentity, Competitor, CompetitorResearch
 
 LIMITATIONS = [
@@ -42,7 +42,12 @@ def _sources_section(lines: list[str], competitor: Competitor) -> None:
     who downloaded it without stepping through review, should still see it.
     """
     domains = source_domain_count(competitor)
-    if domains == 0:
+    stat = find_uncorroborated_precise_claim(competitor)
+
+    if stat:
+        note = (f" _(⚠ single source — the figure {stat!r} in this profile "
+                 f"is unverified, not an established fact)_")
+    elif domains == 0:
         note = " _(no sources cited)_"
     elif domains == 1:
         note = " _(single source — not independently corroborated)_"

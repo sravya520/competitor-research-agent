@@ -7,6 +7,8 @@ categories. Checks like these cost nothing to run, never disagree with
 themselves, and catch things a human reviewer reads straight past.
 """
 
+from urllib.parse import urlparse
+
 from schemas import Competitor
 from tools import looks_like_listicle
 
@@ -84,6 +86,49 @@ def check_competitor_count(competitors: list[Competitor], minimum: int) -> list[
     if len(competitors) < minimum:
         return [f"Expected at least {minimum} competitors, got {len(competitors)}."]
     return []
+
+
+def source_domain(url: str) -> str:
+    """The comparable domain for a URL — strips 'www.' so it isn't miscounted
+    as a domain distinct from the same site without that prefix."""
+    return urlparse(url).netloc.lower().removeprefix("www.")
+
+
+def source_domain_count(competitor: Competitor) -> int:
+    """Number of DISTINCT domains behind a competitor's citations.
+
+    Two pages on the same domain are not independent corroboration — a
+    company's own site linking to itself twice confirms nothing beyond what
+    one of those pages already said. Counting domains, not URLs, is what
+    actually measures whether a claim has been checked against more than one
+    source.
+    """
+    return len({source_domain(url) for url in competitor.sources})
+
+
+def check_source_corroboration(
+    competitors: list[Competitor],
+    minimum_domains: int = 2,
+) -> list[str]:
+    """Flag competitors whose entire profile rests on a single source domain.
+
+    Not a rejection — a small, real company legitimately having only its own
+    website as a source doesn't make it invalid. This is a transparency
+    signal: the point is that a report should never present a single-source
+    claim and a claim checked against multiple independent pages identically,
+    the way a bluff and a fact would look the same without this.
+    """
+    problems: list[str] = []
+    for competitor in competitors:
+        count = source_domain_count(competitor)
+        if count == 0:
+            problems.append(f"{competitor.name} has no cited sources at all.")
+        elif count < minimum_domains:
+            problems.append(
+                f"{competitor.name}'s profile rests on a single source "
+                f"domain — not independently corroborated."
+            )
+    return problems
 
 
 def run_checks(

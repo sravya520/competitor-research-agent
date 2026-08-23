@@ -117,6 +117,11 @@ def main() -> None:
     if removed:
         problems.append(f"Removed {removed} fabricated source URL(s) from the report.")
 
+    # Corroboration is checked AFTER fabricated URLs are stripped above —
+    # a fake source counting toward "2 independent domains" would be worse
+    # than not checking at all.
+    problems += evaluate.check_source_corroboration(verified)
+
     # Step 3 — human review.
     final = review_competitors(verified, excluded, problems)
 

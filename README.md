@@ -171,6 +171,9 @@ The model attributes sources per competitor, which is useful but fallible. Separ
 **Fabricated citations are detected automatically, then removed.**
 Because the tools record every URL genuinely fetched, any URL the model cites that isn't in that record was invented. This check found a real case: the model was handed `.../best-mvp-agencies-for-early-stage-products` and cited `.../best-mvp-**design**-agencies-for-early-stage-products` — a plausible-looking link that would 404. No human reading the report would have caught it, sitting as it was among five genuine URLs. Detection alone isn't enough, so fabricated citations are stripped before the report is written: a broken link still looks like evidence.
 
+**Every competitor is labelled by how corroborated it is, not just whether it has a source.**
+A competitor with one citation and a competitor checked against several independent pages looked identical in earlier versions of the report — both just had a "Sources" list. Now each one is counted by DISTINCT DOMAIN (two pages on the same site aren't independent confirmation of anything) and labelled plainly: corroborated across N sources, single-source and unconfirmed, or none cited at all. Nothing gets rejected for being single-sourced — a small real company legitimately may only have its own website — but nothing is presented with more confidence than the evidence actually supports either.
+
 **Retries are selective.**
 429, 5xx, and raw connection drops (`httpx.TransportError`) are retried, with exponential backoff. A 404 from a retired model name is never retried — it will fail identically forever, so retrying it just wastes quota. Retries cover the tool calls themselves (`search_web`, `extract_company_page`), not just the top-level model calls — a gap found by a live `RemoteProtocolError` during evaluation, in a tool call that had no retry protection at all.
 

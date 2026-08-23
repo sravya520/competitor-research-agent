@@ -7,6 +7,7 @@ is more useful to a founder than one that projects false confidence.
 
 from datetime import date
 
+from evaluate import source_domain_count
 from schemas import CompanyIdentity, Competitor, CompetitorResearch
 
 LIMITATIONS = [
@@ -19,6 +20,10 @@ LIMITATIONS = [
     'Competitor selection was checked automatically for scale and '
     'specificity, then reviewed by a human, but neither check guarantees '
     'completeness.',
+    'Each competitor\'s source count reflects DISTINCT DOMAINS, not distinct '
+    'pages — a company\'s own site cited twice still counts as one source. '
+    '"Single source" does not mean a competitor is wrong, only that its '
+    'profile has not yet been checked against independent evidence.',
 ]
 
 
@@ -26,6 +31,27 @@ def _bullets(lines: list[str], heading: str, items: list[str]) -> None:
     lines.append(f"**{heading}:**")
     lines.append("")
     lines.extend(f"- {item}" for item in items)
+    lines.append("")
+
+
+def _sources_section(lines: list[str], competitor: Competitor) -> None:
+    """Sources, with an honest label on how corroborated they are.
+
+    This label has to live in the saved report itself, not just the
+    interactive review screen — a founder reading the file later, or anyone
+    who downloaded it without stepping through review, should still see it.
+    """
+    domains = source_domain_count(competitor)
+    if domains == 0:
+        note = " _(no sources cited)_"
+    elif domains == 1:
+        note = " _(single source — not independently corroborated)_"
+    else:
+        note = f" _(corroborated across {domains} independent sources)_"
+
+    lines.append(f"**Sources:**{note}")
+    lines.append("")
+    lines.extend(f"- {url}" for url in competitor.sources)
     lines.append("")
 
 
@@ -71,7 +97,7 @@ def build_report(
         _bullets(lines, "Strengths", competitor.strengths)
         _bullets(lines, "Weaknesses", competitor.weaknesses)
         _bullets(lines, "Differentiators", competitor.differentiators)
-        _bullets(lines, "Sources", competitor.sources)
+        _sources_section(lines, competitor)
 
     for heading, items in (
         ("Market trends", research.market_trends),

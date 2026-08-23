@@ -127,6 +127,9 @@ if submitted:
                         removed = evaluate.drop_fabricated_sources(verified, tools.sources_consulted())
                         if removed:
                             problems.append(f"Removed {removed} fabricated source URL(s).")
+                        # After stripping fabricated URLs above, not before --
+                        # a fake source shouldn't count toward corroboration.
+                        problems += evaluate.check_source_corroboration(verified)
 
                         status.update(label=f"Found {len(verified)} verified competitor(s)",
                                       state="complete")

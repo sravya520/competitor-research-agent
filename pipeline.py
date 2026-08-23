@@ -78,7 +78,11 @@ def research_competitors(company_name: str, identity: CompanyIdentity) -> Compet
         config=_agent_config(
             CompetitorResearch,
             tools=[search_web, extract_company_page],
-            max_tool_calls=8,
+            # Prompt hard-caps the model at 7 tool calls; budget needs to be
+            # at least one more than that (the final answer costs a unit
+            # too — see _agent_config's docstring), plus a little slack for
+            # imperfect compliance rather than cutting it exactly at the edge.
+            max_tool_calls=9,
         ),
     )
     response = _send(chat, prompts.research_prompt(company_name, identity))

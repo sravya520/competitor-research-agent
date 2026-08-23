@@ -59,9 +59,12 @@ Location: {identity.location or 'unknown'}
 Research the competitive landscape for THIS SPECIFIC company — not any
 other company that happens to share a similar name.
 
-Be economical — roughly 2-3 searches to discover candidates, plus a small
-number of extractions to verify the most promising ones. Do not verify
-every single candidate; use judgment about which are worth confirming.
+Be economical — you have a HARD LIMIT of 7 tool calls total (searches plus
+extractions combined) before you must answer with whatever you have. Spend
+roughly 2-3 on searching to discover candidates, and use the rest — at
+most 3-4 — on extract_company_page, reserved for your MOST promising 3-4
+candidates only. Do not attempt to verify every candidate; picking which
+ones are worth confirming is part of the task.
 
 Identify the top 5 most relevant competitors — genuinely comparable in
 scale and stage to {company_name}. Competitors do NOT need to be in the

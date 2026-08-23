@@ -28,7 +28,8 @@ flowchart TD
     B -->|ambiguous| STOP["Stop and explain<br/>rather than guess"]
     B -->|confirmed| C[Research]
     C --> D[Verify]
-    D --> E[Human review]
+    D --> K["Check<br/>(fabrication, corroboration)"]
+    K --> E[Human review]
     E --> F["Markdown report<br/>with sources"]
 
     T(["search_web<br/>extract_company_page"]) -.-> B
@@ -51,7 +52,7 @@ flowchart TD
 Requires Python 3.11+. Both API keys have free tiers and need no credit card.
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/sravya520/competitor-research-agent.git
 cd competitor-research-agent
 
 python -m venv venv
@@ -201,20 +202,24 @@ The cases split into two tiers, and the distinction matters:
 
 That split exists because this system does live web searches. The same input can legitimately produce different results on different days — one run finds no single match for an ambiguous name and stops, another finds a registered entity and proceeds. Asserting on that would be testing what search indexed this morning, not testing this code. **A test that flakes for unrelated reasons teaches you to ignore it**, and then you ignore it when it catches something real.
 
-Each run also reports `primary_source_ratio` — the share of citations that are not roundup/listicle content — so a change to the search strategy can be judged by a number instead of a guess.
+Each run also reports three metrics, so a change can be judged by a number instead of a guess: `primary_source_ratio` (share of citations that aren't roundup/listicle content), `corroboration_rate` (share of competitors backed by 2+ independent source domains), and a count of precise-claim warnings (oddly specific stats resting on a single source).
 
 ## Project structure
 
 ```
-main.py        Orchestration and human review — reads as the workflow
+main.py        CLI orchestration and human review — reads as the workflow
+app.py         Streamlit UI for the same pipeline — the only file that
+               imports Streamlit; pipeline/evaluate/report/tools stay
+               framework-agnostic so this and main.py can share them
 pipeline.py    The three LLM steps: identify, research, verify
 prompts.py     All prompt text, with comments on why each constraint exists
 tools.py       search_web / extract_company_page, and source tracking
 schemas.py     Pydantic models defining every structured output
-evaluate.py    Automatic consistency checks (fabricated URLs, generic names)
+evaluate.py    Automatic consistency checks — fabricated URLs, generic
+               names, source corroboration, precise unsourced claims
 eval_cases.py  Regression cases, each one a bug that actually happened
-run_eval.py    Runs the cases and reports gates vs. observations
-report.py      Markdown generation
+run_eval.py    Runs the cases and reports gates, observations, and metrics
+report.py      Markdown generation, with corroboration labels inline
 config.py      Clients, model choice, retry policy
 ```
 

@@ -4,7 +4,9 @@ An agentic AI tool that researches a startup's competitive landscape and produce
 
 Give it a company name — and optionally a URL — and it identifies the company, decides for itself what to search, finds comparable competitors, independently verifies them, asks you to approve the result, and writes a report that cites where every claim came from.
 
-**🔗 Live app: [competitor-research-agent-application.streamlit.app](https://competitor-research-agent-application.streamlit.app/)**
+**🔗 Live app: [competitor-research-agent.onrender.com](https://competitor-research-agent.onrender.com)** (Docker) · [also on Streamlit Cloud](https://competitor-research-agent-application.streamlit.app/)
+
+*Both are free tiers and sleep when idle — the first request after a quiet spell takes 30–60 seconds to wake.*
 
 ---
 
@@ -126,24 +128,41 @@ streamlit run app.py
 
 Same pipeline, browser-based: a form for the company and URL, live progress while it searches, checkboxes to remove competitors during review, and a download button for the finished report. `app.py` is the only file that imports Streamlit — the pipeline itself (`pipeline.py`, `evaluate.py`, `report.py`, `tools.py`) has no idea a UI exists, which is what lets both entry points share it.
 
-**Live version:** [competitor-research-agent-application.streamlit.app](https://competitor-research-agent-application.streamlit.app/)
+**Live:** [Docker on Render](https://competitor-research-agent.onrender.com) · [Streamlit Cloud](https://competitor-research-agent-application.streamlit.app/)
 
 ---
 
 ## Deployment
 
-Deployed on [Streamlit Community Cloud](https://streamlit.io/cloud) — free, no card, deploys straight from this GitHub repo.
+Deployed two ways, which is deliberate: the same application, packaged for a platform-specific host and for any container host.
 
-1. Push to GitHub (already done if you're reading this here)
-2. At [share.streamlit.io](https://share.streamlit.io), sign in with GitHub → **New app** → pick this repo, branch `main`, main file `app.py`
-3. Under **Advanced settings → Secrets**, add:
-   ```toml
-   GEMINI_API_KEY = "your-key-here"
-   TAVILY_API_KEY = "your-key-here"
-   ```
-4. Deploy
+### Docker (Render)
 
-Locally, keys come from a `.env` file (gitignored). On Streamlit Cloud there is no `.env` — `app.py` bridges `st.secrets` into environment variables before the pipeline is imported, so `config.py` and the CLI never need to know which source they came from.
+```bash
+docker build -t competitor-research-agent .
+docker run -p 8501:8501 --env-file .env competitor-research-agent
+```
+
+On Render: **New → Web Service**, connect this repo, runtime auto-detects as Docker, add both API keys as environment variables. Three details in the `Dockerfile` matter more than they look:
+
+- **`--server.address=0.0.0.0`** — Streamlit binds `localhost` by default, which inside a container means *reachable only from within that container*. The app would start, report itself healthy, and refuse every external connection.
+- **`${PORT:-8501}`** — container hosts assign a port and expect the app to honour it. Render assigned 10000 on the first deploy; a hardcoded 8501 would have failed its health check.
+- **`exec` in the `CMD`** — makes Streamlit PID 1 so it receives stop signals directly, instead of a shell absorbing them and Streamlit being force-killed on every restart.
+
+`.dockerignore` is not optional here. Docker does not read `.gitignore`, so a plain `COPY . .` bakes `.env` — real API keys — permanently into the image, readable by anyone who obtains it. Keys are injected at runtime instead (`--env-file` locally, dashboard variables on Render).
+
+### Streamlit Community Cloud
+
+At [share.streamlit.io](https://share.streamlit.io), sign in with GitHub → **New app** → this repo, branch `main`, main file `app.py`. Under **Advanced settings → Secrets**:
+
+```toml
+GEMINI_API_KEY = "your-key-here"
+TAVILY_API_KEY = "your-key-here"
+```
+
+### Why the same code runs in three places
+
+Locally keys come from `.env`; on Streamlit Cloud from `st.secrets`; in a container from real environment variables. `app.py` bridges `st.secrets` into environment variables *before* importing the pipeline, so `config.py` — and the CLI, which has never heard of Streamlit — only ever reads `os.environ`. One code path, three sources.
 
 ---
 

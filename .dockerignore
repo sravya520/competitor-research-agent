@@ -1,0 +1,21 @@
+# Docker does NOT read .gitignore -- this file is its own equivalent, and
+# anything not listed here gets copied into the image by `COPY . .`.
+
+# Secrets. These must never be baked into an image: anyone who obtains the
+# image can read them back out, and images get pushed to registries.
+.env
+.streamlit/secrets.toml
+
+# A Windows virtualenv is useless inside a Linux container, and it's large.
+# Dependencies are installed fresh from requirements.txt during the build.
+venv/
+
+__pycache__/
+*.pyc
+
+# Local artifacts with no purpose in a running container.
+report-*.md
+streamlit_out.log
+streamlit_err.log
+.git/
+.devcontainer/

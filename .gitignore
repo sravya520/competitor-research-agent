@@ -9,3 +9,6 @@ report-*.md
 
 streamlit_out.log
 streamlit_err.log
+
+# Personal interview/job-prep material — deliberately not public.
+docs/

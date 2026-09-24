@@ -8,6 +8,8 @@ Give it a company name — and optionally a URL — and it identifies the compan
 
 *Both are free tiers and sleep when idle — the first request after a quiet spell takes 30–60 seconds to wake.*
 
+![Demo: the agent researching a startup's competitors and producing a sourced report](assets/demo.gif)
+
 ---
 
 ## Why this exists

@@ -26,7 +26,7 @@
 
     {"company": "Mobbin", "page": "https://mobbin.com", "fact": "Product category", "value": "UI & UX design inspiration library", "match": "any", "terms": ["design inspiration", "UI & UX", "UI and UX"]},
 
-    {"company": "Brickanta", "page": "https://brickanta.com", "fact": "Product category", "value": "the agentic AI platform for construction", "match": "any", "terms": ["agentic AI platform for construction", "AI platform for construction"]},
+    {"company": "Brickanta", "page": "https://brickanta.com", "fact": "Product category", "value": "Agentic AI for Construction", "match": "any", "terms": ["Agentic AI for Construction"], "corrected": "see docs/ANSWER_KEY_CHANGES.md"},
     {"company": "Brickanta", "page": "https://www.ycombinator.com/companies/brickanta", "fact": "YC batch", "value": "Fall 2025 (F25)", "match": "any", "terms": ["Fall 2025", "F25"]},
     {"company": "Brickanta", "page": "https://www.ycombinator.com/companies/brickanta", "fact": "HQ city", "value": "Stockholm", "match": "any", "terms": ["Stockholm"]},
 

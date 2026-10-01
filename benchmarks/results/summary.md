@@ -1,6 +1,6 @@
 # Tavily vs Firecrawl — benchmark results
 
-Generated 2026-10-01T15:17:20.779823+00:00
+Generated 2026-10-01T15:26:49.165263+00:00
 Model held constant across all modes: `gemini-flash-lite-latest`
 Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`)
 
@@ -8,9 +8,9 @@ Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`
 
 | fetcher | success | latency p50 | latency p95 | content chars | boilerplate | key-fact recall |
 |---|---|---|---|---|---|---|
-| tavily | 100% | 250ms | 1125ms | 11735 | 6% | 79% (54/68) |
-| firecrawl | 100% | 1390ms | 1797ms | 16258 | 4% | 94% (64/68) |
-| tavily_advanced | 95% | 265ms | 344ms | 12286 | 7% | 74% (50/68) |
+| tavily | 100% | 250ms | 1125ms | 11735 | 6% | 82% (56/68) |
+| firecrawl | 100% | 1390ms | 1797ms | 16258 | 4% | 97% (66/68) |
+| tavily_advanced | 95% | 265ms | 344ms | 12286 | 7% | 76% (52/68) |
 
 ## Experiment B — end to end
 
@@ -48,7 +48,10 @@ Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`
 
 ## Limitations
 
-- **n is small.** 10 companies, 1-2 runs per mode. This is a directional comparison, not a result with error bars. No significance is claimed.
+- **n = 10 companies**, 1-2 runs per mode. This is a directional comparison, not a result with error bars. No significance is claimed.
+- **The end-to-end runs span two days.** Gemini's free tier allows 500 requests a day, which is fewer than one full pass needs, so the modes were completed across two calendar days. Sites may have changed between them. Experiment A, which is the controlled retrieval comparison, ran within a single day.
+- **Answer key wording was corrected post-hoc**, before the final end-to-end run, and every change is logged with its evidence in `docs/ANSWER_KEY_CHANGES.md`. One fact was corrected from a paraphrase to the page's literal text; one proposed removal was rejected because the plain-HTTP check disproved the reason for it.
+- **Credit costs come from each vendor's published pricing, not from measured billing.** Tavily's extract endpoint reported `usage.credits: 0` on both basic and advanced depth, so its per-call cost here is the documented rate rather than an observed charge. Firecrawl's figures were cross-checked against its own `get_credit_usage()` and the gap is reported per run.
 - **We scrape firecrawl.dev using Firecrawl.** The vendor is both a benchmark subject and the audience for this write-up.
 - **Runs killed by the LLM provider's daily quota are excluded**, and the count is shown per mode. Gemini's free tier allows 500 requests a day; the first attempt ran the modes in sequence, so exhaustion landed entirely on whichever modes were scheduled last. Modes are now interleaved. Any mode whose scored-run count is below its attempted count is a smaller sample than the others and should be read as such.
 - **Boilerplate share is a heuristic**, not a measurement: a regex for nav/cookie/footer phrases plus a link-density rule. It is reported as an indicator, not a precise figure.

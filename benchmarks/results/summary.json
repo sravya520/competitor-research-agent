@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-01T15:17:20.779823+00:00",
+  "generated_at": "2026-10-01T15:26:49.165263+00:00",
   "model": "gemini-flash-lite-latest",
   "answer_key": {
     "path": "benchmarks\\answer_key.json",
@@ -13,9 +13,9 @@
       "latency_ms_p95": 1125,
       "content_chars_median": 11735.0,
       "boilerplate_share_median": 0.05853174603174603,
-      "facts_found": 54,
+      "facts_found": 56,
       "facts_total": 68,
-      "key_fact_recall": 0.7941176470588235,
+      "key_fact_recall": 0.8235294117647058,
       "failures": []
     },
     "firecrawl": {
@@ -25,9 +25,9 @@
       "latency_ms_p95": 1797,
       "content_chars_median": 16257.5,
       "boilerplate_share_median": 0.04465811965811966,
-      "facts_found": 64,
+      "facts_found": 66,
       "facts_total": 68,
-      "key_fact_recall": 0.9411764705882353,
+      "key_fact_recall": 0.9705882352941176,
       "failures": []
     },
     "tavily_advanced": {
@@ -37,9 +37,9 @@
       "latency_ms_p95": 344,
       "content_chars_median": 12286.0,
       "boilerplate_share_median": 0.06944444444444445,
-      "facts_found": 50,
+      "facts_found": 52,
       "facts_total": 68,
-      "key_fact_recall": 0.7352941176470589,
+      "key_fact_recall": 0.7647058823529411,
       "failures": [
         {
           "url": "https://docs.firecrawl.dev/billing",

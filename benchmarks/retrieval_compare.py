@@ -32,7 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import tools  # noqa: E402
-from benchmarks.harness import run_once  # noqa: E402
+from benchmarks.harness import _extract_remaining, run_once  # noqa: E402
 from config import MODEL  # noqa: E402
 from retrieval import (  # noqa: E402
     CreditMeter,
@@ -69,6 +69,21 @@ MODE_RUNS = {
 # Agreed: bare search is run on a 5-company subset covering mixed site types,
 # since its purpose is to characterise a configuration, not to rank companies.
 BARE_SUBSET = {"Mobbin", "Notion", "Firecrawl", "Brickanta", "Linear"}
+
+# Never spend below this many Firecrawl credits. The run stops before the job
+# that would cross it, so the reserve is still intact when it stops.
+CREDIT_RESERVE = 100
+
+# Median Firecrawl credits per run, measured from the first attempt's clean runs.
+# firecrawl_bare had no clean run to measure, so its figure is a deliberately
+# generous estimate: over-estimating stops the run early, which is the safe
+# direction, while under-estimating would spend into the reserve.
+ESTIMATED_FIRECRAWL_CREDITS = {
+    "tavily": 0.0,
+    "hybrid": 8.0,
+    "firecrawl_scrape": 35.0,
+    "firecrawl_bare": 20.0,
+}
 
 # Boilerplate heuristic. Stated explicitly because this is the most arguable
 # metric in the set: it is a heuristic, not a measurement, and the write-up
@@ -404,9 +419,23 @@ def ablation_main_content(sample: int = 3) -> None:
 # Experiment B — end to end
 # --------------------------------------------------------------------------
 
+def _firecrawl_remaining() -> float | None:
+    """Firecrawl's own remaining-credit figure, or None if it cannot be read."""
+    try:
+        from retrieval import FirecrawlProvider
+        return _extract_remaining(FirecrawlProvider().live_credit_usage())
+    except Exception as exc:  # noqa: BLE001 - a failed read must not crash the run
+        print(f"[B] credit read failed: {type(exc).__name__}: {exc}")
+        return None
+
+
 def experiment_b() -> None:
     out = RESULTS / "raw_endtoend.jsonl"
-    done = {(r["mode"], r["company"], r["run"]) for r in read_jsonl(out)}
+    # A run the LLM's quota killed does not count as done, or resuming would
+    # skip exactly the runs that need redoing. The failed row stays in the file
+    # as evidence; the report excludes it and counts it as excluded.
+    done = {(r["mode"], r["company"], r["run"]) for r in read_jsonl(out)
+            if not is_quota_failure(r)}
 
     per_mode = {}
     for mode, run_count in MODE_RUNS.items():
@@ -432,15 +461,42 @@ def experiment_b() -> None:
             if tier < len(per_mode[mode]):
                 jobs.append(per_mode[mode][tier])
 
+    # Credit floor. The run stops rather than spending into the reserve, and it
+    # stops BEFORE the run that would cross it, not after. Estimates are the
+    # measured medians per mode from the first attempt; firecrawl_bare has no
+    # clean run to measure, so its figure is deliberately generous.
+    remaining = _firecrawl_remaining()
+    if remaining is not None:
+        print(f"[B] Firecrawl credits remaining: {remaining:.0f} "
+              f"(floor {CREDIT_RESERVE})")
+    else:
+        print("[B] could not read Firecrawl credits; the floor cannot be "
+              "enforced, so stopping rather than spending blind")
+        return
+
     for index, (mode, company, run) in enumerate(jobs, 1):
         tag = (mode, company["name"], run)
         if tag in done:
             print(f"[B {index}/{len(jobs)}] skip (done) {mode} {company['name']} run{run}")
             continue
 
+        cost = ESTIMATED_FIRECRAWL_CREDITS.get(mode, 0.0)
+        if cost and remaining - cost < CREDIT_RESERVE:
+            print(f"\n[B] STOPPING at job {index}/{len(jobs)}. "
+                  f"{mode} needs about {cost:.0f} credits, {remaining:.0f} remain, "
+                  f"and spending it would leave less than the {CREDIT_RESERVE} "
+                  f"credit reserve. Completed work is saved; rerun to resume.")
+            return
+
         print(f"[B {index}/{len(jobs)}] {mode} {company['name']} run{run}", flush=True)
         result = run_once(mode, company["name"], company["url"],
                           use_cache=False, truncate=True)
+
+        # Prefer Firecrawl's own figure. Failing that, deduct the estimate
+        # rather than a call count, which would understate the spend because a
+        # search costs more than one credit.
+        reported = _extract_remaining(result.firecrawl_credits_after)
+        remaining = reported if reported is not None else remaining - cost
         record = result.as_dict()
         record["experiment"] = "B"
         record["run"] = run
@@ -705,8 +761,24 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict]) -> No
         "",
         "## Limitations",
         "",
-        "- **n is small.** 10 companies, 1-2 runs per mode. This is a directional "
+        "- **n = 10 companies**, 1-2 runs per mode. This is a directional "
         "comparison, not a result with error bars. No significance is claimed.",
+        "- **The end-to-end runs span two days.** Gemini's free tier allows 500 "
+        "requests a day, which is fewer than one full pass needs, so the modes "
+        "were completed across two calendar days. Sites may have changed between "
+        "them. Experiment A, which is the controlled retrieval comparison, ran "
+        "within a single day.",
+        "- **Answer key wording was corrected post-hoc**, before the final "
+        "end-to-end run, and every change is logged with its evidence in "
+        "`docs/ANSWER_KEY_CHANGES.md`. One fact was corrected from a paraphrase "
+        "to the page's literal text; one proposed removal was rejected because "
+        "the plain-HTTP check disproved the reason for it.",
+        "- **Credit costs come from each vendor's published pricing, not from "
+        "measured billing.** Tavily's extract endpoint reported "
+        "`usage.credits: 0` on both basic and advanced depth, so its per-call "
+        "cost here is the documented rate rather than an observed charge. "
+        "Firecrawl's figures were cross-checked against its own "
+        "`get_credit_usage()` and the gap is reported per run.",
         "- **We scrape firecrawl.dev using Firecrawl.** The vendor is both a "
         "benchmark subject and the audience for this write-up.",
         "- **Runs killed by the LLM provider's daily quota are excluded**, and "

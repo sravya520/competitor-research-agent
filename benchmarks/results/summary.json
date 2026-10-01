@@ -1,0 +1,138 @@
+{
+  "generated_at": "2026-10-01T15:17:20.779823+00:00",
+  "model": "gemini-flash-lite-latest",
+  "answer_key": {
+    "path": "benchmarks\\answer_key.json",
+    "scored_facts": 34
+  },
+  "experiment_a": {
+    "tavily": {
+      "attempts": 40,
+      "success_rate": 1.0,
+      "latency_ms_median": 250.0,
+      "latency_ms_p95": 1125,
+      "content_chars_median": 11735.0,
+      "boilerplate_share_median": 0.05853174603174603,
+      "facts_found": 54,
+      "facts_total": 68,
+      "key_fact_recall": 0.7941176470588235,
+      "failures": []
+    },
+    "firecrawl": {
+      "attempts": 40,
+      "success_rate": 1.0,
+      "latency_ms_median": 1390.5,
+      "latency_ms_p95": 1797,
+      "content_chars_median": 16257.5,
+      "boilerplate_share_median": 0.04465811965811966,
+      "facts_found": 64,
+      "facts_total": 68,
+      "key_fact_recall": 0.9411764705882353,
+      "failures": []
+    },
+    "tavily_advanced": {
+      "attempts": 40,
+      "success_rate": 0.95,
+      "latency_ms_median": 265.0,
+      "latency_ms_p95": 344,
+      "content_chars_median": 12286.0,
+      "boilerplate_share_median": 0.06944444444444445,
+      "facts_found": 50,
+      "facts_total": 68,
+      "key_fact_recall": 0.7352941176470589,
+      "failures": [
+        {
+          "url": "https://docs.firecrawl.dev/billing",
+          "error": "Tavily returned no extractable content"
+        },
+        {
+          "url": "https://docs.firecrawl.dev/billing",
+          "error": "Tavily returned no extractable content"
+        }
+      ]
+    }
+  },
+  "experiment_b": {
+    "firecrawl_bare": {
+      "runs": 0,
+      "runs_attempted": 5,
+      "excluded_llm_quota": 5,
+      "note": "every run was killed by the LLM provider's quota; no data"
+    },
+    "firecrawl_scrape": {
+      "runs": 8,
+      "runs_attempted": 20,
+      "excluded_llm_quota": 12,
+      "errors": 0,
+      "identity_confirmed_rate": 1.0,
+      "budget_hit_rate": 0.375,
+      "completed_rate": 0.625,
+      "competitors_proposed_median": 5.0,
+      "competitors_kept_median": 4.5,
+      "verification_pass_rate_mean": 0.96,
+      "fabrication_failures_total": 26,
+      "fabricated_urls_dropped_total": 26,
+      "primary_source_ratio_mean": 1.0,
+      "wall_clock_s_median": 49.9,
+      "credits_as_implemented_total": 273.0,
+      "credits_tavily_batched_total": 273.0,
+      "search_truncated_share_mean": 0.9007440476190477,
+      "pages_truncated_share_mean": 0.21875,
+      "credit_meter_gap_max": 67.0
+    },
+    "hybrid": {
+      "runs": 20,
+      "runs_attempted": 20,
+      "excluded_llm_quota": 0,
+      "errors": 0,
+      "identity_confirmed_rate": 1.0,
+      "budget_hit_rate": 0.05,
+      "completed_rate": 0.95,
+      "competitors_proposed_median": 5.0,
+      "competitors_kept_median": 5.0,
+      "verification_pass_rate_mean": 0.8666666666666666,
+      "fabrication_failures_total": 6,
+      "fabricated_urls_dropped_total": 6,
+      "primary_source_ratio_mean": 0.7786195286195288,
+      "wall_clock_s_median": 33.595,
+      "credits_as_implemented_total": 156.0,
+      "credits_tavily_batched_total": 156.0,
+      "search_truncated_share_mean": 0.02321428571428572,
+      "pages_truncated_share_mean": 0.08333333333333333,
+      "credit_meter_gap_max": 6.0
+    },
+    "tavily": {
+      "runs": 16,
+      "runs_attempted": 20,
+      "excluded_llm_quota": 4,
+      "errors": 0,
+      "identity_confirmed_rate": 1.0,
+      "budget_hit_rate": 0.0,
+      "completed_rate": 1.0,
+      "competitors_proposed_median": 5.0,
+      "competitors_kept_median": 4.5,
+      "verification_pass_rate_mean": 0.8875000000000001,
+      "fabrication_failures_total": 4,
+      "fabricated_urls_dropped_total": 4,
+      "primary_source_ratio_mean": 0.710099796037296,
+      "wall_clock_s_median": 33.14,
+      "credits_as_implemented_total": 122.0,
+      "credits_tavily_batched_total": 110.0,
+      "search_truncated_share_mean": 0.0225,
+      "pages_truncated_share_mean": 0.11458333333333333,
+      "credit_meter_gap_max": null
+    }
+  },
+  "ablation": {
+    "only_main_content=True": {
+      "pages": 3,
+      "content_chars_median": 18837,
+      "boilerplate_share_median": 0.09631728045325778
+    },
+    "only_main_content=False": {
+      "pages": 3,
+      "content_chars_median": 32267,
+      "boilerplate_share_median": 0.17708333333333334
+    }
+  }
+}

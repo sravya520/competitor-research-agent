@@ -1,0 +1,6 @@
+{"experiment": "ablation", "url": "https://brickanta.com", "only_main_content": true, "ok": true, "content_chars": 8252, "boilerplate_share": 0.12408759124087591, "latency_ms": 1155}
+{"experiment": "ablation", "url": "https://brickanta.com", "only_main_content": false, "ok": true, "content_chars": 15298, "boilerplate_share": 0.19736842105263158, "latency_ms": 1421}
+{"experiment": "ablation", "url": "https://composio.dev", "only_main_content": true, "ok": true, "content_chars": 24460, "boilerplate_share": 0.09631728045325778, "latency_ms": 1420}
+{"experiment": "ablation", "url": "https://composio.dev", "only_main_content": false, "ok": true, "content_chars": 37240, "boilerplate_share": 0.15513626834381553, "latency_ms": 1765}
+{"experiment": "ablation", "url": "https://composio.dev/pricing", "only_main_content": true, "ok": true, "content_chars": 18837, "boilerplate_share": 0.04487179487179487, "latency_ms": 1422}
+{"experiment": "ablation", "url": "https://composio.dev/pricing", "only_main_content": false, "ok": true, "content_chars": 32267, "boilerplate_share": 0.17708333333333334, "latency_ms": 1469}

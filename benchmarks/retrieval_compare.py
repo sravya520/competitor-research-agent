@@ -126,6 +126,18 @@ def append_jsonl(path: Path, record: dict) -> None:
         handle.write(json.dumps(record) + "\n")
 
 
+def is_quota_failure(row: dict) -> bool:
+    """Did the LLM provider's quota end this run?
+
+    Such a run tells us nothing about the retrieval mode under test, so it is
+    excluded from end-to-end aggregates. Matching on the provider's own status
+    string rather than on an HTTP code, because a 429 from a retrieval provider
+    IS a result about that provider and must keep counting.
+    """
+    error = row.get("error") or ""
+    return "RESOURCE_EXHAUSTED" in error or "generate_content_free_tier" in error
+
+
 def read_jsonl(path: Path) -> list[dict]:
     """Read a results file, tolerating a torn final line.
 
@@ -396,13 +408,29 @@ def experiment_b() -> None:
     out = RESULTS / "raw_endtoend.jsonl"
     done = {(r["mode"], r["company"], r["run"]) for r in read_jsonl(out)}
 
-    jobs = []
+    per_mode = {}
     for mode, run_count in MODE_RUNS.items():
+        mode_jobs = []
         for company in COMPANIES:
             if mode == "firecrawl_bare" and company["name"] not in BARE_SUBSET:
                 continue
             for run in range(1, run_count + 1):
-                jobs.append((mode, company, run))
+                mode_jobs.append((mode, company, run))
+        per_mode[mode] = mode_jobs
+
+    # Interleave the modes instead of finishing one before starting the next.
+    # Grouping by mode meant the LLM's daily quota ran out partway through the
+    # schedule and destroyed whichever modes happened to be last: firecrawl_bare
+    # lost all 5 of its runs and firecrawl_scrape lost 12 of 20, while tavily and
+    # hybrid, which ran first, were almost untouched. Round-robin spreads any
+    # mid-run exhaustion across every mode, so a partial run still yields a
+    # comparable sample for each rather than complete data for some and none for
+    # others.
+    jobs = []
+    for tier in range(max(len(j) for j in per_mode.values())):
+        for mode in MODE_RUNS:
+            if tier < len(per_mode[mode]):
+                jobs.append(per_mode[mode][tier])
 
     for index, (mode, company, run) in enumerate(jobs, 1):
         tag = (mode, company["name"], run)
@@ -486,7 +514,25 @@ def build_report() -> None:
     for row in b_rows:
         by_mode[row["mode"]].append(row)
 
-    for mode, rows in by_mode.items():
+    for mode, all_rows in sorted(by_mode.items()):
+        # A run killed by the LLM provider's quota measured the quota, not the
+        # retrieval mode, so it is excluded rather than averaged in. This is not
+        # cosmetic: the Firecrawl modes ran last and absorbed the exhausted
+        # Gemini daily quota, which made firecrawl_scrape look like it kept 0
+        # competitors when its clean runs keep as many as Tavily. Tavily's own
+        # median was depressed by four such runs. The count is reported so an
+        # excluded run is visible rather than quietly dropped.
+        excluded = [r for r in all_rows if is_quota_failure(r)]
+        rows = [r for r in all_rows if not is_quota_failure(r)]
+        if not rows:
+            summary["experiment_b"][mode] = {
+                "runs": 0,
+                "runs_attempted": len(all_rows),
+                "excluded_llm_quota": len(excluded),
+                "note": "every run was killed by the LLM provider's quota; no data",
+            }
+            continue
+
         finished = [r for r in rows if not r["hit_tool_budget"] and not r["error"]]
         pass_rates = [r["verification_pass_rate"] for r in rows
                       if r["verification_pass_rate"] is not None]
@@ -506,6 +552,8 @@ def build_report() -> None:
 
         summary["experiment_b"][mode] = {
             "runs": len(rows),
+            "runs_attempted": len(all_rows),
+            "excluded_llm_quota": len(excluded),
             "errors": sum(1 for r in rows if r["error"]),
             "identity_confirmed_rate": sum(r["identity_confirmed"] for r in rows) / len(rows),
             "budget_hit_rate": sum(r["hit_tool_budget"] for r in rows) / len(rows),
@@ -603,11 +651,19 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict]) -> No
         )
 
     lines += ["", "## Experiment B — end to end", "",
-              "| mode | runs | budget hit | completed | kept (median) | verif. pass | fabrications | time p50 | credits |",
-              "|---|---|---|---|---|---|---|---|---|"]
+              "| mode | runs scored | excluded (LLM quota) | budget hit | completed "
+              "| kept (median) | verif. pass | fabrications | time p50 | credits |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
     for mode, s in summary["experiment_b"].items():
+        if not s["runs"]:
+            lines.append(
+                f"| {mode} | 0 | {s['excluded_llm_quota']} of {s['runs_attempted']} "
+                f"| n/a | n/a | n/a | n/a | n/a | n/a | n/a |")
+            continue
         lines.append(
-            f"| {mode} | {s['runs']} | {_fmt(s['budget_hit_rate'], pct=True)} "
+            f"| {mode} | {s['runs']} "
+            f"| {s['excluded_llm_quota']} of {s['runs_attempted']} "
+            f"| {_fmt(s['budget_hit_rate'], pct=True)} "
             f"| {_fmt(s['completed_rate'], pct=True)} "
             f"| {_fmt(s['competitors_kept_median'], digits=1)} "
             f"| {_fmt(s['verification_pass_rate_mean'], pct=True)} "
@@ -619,6 +675,9 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict]) -> No
     lines += ["", "### Credits, both ways", "",
               "| mode | as implemented | with Tavily batching |", "|---|---|---|"]
     for mode, s in summary["experiment_b"].items():
+        if not s["runs"]:
+            lines.append(f"| {mode} | n/a | n/a |")
+            continue
         lines.append(
             f"| {mode} | {_fmt(s['credits_as_implemented_total'], digits=1)} "
             f"| {_fmt(s['credits_tavily_batched_total'], digits=1)} |")
@@ -626,6 +685,9 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict]) -> No
     lines += ["", "### Truncation (1,500 search / 25,000 page)", "",
               "| mode | search results truncated | pages truncated |", "|---|---|---|"]
     for mode, s in summary["experiment_b"].items():
+        if not s["runs"]:
+            lines.append(f"| {mode} | n/a | n/a |")
+            continue
         lines.append(
             f"| {mode} | {_fmt(s['search_truncated_share_mean'], pct=True)} "
             f"| {_fmt(s['pages_truncated_share_mean'], pct=True)} |")
@@ -647,6 +709,12 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict]) -> No
         "comparison, not a result with error bars. No significance is claimed.",
         "- **We scrape firecrawl.dev using Firecrawl.** The vendor is both a "
         "benchmark subject and the audience for this write-up.",
+        "- **Runs killed by the LLM provider's daily quota are excluded**, and "
+        "the count is shown per mode. Gemini's free tier allows 500 requests a "
+        "day; the first attempt ran the modes in sequence, so exhaustion landed "
+        "entirely on whichever modes were scheduled last. Modes are now "
+        "interleaved. Any mode whose scored-run count is below its attempted "
+        "count is a smaller sample than the others and should be read as such.",
         "- **Boilerplate share is a heuristic**, not a measurement: a regex for "
         "nav/cookie/footer phrases plus a link-density rule. It is reported as "
         "an indicator, not a precise figure.",

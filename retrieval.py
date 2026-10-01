@@ -92,12 +92,20 @@ class CreditMeter:
     def __init__(self) -> None:
         self.as_implemented: float = 0.0
         self.calls: dict[str, int] = {}
+        # Credits per provider, kept alongside the call counts. Without it,
+        # anything needing a single provider's spend has to re-derive it from
+        # call counts and a second copy of the pricing rules, which is how the
+        # credit cross-check came to score firecrawl_scrape as 0 credits: its
+        # provider name is not literally "firecrawl".
+        self.credits_by_provider: dict[str, float] = {}
         self._tavily_urls_fetched = 0
 
     def record(self, provider: str, operation: str, credits: float, urls: int = 0) -> None:
         self.as_implemented += credits
         key = f"{provider}.{operation}"
         self.calls[key] = self.calls.get(key, 0) + 1
+        self.credits_by_provider[provider] = (
+            self.credits_by_provider.get(provider, 0.0) + credits)
         if provider == "tavily" and operation == "fetch":
             self._tavily_urls_fetched += urls
 

@@ -70,6 +70,14 @@ MODE_RUNS = {
 # since its purpose is to characterise a configuration, not to rank companies.
 BARE_SUBSET = {"Mobbin", "Notion", "Firecrawl", "Brickanta", "Linear"}
 
+# Excluded from firecrawl_scrape for budget, not for data. The first attempt's
+# runs were lost to the LLM's daily quota and redoing all of them would have
+# spent into the Firecrawl credit reserve. Linear was chosen because tavily and
+# hybrid already cover it and it is the least differentiating of the remaining
+# sites. This is a deliberate hole in the sample and the limitations say so:
+# firecrawl_scrape is measured on fewer companies than tavily and hybrid.
+SCRAPE_EXCLUDED = {"Linear"}
+
 # Never spend below this many Firecrawl credits. The run stops before the job
 # that would cross it, so the reserve is still intact when it stops.
 CREDIT_RESERVE = 100
@@ -438,6 +446,26 @@ def ablation_main_content(sample: int = 3, pages: list[str] | None = None) -> No
 # Experiment B — end to end
 # --------------------------------------------------------------------------
 
+def _llm_available() -> tuple[bool, str]:
+    """One cheap generation, to fail fast if the LLM's quota is still spent.
+
+    Without this the benchmark starts work, spends a Firecrawl credit per run
+    on retrieval, and only then discovers every run dies at the first LLM call.
+    The first attempt lost 17 runs that way.
+    """
+    try:
+        from config import MODEL, gemini_client
+        gemini_client.models.generate_content(model=MODEL, contents="ok")
+        return True, "available"
+    except Exception as exc:  # noqa: BLE001 - any failure here means do not start
+        message = str(exc)
+        if "PerDay" in message:
+            return False, "daily quota still exhausted"
+        if "RESOURCE_EXHAUSTED" in message:
+            return False, "rate limited (per-minute); retry shortly"
+        return False, f"{type(exc).__name__}: {message[:120]}"
+
+
 def _firecrawl_remaining() -> float | None:
     """Firecrawl's own remaining-credit figure, or None if it cannot be read."""
     try:
@@ -462,6 +490,8 @@ def experiment_b() -> None:
         for company in COMPANIES:
             if mode == "firecrawl_bare" and company["name"] not in BARE_SUBSET:
                 continue
+            if mode == "firecrawl_scrape" and company["name"] in SCRAPE_EXCLUDED:
+                continue
             for run in range(1, run_count + 1):
                 mode_jobs.append((mode, company, run))
         per_mode[mode] = mode_jobs
@@ -484,6 +514,12 @@ def experiment_b() -> None:
     # stops BEFORE the run that would cross it, not after. Estimates are the
     # measured medians per mode from the first attempt; firecrawl_bare has no
     # clean run to measure, so its figure is deliberately generous.
+    ok, why = _llm_available()
+    if not ok:
+        print(f"[B] not starting: LLM {why}. No credits spent.")
+        return
+    print(f"[B] LLM {why}")
+
     remaining = _firecrawl_remaining()
     if remaining is not None:
         print(f"[B] Firecrawl credits remaining: {remaining:.0f} "
@@ -813,6 +849,13 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict],
         "",
         "- **n = 10 companies**, 1-2 runs per mode. This is a directional "
         "comparison, not a result with error bars. No significance is claimed.",
+        "- **The modes do not all cover the same companies.** firecrawl_scrape "
+        "excludes Linear and firecrawl_bare runs on a 5-company subset, so "
+        "their samples are smaller than tavily's and hybrid's. Linear was "
+        "dropped to stay above the Firecrawl credit reserve after the first "
+        "attempt's runs were lost to the LLM quota. That is a budget decision, "
+        "not a data one, and it means per-mode figures are not strictly "
+        "like-for-like across the same company set.",
         "- **The end-to-end runs span two days.** Gemini's free tier allows 500 "
         "requests a day, which is fewer than one full pass needs, so the modes "
         "were completed across two calendar days. Sites may have changed between "

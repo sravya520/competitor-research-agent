@@ -1,6 +1,6 @@
 # Tavily vs Firecrawl — benchmark results
 
-Generated 2026-10-01T15:42:04.743664+00:00
+Generated 2026-10-01T15:46:48.613057+00:00
 Model held constant across all modes: `gemini-flash-lite-latest`
 Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`)
 
@@ -62,6 +62,7 @@ Per page, with the scored facts each setting retrieves. Filtering is free on mos
 ## Limitations
 
 - **n = 10 companies**, 1-2 runs per mode. This is a directional comparison, not a result with error bars. No significance is claimed.
+- **The modes do not all cover the same companies.** firecrawl_scrape excludes Linear and firecrawl_bare runs on a 5-company subset, so their samples are smaller than tavily's and hybrid's. Linear was dropped to stay above the Firecrawl credit reserve after the first attempt's runs were lost to the LLM quota. That is a budget decision, not a data one, and it means per-mode figures are not strictly like-for-like across the same company set.
 - **The end-to-end runs span two days.** Gemini's free tier allows 500 requests a day, which is fewer than one full pass needs, so the modes were completed across two calendar days. Sites may have changed between them. Experiment A, which is the controlled retrieval comparison, ran within a single day.
 - **Answer key wording was corrected post-hoc**, before the final end-to-end run, and every change is logged with its evidence in `docs/ANSWER_KEY_CHANGES.md`. One fact was corrected from a paraphrase to the page's literal text; one proposed removal was rejected because the plain-HTTP check disproved the reason for it.
 - **Credit costs come from each vendor's published pricing, not from measured billing.** Tavily's extract endpoint reported `usage.credits: 0` on both basic and advanced depth, so its per-call cost here is the documented rate rather than an observed charge. Firecrawl's figures were cross-checked against its own `get_credit_usage()` and the gap is reported per run.

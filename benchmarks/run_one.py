@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from benchmarks.harness import RESEARCH_TOOL_CALL_BUDGET, run_once  # noqa: E402
 
-MODES = ("tavily", "firecrawl", "hybrid")
+MODES = ("tavily", "firecrawl_bare", "firecrawl_scrape", "hybrid")
 
 
 def show(result) -> None:

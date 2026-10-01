@@ -1,0 +1,56 @@
+{
+  "provenance": "Values read from each official page on 2026-10-01 by a separate Claude session using a fetch independent of both Tavily and Firecrawl, then reviewed in a browser by the project owner. Neither benchmarked provider contributed to this key.",
+  "verified_on": "2026-10-01",
+  "source_of_truth": "docs/ANSWER_KEY_CHECKLIST.md",
+  "excluded": "Rows marked flagged (unconfirmed) or absent are not represented here. 34 scored of 52 total rows.",
+  "match_rules": {
+    "any": "Fact counts as present if ANY listed term appears in the retrieved content (case-insensitive substring).",
+    "all": "Fact counts as present only if EVERY listed term appears. Used where the fact IS the complete list, e.g. pricing tier names.",
+    "known_weakness": "Short terms such as 'Free', 'Map', 'Agent' and 'Team' can match incidentally, inflating scores. This affects every provider equally so it does not bias the comparison, but absolute scores should be read as an upper bound."
+  },
+  "facts": [
+    {"company": "Firecrawl", "page": "https://www.firecrawl.dev/pricing", "fact": "Free tier credits", "value": "1,000 credits / month", "match": "any", "terms": ["1,000 credits", "1000 credits"]},
+    {"company": "Firecrawl", "page": "https://www.firecrawl.dev/pricing", "fact": "Paid tier names", "value": "Hobby, Standard, Growth, Scale, Enterprise", "match": "all", "terms": ["Hobby", "Standard", "Growth", "Scale", "Enterprise"]},
+    {"company": "Firecrawl", "page": "https://docs.firecrawl.dev/billing", "fact": "Scrape credit cost", "value": "1 credit / page", "match": "any", "terms": ["1 credit / page", "1 credit/page", "1 credit per page"]},
+    {"company": "Firecrawl", "page": "https://docs.firecrawl.dev/billing", "fact": "Search credit cost", "value": "2 credits / 10 results", "match": "any", "terms": ["2 credits / 10 results", "2 credits/10 results", "2 credits per 10 results"]},
+    {"company": "Firecrawl", "page": "https://www.firecrawl.dev", "fact": "Endpoint/product names", "value": "Search, Scrape, Interact, Map, Crawl, Agent", "match": "all", "terms": ["Search", "Scrape", "Interact", "Map", "Crawl", "Agent"]},
+
+    {"company": "Nango", "page": "https://www.nango.dev", "fact": "Product category", "value": "Connect your product & agents to 1,000+ APIs", "match": "any", "terms": ["Connect your product", "1,000+ APIs"]},
+    {"company": "Nango", "page": "https://www.nango.dev", "fact": "Pre-built integrations count", "value": "1,000+ APIs", "match": "any", "terms": ["1,000+ APIs", "1000+ APIs", "1,000+ integrations"]},
+    {"company": "Nango", "page": "https://www.nango.dev/pricing", "fact": "Free tier exists", "value": "Yes, \"Free\"", "match": "any", "terms": ["Free"]},
+
+    {"company": "Composio", "page": "https://composio.dev", "fact": "Product category", "value": "Give your AI secure access to 1,500+ apps in minutes", "match": "any", "terms": ["secure access to 1,500+ apps", "1,500+ apps"]},
+    {"company": "Composio", "page": "https://composio.dev", "fact": "Tools/integrations count", "value": "1,500+ apps", "match": "any", "terms": ["1,500+ apps", "1500+ apps"]},
+    {"company": "Composio", "page": "https://composio.dev/pricing", "fact": "Free tier exists", "value": "Yes, \"Hobby\"", "match": "any", "terms": ["Hobby"]},
+    {"company": "Composio", "page": "https://composio.dev/pricing", "fact": "Paid tier names", "value": "Pro, Enterprise", "match": "all", "terms": ["Pro", "Enterprise"]},
+
+    {"company": "Mobbin", "page": "https://mobbin.com", "fact": "Product category", "value": "UI & UX design inspiration library", "match": "any", "terms": ["design inspiration", "UI & UX", "UI and UX"]},
+
+    {"company": "Brickanta", "page": "https://brickanta.com", "fact": "Product category", "value": "the agentic AI platform for construction", "match": "any", "terms": ["agentic AI platform for construction", "AI platform for construction"]},
+    {"company": "Brickanta", "page": "https://www.ycombinator.com/companies/brickanta", "fact": "YC batch", "value": "Fall 2025 (F25)", "match": "any", "terms": ["Fall 2025", "F25"]},
+    {"company": "Brickanta", "page": "https://www.ycombinator.com/companies/brickanta", "fact": "HQ city", "value": "Stockholm", "match": "any", "terms": ["Stockholm"]},
+
+    {"company": "Dataleap", "page": "https://dataleap.ai", "fact": "Tagline", "value": "The Agentic Operating System for Enterprises", "match": "any", "terms": ["Agentic Operating System for Enterprises", "Agentic Operating System"]},
+    {"company": "Dataleap", "page": "https://www.ycombinator.com/companies/dataleap", "fact": "Tagline", "value": "AI Employees for the Enterprise", "match": "any", "terms": ["AI Employees for the Enterprise", "AI Employees"]},
+    {"company": "Dataleap", "page": "https://www.ycombinator.com/companies/dataleap", "fact": "YC batch", "value": "Summer 2024", "match": "any", "terms": ["Summer 2024", "S24"]},
+    {"company": "Dataleap", "page": "https://www.ycombinator.com/companies/dataleap", "fact": "HQ", "value": "San Francisco", "match": "any", "terms": ["San Francisco"]},
+
+    {"company": "Manufact", "page": "https://manufact.com", "fact": "Product category", "value": "The MCP Cloud", "match": "any", "terms": ["The MCP Cloud", "MCP Cloud"]},
+    {"company": "Manufact", "page": "https://manufact.com", "fact": "Open-source SDK name", "value": "mcp-use (TypeScript and Python)", "match": "any", "terms": ["mcp-use"]},
+
+    {"company": "Arcade.dev", "page": "https://www.arcade.dev", "fact": "Product category", "value": "The actions runtime for enterprise AI agents", "match": "any", "terms": ["actions runtime for enterprise AI agents", "actions runtime"]},
+    {"company": "Arcade.dev", "page": "https://www.arcade.dev", "fact": "Auth positioning", "value": "Authentication runs against your IdP; authorization is delegated", "match": "any", "terms": ["IdP", "identity provider"]},
+    {"company": "Arcade.dev", "page": "https://www.arcade.dev/pricing", "fact": "Free tier exists", "value": "Yes, \"Free\"", "match": "any", "terms": ["Free"]},
+    {"company": "Arcade.dev", "page": "https://www.arcade.dev/pricing", "fact": "Paid tier names", "value": "Team, Enterprise", "match": "all", "terms": ["Team", "Enterprise"]},
+
+    {"company": "Notion", "page": "https://www.notion.com/pricing", "fact": "Free plan exists", "value": "Yes, \"Free\"", "match": "any", "terms": ["Free"]},
+    {"company": "Notion", "page": "https://www.notion.com/pricing", "fact": "Paid tier names", "value": "Plus, Business, Enterprise", "match": "all", "terms": ["Plus", "Business", "Enterprise"]},
+    {"company": "Notion", "page": "https://www.notion.com", "fact": "Named products beyond core", "value": "Notion AI, Agents, AI Meeting Notes, Enterprise Search, Notion Calendar", "match": "any", "terms": ["Notion AI", "AI Meeting Notes", "Enterprise Search", "Notion Calendar"]},
+
+    {"company": "Linear", "page": "https://linear.app/pricing", "fact": "Free plan exists", "value": "Yes, \"Free\"", "match": "any", "terms": ["Free"]},
+    {"company": "Linear", "page": "https://linear.app/pricing", "fact": "Paid tier names", "value": "Basic, Business, Enterprise", "match": "all", "terms": ["Basic", "Business", "Enterprise"]},
+    {"company": "Linear", "page": "https://linear.app", "fact": "Core concept names", "value": "Issues, Projects, Cycles, Initiatives", "match": "all", "terms": ["Issues", "Projects", "Cycles", "Initiatives"]},
+    {"company": "Linear", "page": "https://linear.app/about", "fact": "Founded year", "value": "2019", "match": "any", "terms": ["2019"]},
+    {"company": "Linear", "page": "https://linear.app/about", "fact": "Founder names", "value": "Karri Saarinen, Jori Lallo, Tuomas Artman", "match": "any", "terms": ["Karri Saarinen", "Jori Lallo", "Tuomas Artman"]}
+  ]
+}

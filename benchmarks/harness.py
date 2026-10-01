@@ -20,6 +20,7 @@ from config import MODEL
 from retrieval import (
     CreditMeter,
     FirecrawlProvider,
+    FirecrawlScrapeSearchProvider,
     HybridProvider,
     ResponseCache,
     TavilyProvider,
@@ -90,8 +91,10 @@ def build_provider(mode: str, meter: CreditMeter, use_cache: bool):
     cache = ResponseCache(enabled=use_cache)
     if mode == "tavily":
         return TavilyProvider(meter=meter, cache=cache)
-    if mode == "firecrawl":
+    if mode == "firecrawl_bare":
         return FirecrawlProvider(meter=meter, cache=cache)
+    if mode == "firecrawl_scrape":
+        return FirecrawlScrapeSearchProvider(meter=meter, cache=cache)
     if mode == "hybrid":
         return HybridProvider(meter=meter, cache=cache)
     raise ValueError(f"unknown mode: {mode!r}")

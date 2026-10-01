@@ -218,12 +218,18 @@ class TavilyProvider(_BaseProvider):
 
     name = "tavily"
 
-    def __init__(self, client=None, **kw):
+    def __init__(self, client=None, extract_depth: str = "basic", **kw):
         super().__init__(**kw)
         if client is None:
             from config import tavily_client
             client = tavily_client
         self.client = client
+        # "basic" is Tavily's default and what production has always used, so it
+        # stays the default here. "advanced" exists because comparing Firecrawl's
+        # full scrape against Tavily's cheaper tier would flatter Firecrawl; the
+        # benchmark runs it as a separate arm rather than quietly handicapping
+        # one side. advanced costs 2 credits per 5 URLs instead of 1.
+        self.extract_depth = extract_depth
 
     @retry(**RETRY_SETTINGS)
     def search(self, query: str, max_results: int = 5) -> list[RetrievedDoc]:
@@ -254,17 +260,23 @@ class TavilyProvider(_BaseProvider):
 
     @retry(**RETRY_SETTINGS)
     def fetch(self, url: str) -> RetrievedDoc:
-        cached = self._cached("fetch", url)
+        # The cache key only gains a suffix for non-default depths, so existing
+        # cached basic responses stay valid and the two depths cannot collide.
+        payload = url if self.extract_depth == "basic" else f"{url}|{self.extract_depth}"
+        cached = self._cached("fetch", payload)
         if cached is not None:
             return cached[0]
 
         self._wait_turn()
         started = time.monotonic()
-        response = self.client.extract(url)
+        extra = {} if self.extract_depth == "basic" else {"extract_depth": self.extract_depth}
+        response = self.client.extract(url, **extra)
         latency = int((time.monotonic() - started) * 1000)
 
         # Basic extract bills per 5 successful URLs; we send one per call.
-        self.meter.record(self.name, "fetch", 1.0, urls=1)
+        # Advanced bills double that.
+        self.meter.record(
+            self.name, "fetch", 1.0 if self.extract_depth == "basic" else 2.0, urls=1)
 
         results = response.get("results") or []
         if not results:
@@ -283,7 +295,7 @@ class TavilyProvider(_BaseProvider):
             if not doc.content:
                 doc.error = "Tavily returned empty content"
 
-        self.cache.put(self.name, "fetch", url, [doc])
+        self.cache.put(self.name, "fetch", payload, [doc])
         return doc
 
 
@@ -423,6 +435,68 @@ class FirecrawlProvider(_BaseProvider):
         return parsed
 
 
+class FirecrawlScrapeSearchProvider(FirecrawlProvider):
+    """Firecrawl search WITH scrape_options, which is how its docs intend it.
+
+    Bare `search` returns only short snippets (measured: median 162 chars
+    against Tavily's 1,144 on the same query). The agent learns little per
+    search, searches more, and exhausts its tool budget. Passing
+    scrape_options returns full page content per result instead.
+
+    The trade is cost: 2 credits for the search plus 1 per scraped result, so
+    5 at limit=3 rather than 2. Benchmarked separately from bare search so the
+    comparison reports a configuration difference rather than attributing a
+    configuration choice to the provider.
+    """
+
+    name = "firecrawl_scrape"
+    search_result_limit = 3
+
+    @retry(**RETRY_SETTINGS)
+    def search(self, query: str, max_results: int = 5) -> list[RetrievedDoc]:
+        limit = min(max_results, self.search_result_limit)
+        cached = self._cached("search_scrape", f"{query}|{limit}")
+        if cached is not None:
+            return cached
+
+        from firecrawl.v2.types import ScrapeOptions
+
+        self._wait_turn()
+        started = time.monotonic()
+        response = self.client.search(
+            query,
+            limit=limit,
+            scrape_options=ScrapeOptions(
+                formats=list(self.formats),
+                only_main_content=self.only_main_content,
+            ),
+            timeout=DEFAULT_TIMEOUT_S * 1000,
+        )
+        latency = int((time.monotonic() - started) * 1000)
+
+        web = self._field(response, "web", []) or []
+        # 2 credits per 10 results, plus 1 per result actually scraped.
+        self.meter.record(
+            self.name, "search", 2.0 * math.ceil(limit / 10) + float(len(web)))
+
+        docs = []
+        for r in web:
+            # Prefer scraped markdown; fall back to the snippet so a single
+            # failed scrape inside the batch degrades to bare-search quality
+            # rather than dropping the result entirely.
+            content = self._field(r, "markdown") or self._field(r, "description")
+            docs.append(RetrievedDoc(
+                url=self._field(r, "url"),
+                title=self._field(r, "title"),
+                content=content,
+                provider=self.name,
+                latency_ms=latency,
+            ))
+
+        self.cache.put(self.name, "search_scrape", f"{query}|{limit}", docs)
+        return docs
+
+
 class HybridProvider:
     """Tavily for discovery, Firecrawl for page content.
 
@@ -460,6 +534,7 @@ class HybridProvider:
 _PROVIDERS = {
     "tavily": TavilyProvider,
     "firecrawl": FirecrawlProvider,
+    "firecrawl_scrape": FirecrawlScrapeSearchProvider,
     "hybrid": HybridProvider,
 }
 

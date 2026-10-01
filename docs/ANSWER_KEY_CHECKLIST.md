@@ -1,20 +1,20 @@
 # Answer Key Verification Checklist
 
-Grouped by page so each URL is opened once. Tick, correct, or mark **ABSENT**.
+Grouped by page so each URL is opened once.
+
+**Status (1 Oct 2026):** Verified. Values were read from the official pages with a fetch independent of both Tavily and Firecrawl, then reviewed by Sravya.
+
+**Legend:**
+- `☑` = verified on the listed page, scored.
+- `✗` = ABSENT on the listed page, or not applicable. Not scored.
+- `⚑` = not yet confirmed. Excluded from scoring unless changed to `☑`.
 
 **Rules agreed:**
-- No `[PRIOR]` value enters the final key unverified. Confirm it or it is gone.
-- Anything not on the official page is **ABSENT**, never guessed.
-- ABSENT is a useful outcome, not a gap. A fact that isn't published can't
-  fairly test retrieval, and keeping it would penalise both providers equally
-  for free.
-
-**Provenance:** `[YOU]` = your brief · `[PRIOR]` = my prior knowledge, likely
-stale · `[BLANK]` = I don't know, fill from the page.
-
-**Scoring note:** each fact is scored against the page listed next to it. If a
-fact actually lives on a different page, move it or mark it — otherwise we'd
-be measuring our page choice rather than retrieval quality.
+- No `[PRIOR]` value enters the final key unverified.
+- Anything not on the official page is ABSENT, never guessed.
+- Each fact is scored only against the page listed above it.
+- Pricing absent is not scored; it is recorded as not_applicable.
+- Dataleap: each page is scored against its own wording.
 
 ---
 
@@ -25,208 +25,207 @@ be measuring our page choice rather than retrieval quality.
 
 **https://www.firecrawl.dev/pricing**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Free tier credits | 1,000 credits/month `[PRIOR]` | |
-| ☐ | Paid tier names | `[BLANK]` | |
+| ☑ | Free tier credits | 1,000 credits/month `[PRIOR]` | 1,000 credits / month |
+| ☑ | Paid tier names | `[BLANK]` | Hobby, Standard, Growth, Scale, Enterprise |
 
 **https://docs.firecrawl.dev/billing**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Scrape credit cost | 1 credit/page `[PRIOR]` | |
-| ☐ | Search credit cost | 2 credits / 10 results `[PRIOR]` | |
+| ☑ | Scrape credit cost | 1 credit/page `[PRIOR]` | 1 credit / page |
+| ☑ | Search credit cost | 2 credits / 10 results `[PRIOR]` | 2 credits / 10 results (plus scrape cost per scraped result) |
 
 **https://www.firecrawl.dev**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Endpoint/product names | Scrape, Crawl, Map, Search `[PRIOR]` | |
+| ☑ | Endpoint/product names | Scrape, Crawl, Map, Search `[PRIOR]` | Search, Scrape, Interact, Map, Crawl, Agent |
 
 ---
 
-## 2. Nango — https://www.nango.dev
+## 2. Nango: https://www.nango.dev
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Product category | Product integrations / unified API `[PRIOR]` | |
-| ☐ | Pre-built integrations count | `[BLANK]` headline number | |
-| ☐ | Funding line | `[BLANK]` | |
+| ☑ | Product category | Product integrations / unified API `[PRIOR]` | "Connect your product & agents to 1,000+ APIs" |
+| ☑ | Pre-built integrations count | `[BLANK]` headline number | 1,000+ APIs |
+| ✗ | Funding line | `[BLANK]` | ABSENT |
 
 **https://www.nango.dev/pricing**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Free tier exists | `[BLANK]` | |
-| ☐ | Paid tier names | `[BLANK]` | |
+| ☑ | Free tier exists | `[BLANK]` | Yes, "Free" |
+| ⚑ | Paid tier names | `[BLANK]` | Pay-as-you-go, Enterprise |
 
 ---
 
-## 3. Composio — https://composio.dev
+## 3. Composio: https://composio.dev
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Product category | Tool/auth infra for AI agents `[PRIOR]` | |
-| ☐ | Tools/integrations count | `[BLANK]` headline number | |
-| ☐ | Named framework integrations | `[BLANK]` | |
+| ☑ | Product category | Tool/auth infra for AI agents `[PRIOR]` | "Give your AI secure access to 1,500+ apps in minutes" |
+| ☑ | Tools/integrations count | `[BLANK]` headline number | 1,500+ apps |
+| ⚑ | Named framework integrations | `[BLANK]` | Claude Code, ChatGPT/Codex, Cursor, MCP |
 
 **https://composio.dev/pricing**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Free tier exists | `[BLANK]` | |
-| ☐ | Paid tier names | `[BLANK]` | |
+| ☑ | Free tier exists | `[BLANK]` | Yes, "Hobby" |
+| ☑ | Paid tier names | `[BLANK]` | Pro, Enterprise |
 
 ---
 
-## 4. Mobbin — https://mobbin.com
+## 4. Mobbin: https://mobbin.com
 
 > Expected JS-heavy. If a provider returns an empty shell here, that is a
 > genuine result, not a bug to work around.
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Product category | Design reference / UI pattern library `[PRIOR]` | |
-| ☐ | Screens or apps count | `[BLANK]` | |
-| ☐ | Platforms covered | `[BLANK]` | |
+| ☑ | Product category | Design reference / UI pattern library `[PRIOR]` | UI & UX design inspiration library |
+| ⚑ | Screens or apps count | `[BLANK]` | 621,500+ screens |
+| ⚑ | Platforms covered | `[BLANK]` | iOS, Web |
 
 **https://mobbin.com/pricing**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Free tier exists | `[BLANK]` | |
-| ☐ | Paid tier names/prices | `[BLANK]` | |
+| ⚑ | Free tier exists | `[BLANK]` | Not confirmed (page blocked the verification fetch) |
+| ⚑ | Paid tier names/prices | `[BLANK]` | Not confirmed (page blocked the verification fetch) |
 
 ---
 
-## 5. Brickanta — https://brickanta.com
+## 5. Brickanta: https://brickanta.com
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Product category | AI agents for construction `[YOU]` | |
-| ☐ | HQ city | Stockholm `[YOU]` | |
-| ☐ | Named product(s) | `[BLANK]` | |
-| ☐ | Pricing published | `[BLANK]` | |
+| ☑ | Product category | AI agents for construction `[YOU]` | "the agentic AI platform for construction" |
+| ✗ | HQ city | Stockholm `[YOU]` | ABSENT on homepage (moved to YC page below) |
+| ⚑ | Named product(s) | `[BLANK]` | Agents for bidding, procurement, compliance, quality assurance |
+| ✗ | Pricing published | `[BLANK]` | ABSENT, not_applicable |
 
 **https://www.ycombinator.com/companies/brickanta**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | YC batch | F25 `[YOU]` | |
+| ☑ | YC batch | F25 `[YOU]` | Fall 2025 (F25) |
+| ☑ | HQ city | Stockholm `[YOU]` | Stockholm |
 
 ---
 
-## 6. Dataleap — https://dataleap.ai
+## 6. Dataleap: https://dataleap.ai
 
-> ⚠️ **Conflict to resolve:** your brief says "agentic OS for enterprises";
-> the YC page says **"AI Employees for the Enterprise"**. The key must use the
-> official site's wording. Please settle this one first.
+> Resolved: each page is scored against its own wording.
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Product category / tagline | "AI Employees for the Enterprise" (YC page) vs "agentic OS" `[YOU]` | |
-| ☐ | Named product(s) | `[BLANK]` | |
-| ☐ | Pricing published | `[BLANK]` | |
+| ☑ | Product category / tagline | "agentic OS" `[YOU]` | "The Agentic Operating System for Enterprises" |
+| ✗ | Named product(s) | `[BLANK]` | ABSENT |
+| ✗ | Pricing published | `[BLANK]` | ABSENT, not_applicable |
 
 **https://www.ycombinator.com/companies/dataleap**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | YC batch | Summer 2024 (confirmed on YC page) | |
-| ☐ | HQ | San Francisco (confirmed on YC page) | |
+| ☑ | Tagline | "AI Employees for the Enterprise" | "AI Employees for the Enterprise" |
+| ☑ | YC batch | Summer 2024 | Summer 2024 |
+| ☑ | HQ | San Francisco | San Francisco |
 
 ---
 
-## 7. Manufact — https://manufact.com
+## 7. Manufact: https://manufact.com
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Product category | MCP infrastructure `[YOU]` | |
-| ☐ | Open-source SDK name | `mcp-use` `[YOU]` | |
-| ☐ | Pricing published | `[BLANK]` | |
-| ☐ | HQ location | `[BLANK]` | |
+| ☑ | Product category | MCP infrastructure `[YOU]` | "The MCP Cloud" |
+| ☑ | Open-source SDK name | `mcp-use` `[YOU]` | mcp-use (TypeScript and Python) |
+| ⚑ | Pricing published | `[BLANK]` | Yes: Free, Hobby, Startup, Enterprise |
+| ✗ | HQ location | `[BLANK]` | ABSENT |
 
 **https://www.ycombinator.com/companies/manufact**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | YC batch | S25 `[YOU]` | |
+| ⚑ | YC batch | S25 `[YOU]` | Not confirmed (page did not load in the verification fetch) |
 
 ---
 
-## 8. Arcade.dev — https://www.arcade.dev
+## 8. Arcade.dev: https://www.arcade.dev
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Product category | Tool-calling / auth infra for AI agents `[PRIOR]` | |
-| ☐ | Auth/OAuth positioning | `[BLANK]` | |
-| ☐ | Funding line | `[BLANK]` | |
+| ☑ | Product category | Tool-calling / auth infra for AI agents `[PRIOR]` | "The actions runtime for enterprise AI agents" |
+| ☑ | Auth/OAuth positioning | `[BLANK]` | Authentication runs against your IdP; authorization is delegated |
+| ✗ | Funding line | `[BLANK]` | ABSENT |
 
 **https://www.arcade.dev/pricing**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Free tier exists | `[BLANK]` | |
-| ☐ | Paid tier names | `[BLANK]` | |
+| ☑ | Free tier exists | `[BLANK]` | Yes, "Free" |
+| ☑ | Paid tier names | `[BLANK]` | Team, Enterprise |
 
 ---
 
-## 9. Notion — https://www.notion.com/pricing
+## 9. Notion: https://www.notion.com/pricing
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Free plan exists | Yes `[PRIOR]` | |
-| ☐ | Paid tier names | Plus, Business, Enterprise `[PRIOR]` — **likely stale** | |
+| ☑ | Free plan exists | Yes `[PRIOR]` | Yes, "Free" |
+| ☑ | Paid tier names | Plus, Business, Enterprise `[PRIOR]` | Plus, Business, Enterprise |
 
 **https://www.notion.com**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Named products beyond core | Notion AI, Notion Calendar, Notion Mail `[PRIOR]` | |
+| ☑ | Named products beyond core | Notion AI, Notion Calendar, Notion Mail `[PRIOR]` | Notion AI, Agents, AI Meeting Notes, Enterprise Search, Notion Calendar (Notion Mail not shown) |
 
 **https://www.notion.com/about**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Founded year | 2013 `[PRIOR]` | |
-| ☐ | Founder name | Ivan Zhao `[PRIOR]` | |
+| ✗ | Founded year | 2013 `[PRIOR]` | ABSENT on this page |
+| ✗ | Founder name | Ivan Zhao `[PRIOR]` | ABSENT on this page |
 
 ---
 
-## 10. Linear — https://linear.app/pricing
+## 10. Linear: https://linear.app/pricing
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Free plan exists | Yes `[PRIOR]` | |
-| ☐ | Paid tier names | Basic, Business, Enterprise `[PRIOR]` — **verify, these change** | |
+| ☑ | Free plan exists | Yes `[PRIOR]` | Yes, "Free" |
+| ☑ | Paid tier names | Basic, Business, Enterprise `[PRIOR]` | Basic, Business, Enterprise |
 
 **https://linear.app**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Core concept names | Issues, Projects, Cycles, Initiatives `[PRIOR]` | |
+| ☑ | Core concept names | Issues, Projects, Cycles, Initiatives `[PRIOR]` | Issues, Projects, Cycles, Initiatives |
 
 **https://linear.app/about**
 
-| ☐ | Fact | Candidate | Verified value / ABSENT |
+| ✓ | Fact | Candidate | Verified value / ABSENT |
 |---|---|---|---|
-| ☐ | Founded year | 2019 `[PRIOR]` | |
-| ☐ | Founder name | Karri Saarinen `[PRIOR]` | |
+| ☑ | Founded year | 2019 `[PRIOR]` | 2019 |
+| ☑ | Founder name | Karri Saarinen `[PRIOR]` | Karri Saarinen, Jori Lallo, Tuomas Artman |
 
 ---
 
 ## Totals
 
-44 fact slots across 10 companies: 17 `[PRIOR]` (must be confirmed or
-dropped), 7 `[YOU]`, 20 `[BLANK]`.
+| Status | Count |
+|---|---|
+| ☑ scored | 34 |
+| ⚑ excluded until confirmed | 9 |
+| ✗ absent / not_applicable | 9 |
 
-Facts surviving verification become the key. A company ending with very few
-confirmed facts is not a problem — it just contributes less to the key-fact
-metric, and that is more honest than padding it.
+Facts marked ☑ form the key. Rows still marked ⚑ are excluded. If you confirm
+one in the browser, change ⚑ to ☑ before the run.
 
-## One decision for you
+## Decision
 
-If a company publishes **no pricing at all**, do we score "pricing absent" as a
-fact in itself? I'd say **no** — absence of a page can't distinguish a good
-scraper from a bad one, since neither will find it. Recommend dropping those
-slots rather than scoring them. Say if you disagree.
+Pricing absent: not scored. Recorded as not_applicable.

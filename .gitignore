@@ -11,4 +11,9 @@ streamlit_out.log
 streamlit_err.log
 
 # Personal interview/job-prep material — deliberately not public.
-docs/
+# docs/ is public project documentation; prep/ is not.
+prep/
+
+# Cached provider responses and raw benchmark output. Summaries under
+# benchmarks/results/ ARE committed; the raw cache is not.
+benchmarks/cache/

@@ -380,17 +380,28 @@ def refetch_failed(attempts: int = 4) -> None:
     rescore()
 
 
-def ablation_main_content(sample: int = 3) -> None:
-    """only_main_content on vs off, on a few pages.
+def ablation_main_content(sample: int = 3, pages: list[str] | None = None) -> None:
+    """only_main_content on vs off.
 
     The setting materially changes the boilerplate metric, so its effect is
     measured rather than asserted.
+
+    Scored facts are recorded per page as well as boilerplate. Measuring only
+    boilerplate would record the setting's benefit and not its cost: filtering
+    removes navigation, and on notion.com the navigation is where the product
+    names actually are. Both sides have to be in the same row or the trade-off
+    cannot be stated honestly.
     """
     out = RESULTS / "raw_ablation.jsonl"
     done = {(r["url"], r["only_main_content"]) for r in read_jsonl(out)}
 
     key = load_key()
-    pages = sorted({f["page"] for f in key["facts"]})[:sample]
+    facts_by_page = defaultdict(list)
+    for fact in key["facts"]:
+        facts_by_page[fact["page"]].append(fact)
+
+    if pages is None:
+        pages = sorted(facts_by_page)[:sample]
     meter = CreditMeter()
 
     for url in pages:
@@ -402,6 +413,10 @@ def ablation_main_content(sample: int = 3) -> None:
             provider.only_main_content = flag
             print(f"[ablation] {url} only_main_content={flag}", flush=True)
             doc = provider.fetch(url)
+            save_content(f"ablation_main{flag}", 1, url, doc.content)
+            facts = facts_by_page[url]
+            found = [f for f in facts if doc.ok and fact_present(f, doc.content)]
+            missed = [f for f in facts if f not in found]
             append_jsonl(out, {
                 "experiment": "ablation",
                 "url": url,
@@ -410,6 +425,10 @@ def ablation_main_content(sample: int = 3) -> None:
                 "content_chars": len(doc.content),
                 "boilerplate_share": boilerplate_share(doc.content),
                 "latency_ms": doc.latency_ms,
+                "facts_total": len(facts),
+                "facts_found": len(found),
+                "facts_found_names": [f["fact"] for f in found],
+                "facts_missed_names": [f["fact"] for f in missed],
             })
 
     print(f"\nAblation credits: {meter.snapshot()}")
@@ -646,7 +665,7 @@ def build_report() -> None:
 
     (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     _write_csv(a_rows, b_rows)
-    _write_markdown(summary, a_rows, b_rows)
+    _write_markdown(summary, a_rows, b_rows, abl_rows)
     print(f"wrote {RESULTS}/summary.json, summary.md, retrieval.csv, endtoend.csv")
 
 
@@ -681,7 +700,8 @@ def _fmt(value, pct=False, digits=2):
     return str(value)
 
 
-def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict]) -> None:
+def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict],
+                    abl_rows: list[dict]) -> None:
     lines = [
         "# Tavily vs Firecrawl — benchmark results",
         "",
@@ -757,6 +777,36 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict]) -> No
                 f"| {_fmt(s['content_chars_median'], digits=0)} "
                 f"| {_fmt(s['boilerplate_share_median'], pct=True)} |")
 
+        # Per page as well as aggregated. The aggregate shows only that
+        # filtering cuts boilerplate; it hides that on one page the filtering
+        # removed a scored fact. Both directions belong in the report.
+        per_page = defaultdict(dict)
+        for row in abl_rows:
+            per_page[row["url"]][row["only_main_content"]] = row
+        caption = ("Per page, with the scored facts each setting retrieves. "
+                   "Filtering is free on most pages and expensive on one: it "
+                   "costs no facts on three of these four while cutting "
+                   "boilerplate, and on notion.com it removes the navigation "
+                   "where the product names are.")
+        if any("facts_total" not in r for r in abl_rows):
+            caption += (" Rows marked not scored predate fact scoring in the "
+                        "ablation and were not re-fetched.")
+        lines += ["", caption, "",
+                  "| page | setting | chars | boilerplate | facts |",
+                  "|---|---|---|---|---|"]
+        for url in sorted(per_page):
+            for flag in (True, False):
+                row = per_page[url].get(flag)
+                if not row:
+                    continue
+                if row.get("facts_total"):
+                    facts = f"{row['facts_found']}/{row['facts_total']}"
+                else:
+                    facts = "not scored"
+                lines.append(
+                    f"| {url} | `{flag}` | {row['content_chars']:,} "
+                    f"| {_fmt(row['boilerplate_share'], pct=True)} | {facts} |")
+
     lines += [
         "",
         "## Limitations",
@@ -830,7 +880,14 @@ def main() -> None:
                         help="recompute experiment A facts from saved content")
     parser.add_argument("--refetch-failed", action="store_true",
                         help="re-fetch experiment A rows that errored, then re-score")
+    parser.add_argument("--ablation-pages", nargs="+", metavar="URL",
+                        help="run the only_main_content ablation on these pages only")
     args = parser.parse_args()
+
+    if args.ablation_pages:
+        ablation_main_content(pages=args.ablation_pages)
+        build_report()
+        return
 
     if args.refetch_failed:
         refetch_failed()

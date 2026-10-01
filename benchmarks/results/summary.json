@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-01T15:26:49.165263+00:00",
+  "generated_at": "2026-10-01T15:42:04.743664+00:00",
   "model": "gemini-flash-lite-latest",
   "answer_key": {
     "path": "benchmarks\\answer_key.json",
@@ -125,14 +125,14 @@
   },
   "ablation": {
     "only_main_content=True": {
-      "pages": 3,
-      "content_chars_median": 18837,
-      "boilerplate_share_median": 0.09631728045325778
+      "pages": 4,
+      "content_chars_median": 14256.5,
+      "boilerplate_share_median": 0.10718641800440667
     },
     "only_main_content=False": {
-      "pages": 3,
-      "content_chars_median": 32267,
-      "boilerplate_share_median": 0.17708333333333334
+      "pages": 4,
+      "content_chars_median": 24141.5,
+      "boilerplate_share_median": 0.1842863475177305
     }
   }
 }

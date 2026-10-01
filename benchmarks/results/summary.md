@@ -1,6 +1,6 @@
 # Tavily vs Firecrawl — benchmark results
 
-Generated 2026-10-01T15:26:49.165263+00:00
+Generated 2026-10-01T15:42:04.743664+00:00
 Model held constant across all modes: `gemini-flash-lite-latest`
 Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`)
 
@@ -43,8 +43,21 @@ Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`
 
 | setting | pages | content chars | boilerplate |
 |---|---|---|---|
-| only_main_content=True | 3 | 18837 | 10% |
-| only_main_content=False | 3 | 32267 | 18% |
+| only_main_content=True | 4 | 14256 | 11% |
+| only_main_content=False | 4 | 24142 | 18% |
+
+Per page, with the scored facts each setting retrieves. Filtering is free on most pages and expensive on one: it costs no facts on three of these four while cutting boilerplate, and on notion.com it removes the navigation where the product names are.
+
+| page | setting | chars | boilerplate | facts |
+|---|---|---|---|---|
+| https://brickanta.com | `True` | 8,970 | 12% | 1/1 |
+| https://brickanta.com | `False` | 16,016 | 19% | 1/1 |
+| https://composio.dev | `True` | 24,460 | 10% | 2/2 |
+| https://composio.dev | `False` | 37,240 | 16% | 2/2 |
+| https://composio.dev/pricing | `True` | 18,837 | 4% | 2/2 |
+| https://composio.dev/pricing | `False` | 32,267 | 18% | 2/2 |
+| https://www.notion.com | `True` | 9,676 | 13% | 0/1 |
+| https://www.notion.com | `False` | 14,449 | 45% | 1/1 |
 
 ## Limitations
 

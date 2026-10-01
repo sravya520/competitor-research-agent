@@ -214,14 +214,16 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False,
 
 
 def _firecrawl_computed_credits(meter: CreditMeter) -> float:
-    """Credits our meter attributes to Firecrawl specifically."""
-    total = 0.0
-    for key, count in meter.calls.items():
-        provider, _, operation = key.partition(".")
-        if provider != "firecrawl":
-            continue
-        total += 2.0 * count if operation == "search" else 1.0 * count
-    return total
+    """Credits our meter attributes to Firecrawl, across its provider variants.
+
+    Reads the meter's recorded credits rather than re-deriving them from call
+    counts. The earlier version matched the provider name exactly and applied
+    its own copy of the pricing rules, so firecrawl_scrape — whose provider
+    name is "firecrawl_scrape" — contributed 0, and the cross-check then
+    reported the entire spend as a discrepancy instead of validating anything.
+    """
+    return sum(credits for provider, credits in meter.credits_by_provider.items()
+               if provider.startswith("firecrawl"))
 
 
 def _extract_remaining(usage: dict | None) -> float | None:

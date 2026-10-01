@@ -30,6 +30,65 @@ _progress_hook = print
 
 _provider = None
 
+# Benchmark fairness control, OFF by default.
+#
+# No character limit exists in production: Tavily snippets arrive at whatever
+# length Tavily sends (observed median 1,144, max 1,438) and extract returns
+# full pages uncapped. Enabling this in normal use would therefore change
+# behaviour, so it stays off unless a benchmark turns it on.
+#
+# It exists because providers return very different volumes of text, and
+# without a shared cap the comparison would partly measure verbosity rather
+# than retrieval quality.
+_truncation = {
+    "enabled": False,
+    "search_chars": 1500,   # just above the observed Tavily search maximum
+    "page_chars": 25000,
+}
+
+_truncation_stats = {
+    "search_results": 0, "search_truncated": 0,
+    "pages": 0, "pages_truncated": 0,
+}
+
+
+def set_truncation(enabled: bool, search_chars: int = 1500, page_chars: int = 25000) -> None:
+    """Enable the shared per-result character cap. Benchmarks only."""
+    _truncation.update(
+        enabled=enabled, search_chars=search_chars, page_chars=page_chars)
+
+
+def truncation_settings() -> dict:
+    """The active settings, recorded into benchmark result metadata."""
+    return dict(_truncation)
+
+
+def truncation_stats() -> dict:
+    """Counts plus the share truncated, per operation."""
+    stats = dict(_truncation_stats)
+    stats["search_truncated_share"] = (
+        stats["search_truncated"] / stats["search_results"]
+        if stats["search_results"] else None
+    )
+    stats["pages_truncated_share"] = (
+        stats["pages_truncated"] / stats["pages"] if stats["pages"] else None
+    )
+    return stats
+
+
+def reset_truncation_stats() -> None:
+    for key in _truncation_stats:
+        _truncation_stats[key] = 0
+
+
+def _cap(text: str, limit_key: str, total_key: str, truncated_key: str) -> str:
+    """Apply the shared cap and record whether it bit."""
+    _truncation_stats[total_key] += 1
+    if not _truncation["enabled"] or len(text) <= _truncation[limit_key]:
+        return text
+    _truncation_stats[truncated_key] += 1
+    return text[:_truncation[limit_key]]
+
 
 def active_provider():
     """The retrieval provider, built on first use.
@@ -129,9 +188,11 @@ def search_web(query: str) -> str:
             "Use extract_company_page on the company's own site to confirm.]"
             if looks_like_listicle(doc.url) else ""
         )
+        content = _cap(doc.content, "search_chars", "search_results", "search_truncated")
+
         context += f"Title: {doc.title}{tag}\n"
         context += f"URL: {doc.url}\n"
-        context += f"Content: {doc.content}\n\n"
+        context += f"Content: {content}\n\n"
 
     return context
 
@@ -150,4 +211,4 @@ def extract_company_page(url: str) -> str:
         return (f"Could not read the page at {url}. "
                 f"It may be blocked, private, or unavailable.")
 
-    return doc.content
+    return _cap(doc.content, "page_chars", "pages", "pages_truncated")

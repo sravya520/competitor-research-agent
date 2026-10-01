@@ -66,6 +66,12 @@ class RunResult:
     credits_theoretical_tavily_batched: float = 0.0
     provider_calls: dict = field(default_factory=dict)
 
+    # Recorded per run rather than assumed from the plan, so a result file is
+    # self-describing and a changed setting cannot be mistaken for a changed
+    # provider.
+    truncation_settings: dict = field(default_factory=dict)
+    truncation_stats: dict = field(default_factory=dict)
+
     # Firecrawl's own accounting, for cross-checking our computed meter.
     firecrawl_credits_before: dict | None = None
     firecrawl_credits_after: dict | None = None
@@ -104,8 +110,14 @@ def _total_calls(meter: CreditMeter) -> int:
     return sum(meter.calls.values())
 
 
-def run_once(mode: str, company: str, url: str = "", use_cache: bool = False) -> RunResult:
-    """One full pipeline run. Never raises: a crash is a result, not an abort."""
+def run_once(mode: str, company: str, url: str = "", use_cache: bool = False,
+             truncate: bool = True) -> RunResult:
+    """One full pipeline run. Never raises: a crash is a result, not an abort.
+
+    `truncate` applies the shared per-result character cap to every provider
+    equally. On for benchmarks so the comparison measures retrieval rather
+    than which provider returns more text; off in production.
+    """
     result = RunResult(
         mode=mode, company=company, url=url,
         started_at=datetime.now(timezone.utc).isoformat(),
@@ -116,6 +128,8 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False) ->
     fc = _firecrawl_half(provider)
 
     tools.reset_sources()
+    tools.reset_truncation_stats()
+    tools.set_truncation(truncate)
     tools.set_provider(provider)
 
     if fc is not None:
@@ -166,6 +180,8 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False) ->
 
     result.wall_clock_s = round(time.monotonic() - started, 2)
     result.sources_consulted = len(tools.sources_consulted())
+    result.truncation_settings = tools.truncation_settings()
+    result.truncation_stats = tools.truncation_stats()
 
     snapshot = meter.snapshot()
     result.credits_as_implemented = snapshot["as_implemented"]
@@ -190,6 +206,7 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False) ->
                 result.firecrawl_credits_delta - fc_computed, 2)
 
     tools.set_provider(None)
+    tools.set_truncation(False)  # never leave production behaviour altered
     return result
 
 

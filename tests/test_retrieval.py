@@ -268,6 +268,67 @@ class CreditAccounting(unittest.TestCase):
         self.assertEqual(provider.meter.as_implemented, 1.0)
 
 
+class Truncation(unittest.TestCase):
+    """The shared per-result cap used only for benchmark fairness."""
+
+    def setUp(self):
+        tools.reset_sources()
+        tools.reset_truncation_stats()
+
+    def tearDown(self):
+        tools.set_truncation(False)
+        tools.reset_truncation_stats()
+        tools.set_provider(None)
+        tools.reset_sources()
+
+    def test_off_by_default_leaves_content_untouched(self):
+        """Production behaviour must be unchanged when nobody enables this."""
+        long_text = "x" * 9000
+        tools.set_provider(TavilyProvider(client=make_tavily(search_results=[
+            {"title": "T", "url": "https://t.com", "content": long_text}]),
+            cache=NO_CACHE(), throttle=False))
+
+        self.assertIn(long_text, tools.search_web("q"))
+
+    def test_search_content_capped_when_enabled(self):
+        tools.set_truncation(True, search_chars=1500, page_chars=25000)
+        tools.set_provider(TavilyProvider(client=make_tavily(search_results=[
+            {"title": "T", "url": "https://t.com", "content": "x" * 9000}]),
+            cache=NO_CACHE(), throttle=False))
+
+        out = tools.search_web("q")
+        self.assertIn("x" * 1500, out)
+        self.assertNotIn("x" * 1501, out)
+
+    def test_page_content_capped_when_enabled(self):
+        tools.set_truncation(True, search_chars=1500, page_chars=25000)
+        tools.set_provider(TavilyProvider(
+            client=make_tavily(extract_results=[{"raw_content": "y" * 40000}]),
+            cache=NO_CACHE(), throttle=False))
+
+        self.assertEqual(len(tools.extract_company_page("https://t.com")), 25000)
+
+    def test_short_content_is_not_counted_as_truncated(self):
+        tools.set_truncation(True)
+        tools.set_provider(TavilyProvider(client=make_tavily(search_results=[
+            {"title": "A", "url": "https://a.com", "content": "short"},
+            {"title": "B", "url": "https://b.com", "content": "z" * 5000}]),
+            cache=NO_CACHE(), throttle=False))
+
+        tools.search_web("q")
+        stats = tools.truncation_stats()
+        self.assertEqual(stats["search_results"], 2)
+        self.assertEqual(stats["search_truncated"], 1)
+        self.assertEqual(stats["search_truncated_share"], 0.5)
+
+    def test_settings_are_reportable(self):
+        tools.set_truncation(True, search_chars=1500, page_chars=25000)
+        self.assertEqual(
+            tools.truncation_settings(),
+            {"enabled": True, "search_chars": 1500, "page_chars": 25000},
+        )
+
+
 class ProviderSelection(unittest.TestCase):
     def tearDown(self):
         os.environ.pop("RETRIEVAL_PROVIDER", None)

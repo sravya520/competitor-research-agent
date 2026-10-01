@@ -400,12 +400,27 @@ class FirecrawlProvider(_BaseProvider):
 
         Our counter applies the documented rule; this is ground truth. Any gap
         between them is itself worth reporting.
+
+        The SDK returns an object, not a dict, so attributes are read by name
+        and the raw repr is kept alongside. Stringifying the whole thing (an
+        earlier version of this) silently defeated the cross-check: the caller
+        found no numeric field and skipped the comparison without complaining.
         """
         try:
             usage = self.client.get_credit_usage()
-            return usage if isinstance(usage, dict) else {"raw": str(usage)}
         except Exception as exc:
             return {"error": f"{type(exc).__name__}: {exc}"}
+
+        if isinstance(usage, dict):
+            return usage
+
+        parsed = {
+            field: getattr(usage, field)
+            for field in ("remaining_credits", "plan_credits")
+            if isinstance(getattr(usage, field, None), (int, float))
+        }
+        parsed["raw"] = str(usage)
+        return parsed
 
 
 class HybridProvider:

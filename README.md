@@ -225,6 +225,53 @@ That split exists because this system does live web searches. The same input can
 
 Each run also reports three metrics, so a change can be judged by a number instead of a guess: `primary_source_ratio` (share of citations that aren't roundup/listicle content), `corroboration_rate` (share of competitors backed by 2+ independent source domains), and a count of precise-claim warnings (oddly specific stats resting on a single source).
 
+## Retrieval is pluggable, and both backends are benchmarked
+
+Retrieval sits behind a provider protocol (`retrieval.py`), so the fetcher is a
+swappable part rather than something welded into the tools. Tavily is the
+default and the deployed behaviour is unchanged; `RETRIEVAL_PROVIDER` selects
+`tavily`, `firecrawl`, `firecrawl_scrape` or `hybrid`.
+
+Adding a second backend is only interesting if you can say which one is better,
+so there is a benchmark rather than an opinion. It runs at two levels: a
+deterministic retrieval comparison with no LLM in the loop, and a full
+end-to-end comparison where the backend is the only variable.
+
+**Headline, from 20 pages fetched twice by each backend with no LLM involved:**
+
+| backend | success | latency p50 | median chars | boilerplate | fact recall |
+|---|---|---|---|---|---|
+| Tavily (basic extract) | 100% | 250ms | 11,735 | 6% | 82% (56/68) |
+| Firecrawl (`only_main_content=True`) | 100% | 1,390ms | 16,258 | 4% | **97%** (66/68) |
+
+Firecrawl found 97% of independently verified facts against Tavily's 82%, at
+about 5.6x the latency and about 5x the per-page credit cost. Facts come from an
+answer key read off each official page by a plain HTTP request that used neither
+vendor.
+
+The end-to-end runs produced a more transferable result: **the number of
+citations rejected by the fabrication check tracks how many sources the agent
+managed to consult**, with model, prompts and temperature held constant. The
+mode that consulted a median of 6 sources had 48 citations rejected; the mode
+that consulted 31 had 4. Starve an agent of sources and it starts citing pages
+it never retrieved, which looks like a hallucination problem but is a retrieval
+problem.
+
+Also measured, and worth knowing before you copy a config: Firecrawl's
+`only_main_content=True` cut boilerplate on every page tested and on one page
+removed a fact that lived in the site's navigation. Tavily's `advanced` extract
+depth cost double, returned byte-identical content on 19 of 20 pages, and
+returned `404 page not found` on the twentieth where `basic` succeeded.
+
+Full numbers, the cases where Firecrawl loses, the mistakes I made in the
+measurement itself, and the limitations that bound all of it:
+**[docs/firecrawl_vs_tavily.md](docs/firecrawl_vs_tavily.md)**.
+
+```bash
+python -m benchmarks.retrieval_compare --experiment all   # full benchmark
+python -m benchmarks.retrieval_compare --rescore          # re-score, no network
+```
+
 ## Project structure
 
 ```

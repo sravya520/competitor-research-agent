@@ -588,7 +588,16 @@ FIRECRAWL_RATES = {
 
 
 def _firecrawl_credits_from_calls(row: dict) -> float:
-    """What Firecrawl's published rates say a run should have cost."""
+    """What our accounting says a run spent with Firecrawl.
+
+    For the Firecrawl-only modes this is the meter's own figure, which charges
+    2 credits per search plus 1 per result actually returned. The flat rate
+    below is only a fallback for hybrid, whose rows mix both vendors and
+    predate per-provider credit tracking; it assumes 3 results per search and
+    so slightly over-charges a search that returned fewer.
+    """
+    if row.get("mode", "").startswith("firecrawl"):
+        return row.get("credits_as_implemented", 0.0)
     return sum(FIRECRAWL_RATES.get(key, 0.0) * count
                for key, count in (row.get("provider_calls") or {}).items())
 
@@ -789,7 +798,7 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict],
 
     lines += ["", "## Experiment B — end to end", "",
               "| mode | runs scored | excluded (LLM quota) | budget hit | completed "
-              "| kept (median) | verif. pass | fabrications | time p50 | credits |",
+              "| kept (median) | verif. pass | citations rejected | time p50 | credits |",
               "|---|---|---|---|---|---|---|---|---|---|"]
     for mode, s in summary["experiment_b"].items():
         if not s["runs"]:
@@ -809,7 +818,20 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict],
             f"| {_fmt(s['credits_as_implemented_total'], digits=1)} |"
         )
 
-    lines += ["", "### Credits, both ways", "",
+    lines += [
+        "",
+        "**Citations rejected** counts source URLs the fabrication check "
+        "refused: a deterministic test that every cited URL appears in the "
+        "ledger of pages our own code actually fetched. It is set membership, "
+        "not a judgement, so it rejects every citation that is not in the "
+        "ledger. In both entry points (`main.py`, `app.py`) the rejected "
+        "citations are stripped before the report is built and before "
+        "corroboration is checked, so 100% of them were caught and none "
+        "reached a final report. The check cannot detect a citation whose URL "
+        "*was* fetched but is described wrongly; corroboration and the "
+        "precise-claims check cover that separately.",
+        "",
+        "### Credits, both ways", "",
               "| mode | as implemented | with Tavily batching |", "|---|---|---|"]
     for mode, s in summary["experiment_b"].items():
         if not s["runs"]:
@@ -891,12 +913,39 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict],
         "`docs/ANSWER_KEY_CHANGES.md`. One fact was corrected from a paraphrase "
         "to the page's literal text; one proposed removal was rejected because "
         "the plain-HTTP check disproved the reason for it.",
+        "- **firecrawl_bare's result could not be fully reconciled with the "
+        "earlier single run.** The Phase 1 run on Linear exhausted all 9 "
+        "research tool calls and returned nothing; the final run on the same "
+        "company used 7 calls and kept 5. The failure was budget exhaustion, "
+        "not missing sources: the failed run consulted 36 sources against the "
+        "successful run's 25. Three candidate causes could not be separated "
+        "without a further run, which was out of scope: the per-result "
+        "character cap was off in Phase 1 and on afterwards, which shortens "
+        "context and can change tool-call behaviour; the margin is thin, with "
+        "one final run using 8 of 9 calls, and agent tool sequences are "
+        "non-deterministic; and the two runs were two days apart. The earlier "
+        "note that bare search returns uniformly short snippets does not hold "
+        "either: 16% of its search results on Linear and 40% on Notion "
+        "exceeded the 1,500-character cap. Read firecrawl_bare as 5 runs on 5 "
+        "companies, one run each, not as a settled result.",
         "- **Credit costs come from each vendor's published pricing, not from "
         "measured billing.** Tavily's extract endpoint reported "
         "`usage.credits: 0` on both basic and advanced depth, so its per-call "
         "cost here is the documented rate rather than an observed charge. "
         "Firecrawl's figures were cross-checked against its own "
-        "`get_credit_usage()` and the gap is reported per run.",
+        "`get_credit_usage()` and the gap is reported per run. On the "
+        "Firecrawl-only modes our accounting lands within about 2% of "
+        "Firecrawl's own: 630 computed against 619 billed for "
+        "firecrawl_scrape, 69 against 67 for firecrawl_bare. Hybrid's 40 "
+        "computed against 58 billed is a real under-count: its 40 page "
+        "scrapes averaged 1.45 credits each rather than the base 1, so some "
+        "pages bill above the base rate. The documented base rate is "
+        "therefore a floor, not a prediction, and a plan sized on it will "
+        "under-budget for sites that need costlier scraping. The worst single "
+        "run shows a 29-credit gap; it ran while another of our own processes "
+        "was also calling Firecrawl, and the before/after reading is "
+        "account-wide so it cannot isolate one process. The other 17 runs fall "
+        "between -7 and 0, as do all 10 runs executed with no concurrent use.",
         "- **We scrape firecrawl.dev using Firecrawl.** The vendor is both a "
         "benchmark subject and the audience for this write-up.",
         "- **Runs killed by the LLM provider's daily quota are excluded**, and "

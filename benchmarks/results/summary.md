@@ -1,6 +1,6 @@
 # Tavily vs Firecrawl — benchmark results
 
-Generated 2026-10-03T07:05:05.983533+00:00
+Generated 2026-10-03T07:20:06.843520+00:00
 Model held constant across all modes: `gemini-flash-lite-latest`
 Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`)
 
@@ -14,12 +14,14 @@ Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`
 
 ## Experiment B — end to end
 
-| mode | runs scored | excluded (LLM quota) | budget hit | completed | kept (median) | verif. pass | fabrications | time p50 | credits |
+| mode | runs scored | excluded (LLM quota) | budget hit | completed | kept (median) | verif. pass | citations rejected | time p50 | credits |
 |---|---|---|---|---|---|---|---|---|---|
 | firecrawl_bare | 5 | 5 of 10 | 0% | 100% | 5 | 92% | 2 | 58.7s | 69.0 |
 | firecrawl_scrape | 18 | 12 of 30 | 50% | 50% | 1.0 | 96% | 48 | 47.9s | 630.0 |
 | hybrid | 20 | 0 of 20 | 5% | 95% | 5.0 | 87% | 6 | 33.6s | 156.0 |
 | tavily | 20 | 4 of 24 | 5% | 95% | 5.0 | 91% | 4 | 32.3s | 156.0 |
+
+**Citations rejected** counts source URLs the fabrication check refused: a deterministic test that every cited URL appears in the ledger of pages our own code actually fetched. It is set membership, not a judgement, so it rejects every citation that is not in the ledger. In both entry points (`main.py`, `app.py`) the rejected citations are stripped before the report is built and before corroboration is checked, so 100% of them were caught and none reached a final report. The check cannot detect a citation whose URL *was* fetched but is described wrongly; corroboration and the precise-claims check cover that separately.
 
 ### Credits, both ways
 
@@ -65,7 +67,8 @@ Per page, with the scored facts each setting retrieves. Filtering is free on mos
 - **The modes do not all cover the same companies.** firecrawl_scrape excludes Linear and firecrawl_bare runs on a 5-company subset, so their samples are smaller than tavily's and hybrid's. Linear was dropped to stay above the Firecrawl credit reserve after the first attempt's runs were lost to the LLM quota. That is a budget decision, not a data one, and it means per-mode figures are not strictly like-for-like across the same company set.
 - **The end-to-end runs span two days.** Gemini's free tier allows 500 requests a day, which is fewer than one full pass needs, so the modes were completed across two calendar days. Sites may have changed between them. Experiment A, which is the controlled retrieval comparison, ran within a single day.
 - **Answer key wording was corrected post-hoc**, before the final end-to-end run, and every change is logged with its evidence in `docs/ANSWER_KEY_CHANGES.md`. One fact was corrected from a paraphrase to the page's literal text; one proposed removal was rejected because the plain-HTTP check disproved the reason for it.
-- **Credit costs come from each vendor's published pricing, not from measured billing.** Tavily's extract endpoint reported `usage.credits: 0` on both basic and advanced depth, so its per-call cost here is the documented rate rather than an observed charge. Firecrawl's figures were cross-checked against its own `get_credit_usage()` and the gap is reported per run.
+- **firecrawl_bare's result could not be fully reconciled with the earlier single run.** The Phase 1 run on Linear exhausted all 9 research tool calls and returned nothing; the final run on the same company used 7 calls and kept 5. The failure was budget exhaustion, not missing sources: the failed run consulted 36 sources against the successful run's 25. Three candidate causes could not be separated without a further run, which was out of scope: the per-result character cap was off in Phase 1 and on afterwards, which shortens context and can change tool-call behaviour; the margin is thin, with one final run using 8 of 9 calls, and agent tool sequences are non-deterministic; and the two runs were two days apart. The earlier note that bare search returns uniformly short snippets does not hold either: 16% of its search results on Linear and 40% on Notion exceeded the 1,500-character cap. Read firecrawl_bare as 5 runs on 5 companies, one run each, not as a settled result.
+- **Credit costs come from each vendor's published pricing, not from measured billing.** Tavily's extract endpoint reported `usage.credits: 0` on both basic and advanced depth, so its per-call cost here is the documented rate rather than an observed charge. Firecrawl's figures were cross-checked against its own `get_credit_usage()` and the gap is reported per run. On the Firecrawl-only modes our accounting lands within about 2% of Firecrawl's own: 630 computed against 619 billed for firecrawl_scrape, 69 against 67 for firecrawl_bare. Hybrid's 40 computed against 58 billed is a real under-count: its 40 page scrapes averaged 1.45 credits each rather than the base 1, so some pages bill above the base rate. The documented base rate is therefore a floor, not a prediction, and a plan sized on it will under-budget for sites that need costlier scraping. The worst single run shows a 29-credit gap; it ran while another of our own processes was also calling Firecrawl, and the before/after reading is account-wide so it cannot isolate one process. The other 17 runs fall between -7 and 0, as do all 10 runs executed with no concurrent use.
 - **We scrape firecrawl.dev using Firecrawl.** The vendor is both a benchmark subject and the audience for this write-up.
 - **Runs killed by the LLM provider's daily quota are excluded**, and the count is shown per mode. Gemini's free tier allows 500 requests a day; the first attempt ran the modes in sequence, so exhaustion landed entirely on whichever modes were scheduled last. Modes are now interleaved. Any mode whose scored-run count is below its attempted count is a smaller sample than the others and should be read as such.
 - **Boilerplate share is a heuristic**, not a measurement: a regex for nav/cookie/footer phrases plus a link-density rule. It is reported as an indicator, not a precise figure.

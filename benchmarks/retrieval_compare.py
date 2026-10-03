@@ -575,6 +575,24 @@ def _safe_median(values):
     return stats.median(values) if values else None
 
 
+# Firecrawl's published rates, keyed by the meter's provider.operation label.
+# search_scrape is 2 credits for the search plus 1 per scraped result, and the
+# benchmark scrapes 3 results per search.
+FIRECRAWL_RATES = {
+    "firecrawl.search": 2.0,
+    "firecrawl.fetch": 1.0,
+    "firecrawl_scrape.search": 5.0,
+    "firecrawl_scrape.search_scrape": 5.0,
+    "firecrawl_scrape.fetch": 1.0,
+}
+
+
+def _firecrawl_credits_from_calls(row: dict) -> float:
+    """What Firecrawl's published rates say a run should have cost."""
+    return sum(FIRECRAWL_RATES.get(key, 0.0) * count
+               for key, count in (row.get("provider_calls") or {}).items())
+
+
 def build_report() -> None:
     RESULTS.mkdir(parents=True, exist_ok=True)
     a_rows = read_jsonl(RESULTS / "raw_retrieval.jsonl")
@@ -659,7 +677,14 @@ def build_report() -> None:
             for r in rows
             if r.get("truncation_stats", {}).get("pages_truncated_share") is not None
         ]
-        gaps = [r["credit_meter_gap"] for r in rows if r.get("credit_meter_gap") is not None]
+        # Recomputed here rather than read from the row. Rows recorded before
+        # the credit-attribution fix stored a gap that was the whole Firecrawl
+        # spend instead of a discrepancy, so trusting the stored value would
+        # publish a 67-credit "gap" that never existed. Deriving it from the
+        # call counts and the documented rates gives the same answer for every
+        # row regardless of when it was recorded.
+        gaps = [r["firecrawl_credits_delta"] - _firecrawl_credits_from_calls(r)
+                for r in rows if r.get("firecrawl_credits_delta") is not None]
 
         summary["experiment_b"][mode] = {
             "runs": len(rows),

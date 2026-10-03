@@ -1,6 +1,6 @@
 # Tavily vs Firecrawl — benchmark results
 
-Generated 2026-10-01T15:46:48.613057+00:00
+Generated 2026-10-03T07:05:05.983533+00:00
 Model held constant across all modes: `gemini-flash-lite-latest`
 Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`)
 
@@ -16,28 +16,28 @@ Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`
 
 | mode | runs scored | excluded (LLM quota) | budget hit | completed | kept (median) | verif. pass | fabrications | time p50 | credits |
 |---|---|---|---|---|---|---|---|---|---|
-| firecrawl_bare | 0 | 5 of 5 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| firecrawl_scrape | 8 | 12 of 20 | 38% | 62% | 4.5 | 96% | 26 | 49.9s | 273.0 |
+| firecrawl_bare | 5 | 5 of 10 | 0% | 100% | 5 | 92% | 2 | 58.7s | 69.0 |
+| firecrawl_scrape | 18 | 12 of 30 | 50% | 50% | 1.0 | 96% | 48 | 47.9s | 630.0 |
 | hybrid | 20 | 0 of 20 | 5% | 95% | 5.0 | 87% | 6 | 33.6s | 156.0 |
-| tavily | 16 | 4 of 20 | 0% | 100% | 4.5 | 89% | 4 | 33.1s | 122.0 |
+| tavily | 20 | 4 of 24 | 5% | 95% | 5.0 | 91% | 4 | 32.3s | 156.0 |
 
 ### Credits, both ways
 
 | mode | as implemented | with Tavily batching |
 |---|---|---|
-| firecrawl_bare | n/a | n/a |
-| firecrawl_scrape | 273.0 | 273.0 |
+| firecrawl_bare | 69.0 | 69.0 |
+| firecrawl_scrape | 630.0 | 630.0 |
 | hybrid | 156.0 | 156.0 |
-| tavily | 122.0 | 110.0 |
+| tavily | 156.0 | 142.0 |
 
 ### Truncation (1,500 search / 25,000 page)
 
 | mode | search results truncated | pages truncated |
 |---|---|---|
-| firecrawl_bare | n/a | n/a |
-| firecrawl_scrape | 90% | 22% |
+| firecrawl_bare | 15% | 25% |
+| firecrawl_scrape | 87% | 16% |
 | hybrid | 2% | 8% |
-| tavily | 2% | 11% |
+| tavily | 2% | 17% |
 
 ## Ablation — only_main_content
 

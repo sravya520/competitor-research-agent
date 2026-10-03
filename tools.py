@@ -3,11 +3,22 @@
 Source tracking lives here rather than in the model's output because it must
 be trustworthy: the model can misattribute which page supported which claim,
 but this list is written by our own code from the actual API responses.
+
+Retrieval itself is delegated to a provider (see retrieval.py), selected by
+RETRIEVAL_PROVIDER and defaulting to tavily. This module deliberately keeps
+ownership of the three things the rest of the pipeline depends on, so that
+swapping providers cannot change them:
+
+    - the exact string the model sees
+    - the [ROUNDUP/LISTICLE CONTENT] tag
+    - the source ledger behind the fabrication check
+
+Retries now live on the provider methods, at the network boundary, rather than
+wrapping these functions. Same number of attempts against the same failure,
+one layer closer to what actually fails.
 """
 
-from tenacity import retry
-
-from config import RETRY_SETTINGS, tavily_client
+from retrieval import RetrievedDoc, get_provider
 
 _sources_consulted: set[str] = set()
 
@@ -16,6 +27,85 @@ _sources_consulted: set[str] = set()
 # web page instead of a terminal, without either caller knowing about the
 # other.
 _progress_hook = print
+
+_provider = None
+
+# Benchmark fairness control, OFF by default.
+#
+# No character limit exists in production: Tavily snippets arrive at whatever
+# length Tavily sends (observed median 1,144, max 1,438) and extract returns
+# full pages uncapped. Enabling this in normal use would therefore change
+# behaviour, so it stays off unless a benchmark turns it on.
+#
+# It exists because providers return very different volumes of text, and
+# without a shared cap the comparison would partly measure verbosity rather
+# than retrieval quality.
+_truncation = {
+    "enabled": False,
+    "search_chars": 1500,   # just above the observed Tavily search maximum
+    "page_chars": 25000,
+}
+
+_truncation_stats = {
+    "search_results": 0, "search_truncated": 0,
+    "pages": 0, "pages_truncated": 0,
+}
+
+
+def set_truncation(enabled: bool, search_chars: int = 1500, page_chars: int = 25000) -> None:
+    """Enable the shared per-result character cap. Benchmarks only."""
+    _truncation.update(
+        enabled=enabled, search_chars=search_chars, page_chars=page_chars)
+
+
+def truncation_settings() -> dict:
+    """The active settings, recorded into benchmark result metadata."""
+    return dict(_truncation)
+
+
+def truncation_stats() -> dict:
+    """Counts plus the share truncated, per operation."""
+    stats = dict(_truncation_stats)
+    stats["search_truncated_share"] = (
+        stats["search_truncated"] / stats["search_results"]
+        if stats["search_results"] else None
+    )
+    stats["pages_truncated_share"] = (
+        stats["pages_truncated"] / stats["pages"] if stats["pages"] else None
+    )
+    return stats
+
+
+def reset_truncation_stats() -> None:
+    for key in _truncation_stats:
+        _truncation_stats[key] = 0
+
+
+def _cap(text: str, limit_key: str, total_key: str, truncated_key: str) -> str:
+    """Apply the shared cap and record whether it bit."""
+    _truncation_stats[total_key] += 1
+    if not _truncation["enabled"] or len(text) <= _truncation[limit_key]:
+        return text
+    _truncation_stats[truncated_key] += 1
+    return text[:_truncation[limit_key]]
+
+
+def active_provider():
+    """The retrieval provider, built on first use.
+
+    Lazy so that importing this module does not require API keys for whichever
+    provider happens to be selected — tests inject their own.
+    """
+    global _provider
+    if _provider is None:
+        _provider = get_provider()
+    return _provider
+
+
+def set_provider(provider) -> None:
+    """Override the provider. Used by tests and the benchmark harness."""
+    global _provider
+    _provider = provider
 
 
 def sources_consulted() -> list[str]:
@@ -53,7 +143,20 @@ def looks_like_listicle(url: str) -> bool:
     return any(marker in url.lower() for marker in _LISTICLE_MARKERS)
 
 
-@retry(**RETRY_SETTINGS)
+def _record(doc: RetrievedDoc) -> bool:
+    """Add a URL to the ledger, but only for a genuinely successful fetch.
+
+    This single rule is what keeps evaluate.check_sources_are_real meaningful.
+    The ledger is treated downstream as proof a URL was really retrieved, so
+    recording a failure here would let a model cite a page nobody ever read
+    and have it pass the fabrication check.
+    """
+    if doc.ok:
+        _sources_consulted.add(doc.url)
+        return True
+    return False
+
+
 def search_web(query: str) -> str:
     """Search the web for current, real information.
 
@@ -65,10 +168,17 @@ def search_web(query: str) -> str:
         query: The search query to look up.
     """
     _progress_hook(f"[search] {query}")
-    response = tavily_client.search(query, max_results=5)
+    docs = active_provider().search(query, max_results=5)
 
     context = ""
-    for result in response["results"]:
+    for doc in docs:
+        if not _record(doc):
+            # A result we could not retrieve is not shown to the model at all.
+            # Rendering it would put a URL in front of the model that is absent
+            # from the ledger, which the fabrication check would later flag as
+            # invented — blaming the model for our own failed fetch.
+            continue
+
         # Labelled in code, not left for the model to judge from prose
         # instructions alone — a deterministic tag is a smaller, more
         # reliable ask than "please recognise marketing content".
@@ -76,17 +186,17 @@ def search_web(query: str) -> str:
             " [ROUNDUP/LISTICLE CONTENT — useful for discovering company "
             "names, but do not treat its stats or claims as verified facts. "
             "Use extract_company_page on the company's own site to confirm.]"
-            if looks_like_listicle(result["url"]) else ""
+            if looks_like_listicle(doc.url) else ""
         )
-        context += f"Title: {result['title']}{tag}\n"
-        context += f"URL: {result['url']}\n"
-        context += f"Content: {result['content']}\n\n"
-        _sources_consulted.add(result["url"])
+        content = _cap(doc.content, "search_chars", "search_results", "search_truncated")
+
+        context += f"Title: {doc.title}{tag}\n"
+        context += f"URL: {doc.url}\n"
+        context += f"Content: {content}\n\n"
 
     return context
 
 
-@retry(**RETRY_SETTINGS)
 def extract_company_page(url: str) -> str:
     """Read the actual content of one specific page.
 
@@ -95,11 +205,10 @@ def extract_company_page(url: str) -> str:
     are different facts, and the caller needs to tell them apart.
     """
     _progress_hook(f"[extract] {url}")
-    response = tavily_client.extract(url)
+    doc = active_provider().fetch(url)
 
-    if not response["results"]:
+    if not _record(doc):
         return (f"Could not read the page at {url}. "
                 f"It may be blocked, private, or unavailable.")
 
-    _sources_consulted.add(url)
-    return response["results"][0].get("raw_content", "")
+    return _cap(doc.content, "page_chars", "pages", "pages_truncated")

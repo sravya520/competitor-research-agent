@@ -1,0 +1,153 @@
+{
+  "generated_at": "2026-10-03T08:08:02.567545+00:00",
+  "model": "gemini-flash-lite-latest",
+  "answer_key": {
+    "path": "benchmarks\\answer_key.json",
+    "scored_facts": 34
+  },
+  "experiment_a": {
+    "tavily": {
+      "attempts": 40,
+      "success_rate": 1.0,
+      "latency_ms_median": 250.0,
+      "latency_ms_p95": 1125,
+      "content_chars_median": 11735.0,
+      "boilerplate_share_median": 0.05853174603174603,
+      "facts_found": 56,
+      "facts_total": 68,
+      "key_fact_recall": 0.8235294117647058,
+      "failures": []
+    },
+    "firecrawl": {
+      "attempts": 40,
+      "success_rate": 1.0,
+      "latency_ms_median": 1390.5,
+      "latency_ms_p95": 1797,
+      "content_chars_median": 16257.5,
+      "boilerplate_share_median": 0.04465811965811966,
+      "facts_found": 66,
+      "facts_total": 68,
+      "key_fact_recall": 0.9705882352941176,
+      "failures": []
+    },
+    "tavily_advanced": {
+      "attempts": 40,
+      "success_rate": 0.95,
+      "latency_ms_median": 265.0,
+      "latency_ms_p95": 344,
+      "content_chars_median": 12286.0,
+      "boilerplate_share_median": 0.06944444444444445,
+      "facts_found": 52,
+      "facts_total": 68,
+      "key_fact_recall": 0.7647058823529411,
+      "failures": [
+        {
+          "url": "https://docs.firecrawl.dev/billing",
+          "error": "Tavily returned no extractable content"
+        },
+        {
+          "url": "https://docs.firecrawl.dev/billing",
+          "error": "Tavily returned no extractable content"
+        }
+      ]
+    }
+  },
+  "experiment_b": {
+    "firecrawl_bare": {
+      "runs": 5,
+      "runs_attempted": 10,
+      "excluded_llm_quota": 5,
+      "errors": 0,
+      "identity_confirmed_rate": 1.0,
+      "budget_hit_rate": 0.0,
+      "completed_rate": 1.0,
+      "competitors_proposed_median": 5,
+      "competitors_kept_median": 5,
+      "verification_pass_rate_mean": 0.9199999999999999,
+      "fabrication_failures_total": 2,
+      "fabricated_urls_dropped_total": 2,
+      "primary_source_ratio_mean": 0.8283333333333334,
+      "wall_clock_s_median": 58.67,
+      "credits_as_implemented_total": 69.0,
+      "credits_tavily_batched_total": 69.0,
+      "search_truncated_share_mean": 0.14533333333333334,
+      "pages_truncated_share_mean": 0.25,
+      "credit_meter_gap_max": -2.0
+    },
+    "firecrawl_scrape": {
+      "runs": 18,
+      "runs_attempted": 30,
+      "excluded_llm_quota": 12,
+      "errors": 0,
+      "identity_confirmed_rate": 1.0,
+      "budget_hit_rate": 0.5,
+      "completed_rate": 0.5,
+      "competitors_proposed_median": 1.0,
+      "competitors_kept_median": 1.0,
+      "verification_pass_rate_mean": 0.9555555555555555,
+      "fabrication_failures_total": 48,
+      "fabricated_urls_dropped_total": 48,
+      "primary_source_ratio_mean": 1.0,
+      "wall_clock_s_median": 47.894999999999996,
+      "credits_as_implemented_total": 630.0,
+      "credits_tavily_batched_total": 630.0,
+      "search_truncated_share_mean": 0.8726296579237757,
+      "pages_truncated_share_mean": 0.16203703703703703,
+      "credit_meter_gap_max": 29.0
+    },
+    "hybrid": {
+      "runs": 20,
+      "runs_attempted": 20,
+      "excluded_llm_quota": 0,
+      "errors": 0,
+      "identity_confirmed_rate": 1.0,
+      "budget_hit_rate": 0.05,
+      "completed_rate": 0.95,
+      "competitors_proposed_median": 5.0,
+      "competitors_kept_median": 5.0,
+      "verification_pass_rate_mean": 0.8666666666666666,
+      "fabrication_failures_total": 6,
+      "fabricated_urls_dropped_total": 6,
+      "primary_source_ratio_mean": 0.7786195286195288,
+      "wall_clock_s_median": 33.595,
+      "credits_as_implemented_total": 156.0,
+      "credits_tavily_batched_total": 156.0,
+      "search_truncated_share_mean": 0.02321428571428572,
+      "pages_truncated_share_mean": 0.08333333333333333,
+      "credit_meter_gap_max": 6.0
+    },
+    "tavily": {
+      "runs": 20,
+      "runs_attempted": 24,
+      "excluded_llm_quota": 4,
+      "errors": 0,
+      "identity_confirmed_rate": 1.0,
+      "budget_hit_rate": 0.05,
+      "completed_rate": 0.95,
+      "competitors_proposed_median": 5.0,
+      "competitors_kept_median": 5.0,
+      "verification_pass_rate_mean": 0.905263157894737,
+      "fabrication_failures_total": 4,
+      "fabricated_urls_dropped_total": 4,
+      "primary_source_ratio_mean": 0.7375322046374678,
+      "wall_clock_s_median": 32.295,
+      "credits_as_implemented_total": 156.0,
+      "credits_tavily_batched_total": 142.0,
+      "search_truncated_share_mean": 0.022285714285714287,
+      "pages_truncated_share_mean": 0.16666666666666666,
+      "credit_meter_gap_max": null
+    }
+  },
+  "ablation": {
+    "only_main_content=True": {
+      "pages": 4,
+      "content_chars_median": 14256.5,
+      "boilerplate_share_median": 0.10718641800440667
+    },
+    "only_main_content=False": {
+      "pages": 4,
+      "content_chars_median": 24141.5,
+      "boilerplate_share_median": 0.1842863475177305
+    }
+  }
+}

@@ -1,0 +1,117 @@
+[
+  {
+    "mode": "tavily",
+    "company": "Linear",
+    "url": "https://linear.app",
+    "model": "gemini-flash-lite-latest",
+    "started_at": "2026-10-01T09:45:58.491634+00:00",
+    "wall_clock_s": 30.91,
+    "identity_confirmed": true,
+    "identity_stopped_reason": null,
+    "research_returned_none": false,
+    "research_provider_calls": 6,
+    "hit_tool_budget": false,
+    "competitors_proposed": 5,
+    "competitors_kept": 5,
+    "verification_pass_rate": 1.0,
+    "fabrication_failures": 0,
+    "fabricated_urls_dropped": 0,
+    "generic_name_failures": 0,
+    "uncorroborated_count": 1,
+    "primary_source_ratio": 1.0,
+    "sources_consulted": 30,
+    "credits_as_implemented": 7.0,
+    "credits_theoretical_tavily_batched": 7.0,
+    "provider_calls": {
+      "tavily.fetch": 1,
+      "tavily.search": 6
+    },
+    "firecrawl_credits_before": null,
+    "firecrawl_credits_after": null,
+    "firecrawl_credits_delta": null,
+    "credit_meter_gap": null,
+    "error": null
+  },
+  {
+    "mode": "firecrawl",
+    "company": "Linear",
+    "url": "https://linear.app",
+    "model": "gemini-flash-lite-latest",
+    "started_at": "2026-10-01T09:46:29.391523+00:00",
+    "wall_clock_s": 67.03,
+    "identity_confirmed": true,
+    "identity_stopped_reason": null,
+    "research_returned_none": true,
+    "research_provider_calls": 9,
+    "hit_tool_budget": true,
+    "competitors_proposed": 0,
+    "competitors_kept": 0,
+    "verification_pass_rate": null,
+    "fabrication_failures": 0,
+    "fabricated_urls_dropped": 0,
+    "generic_name_failures": 0,
+    "uncorroborated_count": 0,
+    "primary_source_ratio": null,
+    "sources_consulted": 36,
+    "credits_as_implemented": 19.0,
+    "credits_theoretical_tavily_batched": 19.0,
+    "provider_calls": {
+      "firecrawl.fetch": 3,
+      "firecrawl.search": 8
+    },
+    "firecrawl_credits_before": {
+      "remaining_credits": 1022,
+      "plan_credits": 1000,
+      "raw": "remaining_credits=1022 plan_credits=1000 billing_period_start='2026-10-01T07:40:37.191Z' billing_period_end='2026-11-01T07:40:37.191Z'"
+    },
+    "firecrawl_credits_after": {
+      "remaining_credits": 1003,
+      "plan_credits": 1000,
+      "raw": "remaining_credits=1003 plan_credits=1000 billing_period_start='2026-10-01T07:40:37.191Z' billing_period_end='2026-11-01T07:40:37.191Z'"
+    },
+    "firecrawl_credits_delta": 19.0,
+    "credit_meter_gap": 0.0,
+    "error": null
+  },
+  {
+    "mode": "hybrid",
+    "company": "Linear",
+    "url": "https://linear.app",
+    "model": "gemini-flash-lite-latest",
+    "started_at": "2026-10-01T09:47:38.520027+00:00",
+    "wall_clock_s": 30.8,
+    "identity_confirmed": true,
+    "identity_stopped_reason": null,
+    "research_returned_none": false,
+    "research_provider_calls": 5,
+    "hit_tool_budget": false,
+    "competitors_proposed": 5,
+    "competitors_kept": 5,
+    "verification_pass_rate": 1.0,
+    "fabrication_failures": 0,
+    "fabricated_urls_dropped": 0,
+    "generic_name_failures": 0,
+    "uncorroborated_count": 0,
+    "primary_source_ratio": 0.8,
+    "sources_consulted": 30,
+    "credits_as_implemented": 7.0,
+    "credits_theoretical_tavily_batched": 7.0,
+    "provider_calls": {
+      "firecrawl.fetch": 1,
+      "tavily.search": 6
+    },
+    "firecrawl_credits_before": {
+      "remaining_credits": 1003,
+      "plan_credits": 1000,
+      "raw": "remaining_credits=1003 plan_credits=1000 billing_period_start='2026-10-01T07:40:37.191Z' billing_period_end='2026-11-01T07:40:37.191Z'"
+    },
+    "firecrawl_credits_after": {
+      "remaining_credits": 1002,
+      "plan_credits": 1000,
+      "raw": "remaining_credits=1002 plan_credits=1000 billing_period_start='2026-10-01T07:40:37.191Z' billing_period_end='2026-11-01T07:40:37.191Z'"
+    },
+    "firecrawl_credits_delta": 1.0,
+    "credit_meter_gap": 0.0,
+    "error": null
+  }
+]

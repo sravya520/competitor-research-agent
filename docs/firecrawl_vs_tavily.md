@@ -107,6 +107,25 @@ Across all scored runs of each mode:
 | tavily (20 runs, 10 companies) | 31 | 4 |
 | firecrawl_scrape (18 runs, 9 companies) | 6 | 48 |
 
+Cutting the same data by breadth rather than by vendor makes the pattern
+clearer. Pooling every mode and counting only runs that produced competitors, so
+that a run which produced nothing cannot score zero rejections by default:
+
+| sources consulted in the run | runs | citations rejected | per run |
+|---|---|---|---|
+| 10 or fewer | 9 | 48 | **5.33** |
+| more than 10 | 42 | 12 | **0.29** |
+
+That is an 18x difference in rejected citations, with the model, prompts and
+temperature identical throughout.
+
+**This shows association, not isolated causation.** All 9 of the low-source runs
+are `firecrawl_scrape` runs, which is the mode I configured with `limit=3`. Low
+breadth and that one configuration are therefore confounded in this data, and I
+cannot separate "few sources causes poor grounding" from "this configuration
+causes poor grounding" without a run that varies the limit, which I did not do.
+What the data supports is that the two move together.
+
 Starve an agent of sources and it starts citing things it did not retrieve. That
 is a retrieval problem presenting as a hallucination problem, and it is the most
 transferable thing I learned here.

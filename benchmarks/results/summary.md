@@ -1,6 +1,6 @@
 # Tavily vs Firecrawl — benchmark results
 
-Generated 2026-10-03T07:20:06.843520+00:00
+Generated 2026-10-03T08:08:02.567545+00:00
 Model held constant across all modes: `gemini-flash-lite-latest`
 Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`)
 

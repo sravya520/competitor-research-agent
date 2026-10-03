@@ -1,3 +1,5 @@
+Pre-verification draft kept for transparency. Contains unverified guesses. Not used for scoring. The scored key is docs/ANSWER_KEY_CHECKLIST.md; changes are in docs/ANSWER_KEY_CHANGES.md.
+
 # Answer Key — DRAFT, needs your browser verification
 
 **Status: not usable until verified.** No value below came from Tavily or

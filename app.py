@@ -198,7 +198,7 @@ elif st.session_state["stage"] == "review":
     if excluded:
         with st.expander(f"Automatically excluded ({len(excluded)})"):
             for name, reason in excluded:
-                st.write(f"**{name}** — {reason}")
+                st.write(f"**{name}**: {reason}")
 
     if not verified:
         st.error("No competitors passed verification. Try a more specific name or URL.")
@@ -209,7 +209,7 @@ elif st.session_state["stage"] == "review":
         keep_flags = []
         for i, competitor in enumerate(verified):
             keep = st.checkbox(
-                f"**{competitor.name}** — {competitor.positioning}",
+                f"**{competitor.name}**: {competitor.positioning}",
                 value=True,
                 key=f"keep_{i}",
             )

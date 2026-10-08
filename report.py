@@ -21,7 +21,7 @@ LIMITATIONS = [
     'specificity, then reviewed by a human, but neither check guarantees '
     'completeness.',
     'Each competitor\'s source count reflects DISTINCT DOMAINS, not distinct '
-    'pages — a company\'s own site cited twice still counts as one source. '
+    'pages: a company\'s own site cited twice still counts as one source. '
     '"Single source" does not mean a competitor is wrong, only that its '
     'profile has not yet been checked against independent evidence.',
 ]
@@ -45,12 +45,12 @@ def _sources_section(lines: list[str], competitor: Competitor) -> None:
     stat = find_uncorroborated_precise_claim(competitor)
 
     if stat:
-        note = (f" _(⚠ single source — the figure {stat!r} in this profile "
+        note = (f" _(⚠ single source: the figure {stat!r} in this profile "
                  f"is unverified, not an established fact)_")
     elif domains == 0:
         note = " _(no sources cited)_"
     elif domains == 1:
-        note = " _(single source — not independently corroborated)_"
+        note = " _(single source: not independently corroborated)_"
     else:
         note = f" _(corroborated across {domains} independent sources)_"
 
@@ -122,7 +122,7 @@ def build_report(
             "Candidates that were considered and rejected, and why:",
             "",
         ]
-        lines.extend(f"- **{name}** — {reason}" for name, reason in excluded)
+        lines.extend(f"- **{name}**: {reason}" for name, reason in excluded)
         lines.append("")
 
     lines += ["## All sources consulted", ""]

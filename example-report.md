@@ -107,7 +107,7 @@ Notion (developed by Notion Labs, Inc.) is a productivity, collaboration, and no
 - True enterprise-grade relational database capabilities with consumer-grade ease of use
 - Advanced data modeling, interface designer, and sync integrations
 
-**Sources:** _(⚠ single source — the figure '$20' in this profile is unverified, not an established fact)_
+**Sources:** _(⚠ single source: the figure '$20' in this profile is unverified, not an established fact)_
 
 - https://www.airtable.com/articles/notion-alternatives
 - https://airtable.com/pricing
@@ -241,4 +241,4 @@ Notion (developed by Notion Labs, Inc.) is a productivity, collaboration, and no
 - Competitor discovery depends on web search, which favours search-optimised content. "Best agencies" listicles are often published by a company that ranks itself highly; figures quoted in them are frequently unverifiable.
 - Details attributed to a single promotional source should be treated as claims, not established facts.
 - Competitor selection was checked automatically for scale and specificity, then reviewed by a human, but neither check guarantees completeness.
-- Each competitor's source count reflects DISTINCT DOMAINS, not distinct pages — a company's own site cited twice still counts as one source. "Single source" does not mean a competitor is wrong, only that its profile has not yet been checked against independent evidence.
+- Each competitor's source count reflects DISTINCT DOMAINS, not distinct pages: a company's own site cited twice still counts as one source. "Single source" does not mean a competitor is wrong, only that its profile has not yet been checked against independent evidence.

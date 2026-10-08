@@ -54,7 +54,7 @@ def review_competitors(
 
     print(f"\n{len(competitors)} competitor(s) passed verification:\n")
     for i, competitor in enumerate(competitors):
-        print(f"  [{i}] {competitor.name} — {competitor.positioning}")
+        print(f"  [{i}] {competitor.name}: {competitor.positioning}")
 
     answer = clean_input(
         "\nEnter the numbers of any you want REMOVED (comma-separated), "

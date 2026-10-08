@@ -1,10 +1,10 @@
-# Tavily vs Firecrawl — benchmark results
+# Tavily vs Firecrawl: benchmark results
 
-Generated 2026-10-03T08:08:02.567545+00:00
+Generated 2026-10-08T16:32:49.284236+00:00
 Model held constant across all modes: `gemini-flash-lite-latest`
 Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`)
 
-## Experiment A — retrieval level (no LLM)
+## Experiment A: retrieval level (no LLM)
 
 | fetcher | success | latency p50 | latency p95 | content chars | boilerplate | key-fact recall |
 |---|---|---|---|---|---|---|
@@ -12,7 +12,7 @@ Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`
 | firecrawl | 100% | 1390ms | 1797ms | 16258 | 4% | 97% (66/68) |
 | tavily_advanced | 95% | 265ms | 344ms | 12286 | 7% | 76% (52/68) |
 
-## Experiment B — end to end
+## Experiment B: end to end
 
 | mode | runs scored | excluded (LLM quota) | budget hit | completed | kept (median) | verif. pass | citations rejected | time p50 | credits |
 |---|---|---|---|---|---|---|---|---|---|
@@ -41,7 +41,7 @@ Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`
 | hybrid | 2% | 8% |
 | tavily | 2% | 17% |
 
-## Ablation — only_main_content
+## Ablation: only_main_content
 
 | setting | pages | content chars | boilerplate |
 |---|---|---|---|
@@ -70,6 +70,7 @@ Per page, with the scored facts each setting retrieves. Filtering is free on mos
 - **firecrawl_bare's result could not be fully reconciled with the earlier single run.** The Phase 1 run on Linear exhausted all 9 research tool calls and returned nothing; the final run on the same company used 7 calls and kept 5. The failure was budget exhaustion, not missing sources: the failed run consulted 36 sources against the successful run's 25. Three candidate causes could not be separated without a further run, which was out of scope: the per-result character cap was off in Phase 1 and on afterwards, which shortens context and can change tool-call behaviour; the margin is thin, with one final run using 8 of 9 calls, and agent tool sequences are non-deterministic; and the two runs were two days apart. The earlier note that bare search returns uniformly short snippets does not hold either: 16% of its search results on Linear and 40% on Notion exceeded the 1,500-character cap. Read firecrawl_bare as 5 runs on 5 companies, one run each, not as a settled result.
 - **Credit costs come from each vendor's published pricing, not from measured billing.** Tavily's extract endpoint reported `usage.credits: 0` on both basic and advanced depth, so its per-call cost here is the documented rate rather than an observed charge. Firecrawl's figures were cross-checked against its own `get_credit_usage()` and the gap is reported per run. On the Firecrawl-only modes our accounting lands within about 2% of Firecrawl's own: 630 computed against 619 billed for firecrawl_scrape, 69 against 67 for firecrawl_bare. Hybrid's 40 computed against 58 billed is a real under-count: its 40 page scrapes averaged 1.45 credits each rather than the base 1, so some pages bill above the base rate. The documented base rate is therefore a floor, not a prediction, and a plan sized on it will under-budget for sites that need costlier scraping. The worst single run shows a 29-credit gap; it ran while another of our own processes was also calling Firecrawl, and the before/after reading is account-wide so it cannot isolate one process. The other 17 runs fall between -7 and 0, as do all 10 runs executed with no concurrent use.
 - **We scrape firecrawl.dev using Firecrawl.** The vendor is both a benchmark subject and the audience for this write-up.
+- **`benchmarks/results/run.log` is kept unedited**; most of it is Gemini free-tier 429 messages from the quota exclusions described above.
 - **Runs killed by the LLM provider's daily quota are excluded**, and the count is shown per mode. Gemini's free tier allows 500 requests a day; the first attempt ran the modes in sequence, so exhaustion landed entirely on whichever modes were scheduled last. Modes are now interleaved. Any mode whose scored-run count is below its attempted count is a smaller sample than the others and should be read as such.
 - **Boilerplate share is a heuristic**, not a measurement: a regex for nav/cookie/footer phrases plus a link-density rule. It is reported as an indicator, not a precise figure.
 - **Firecrawl main-content filtering was ON** (`only_main_content=True`) for every Firecrawl fetch. Boilerplate numbers must be read as "with Firecrawl main-content filtering on". The ablation measures its effect.

@@ -182,7 +182,7 @@ def read_jsonl(path: Path) -> list[dict]:
 
 
 # --------------------------------------------------------------------------
-# Experiment A — retrieval level, deterministic
+# Experiment A: retrieval level, deterministic
 # --------------------------------------------------------------------------
 
 CONTENT_DIR = Path(__file__).resolve().parent / "cache" / "experiment_a_content"
@@ -443,7 +443,7 @@ def ablation_main_content(sample: int = 3, pages: list[str] | None = None) -> No
 
 
 # --------------------------------------------------------------------------
-# Experiment B — end to end
+# Experiment B: end to end
 # --------------------------------------------------------------------------
 
 def _llm_available() -> tuple[bool, str]:
@@ -773,14 +773,14 @@ def _fmt(value, pct=False, digits=2):
 def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict],
                     abl_rows: list[dict]) -> None:
     lines = [
-        "# Tavily vs Firecrawl — benchmark results",
+        "# Tavily vs Firecrawl: benchmark results",
         "",
         f"Generated {summary['generated_at']}",
         f"Model held constant across all modes: `{summary['model']}`",
         f"Answer key: {summary['answer_key']['scored_facts']} facts, "
         f"independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`)",
         "",
-        "## Experiment A — retrieval level (no LLM)",
+        "## Experiment A: retrieval level (no LLM)",
         "",
         "| fetcher | success | latency p50 | latency p95 | content chars | boilerplate | key-fact recall |",
         "|---|---|---|---|---|---|---|",
@@ -796,7 +796,7 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict],
             f"({s['facts_found']}/{s['facts_total']}) |"
         )
 
-    lines += ["", "## Experiment B — end to end", "",
+    lines += ["", "## Experiment B: end to end", "",
               "| mode | runs scored | excluded (LLM quota) | budget hit | completed "
               "| kept (median) | verif. pass | citations rejected | time p50 | credits |",
               "|---|---|---|---|---|---|---|---|---|---|"]
@@ -852,7 +852,7 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict],
             f"| {_fmt(s['pages_truncated_share_mean'], pct=True)} |")
 
     if summary["ablation"]:
-        lines += ["", "## Ablation — only_main_content", "",
+        lines += ["", "## Ablation: only_main_content", "",
                   "| setting | pages | content chars | boilerplate |", "|---|---|---|---|"]
         for setting, s in summary["ablation"].items():
             lines.append(
@@ -948,6 +948,9 @@ def _write_markdown(summary: dict, a_rows: list[dict], b_rows: list[dict],
         "between -7 and 0, as do all 10 runs executed with no concurrent use.",
         "- **We scrape firecrawl.dev using Firecrawl.** The vendor is both a "
         "benchmark subject and the audience for this write-up.",
+        "- **`benchmarks/results/run.log` is kept unedited**; most of it is "
+        "Gemini free-tier 429 messages from the quota exclusions described "
+        "above.",
         "- **Runs killed by the LLM provider's daily quota are excluded**, and "
         "the count is shown per mode. Gemini's free tier allows 500 requests a "
         "day; the first attempt ran the modes in sequence, so exhaustion landed "

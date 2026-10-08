@@ -285,6 +285,8 @@ These are the ones that would change how you read the numbers.
   decision. It is a configuration handicap, not a property of the provider.
 - **I scraped firecrawl.dev using Firecrawl.** The vendor is both a subject of
   the benchmark and an audience for this write-up.
+- **`benchmarks/results/run.log` is kept unedited**; most of it is Gemini
+  free-tier 429 messages from the quota exclusions described above.
 
 ## Reproducing it
 

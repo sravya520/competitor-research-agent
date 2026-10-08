@@ -15,7 +15,7 @@ is.
 ## How each fact was re-checked
 
 Any fact missed by **all** arms was re-checked against the official page's raw
-HTML using a plain HTTP GET — `benchmarks/verify_key_raw.py`, which uses
+HTML using a plain HTTP GET, `benchmarks/verify_key_raw.py`, which uses
 `httpx` directly and involves neither Tavily nor Firecrawl. Because `httpx` does
 not execute JavaScript, anything it returns is server-rendered by definition.
 
@@ -24,7 +24,7 @@ and one was kept.
 
 ---
 
-## 1. Brickanta / Product category — CORRECTED
+## 1. Brickanta / Product category: CORRECTED
 
 | | |
 |---|---|
@@ -35,7 +35,7 @@ and one was kept.
 | New terms | `["Agentic AI for Construction"]` |
 
 **Evidence.** The old wording does appear in the raw HTML, but only inside three
-metadata tags — `<meta name="description">`, `og:description` and
+metadata tags, `<meta name="description">`, `og:description` and
 `twitter:description`:
 
 ```html
@@ -65,7 +65,7 @@ any provider.
 
 ---
 
-## 2. Notion / Named products beyond core — KEPT, NOT DROPPED
+## 2. Notion / Named products beyond core: KEPT, NOT DROPPED
 
 | | |
 |---|---|

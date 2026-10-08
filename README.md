@@ -2,11 +2,11 @@
 
 An agentic AI tool that researches a startup's competitive landscape and produces a sourced Markdown report a founder can actually act on.
 
-Give it a company name — and optionally a URL — and it identifies the company, decides for itself what to search, finds comparable competitors, independently verifies them, asks you to approve the result, and writes a report that cites where every claim came from.
+Give it a company name, and optionally a URL, and it identifies the company, decides for itself what to search, finds comparable competitors, independently verifies them, asks you to approve the result, and writes a report that cites where every claim came from.
 
 **🔗 Live app: [competitor-research-agent.onrender.com](https://competitor-research-agent.onrender.com)** (Docker) · [also on Streamlit Cloud](https://competitor-research-agent-application.streamlit.app/)
 
-*Both are free tiers and sleep when idle — the first request after a quiet spell takes 30–60 seconds to wake.*
+*Both are free tiers and sleep when idle. The first request after a quiet spell takes 30–60 seconds to wake.*
 
 ![Demo: the agent researching a startup's competitors and producing a sourced report](assets/demo.gif)
 
@@ -20,7 +20,7 @@ You could ask a chatbot "who are Acme's competitors?" and get an answer in secon
 2. **You can't check it.** No sources, no way to tell which parts are solid and which are guesses.
 3. **It isn't reproducible.** Ask twice, get two different answers, with no record of what was considered or rejected.
 
-This tool is built around the assumption that **the model will sometimes be wrong**, and that the job of the surrounding system is to catch it, show its work, and stop rather than guess. What it sells is not intelligence — it's **traceability**.
+This tool is built around the assumption that **the model will sometimes be wrong**, and that the job of the surrounding system is to catch it, show its work, and stop rather than guess. What it sells is not intelligence, it's **traceability**.
 
 ---
 
@@ -73,8 +73,8 @@ GEMINI_API_KEY=your-key-here
 TAVILY_API_KEY=your-key-here
 ```
 
-- **Gemini API key** — [Google AI Studio](https://aistudio.google.com) (free tier, no card)
-- **Tavily API key** — [tavily.com](https://tavily.com) (1,000 searches/month free, no card)
+- **Gemini API key**: [Google AI Studio](https://aistudio.google.com) (free tier, no card)
+- **Tavily API key**: [tavily.com](https://tavily.com) (1,000 searches/month free, no card)
 
 > A Gemini *app* subscription is not the same thing as an API key. The key comes from AI Studio.
 
@@ -107,10 +107,10 @@ Automatically excluded by verification:
 
 4 competitor(s) passed verification:
 
-  [0] UX Cabin — Flexible, senior-level boutique design partner for lean startup teams.
-  [1] Semiflat Studio — Production-ready interface design specialists.
-  [2] Orbix Studio — Rapid concept-to-launch execution.
-  [3] Valtorian — Zero-handoff, direct-with-founders boutique studio.
+  [0] UX Cabin: Flexible, senior-level boutique design partner for lean startup teams.
+  [1] Semiflat Studio: Production-ready interface design specialists.
+  [2] Orbix Studio: Rapid concept-to-launch execution.
+  [3] Valtorian: Zero-handoff, direct-with-founders boutique studio.
 
 Enter the numbers of any you want REMOVED (comma-separated), or press Enter to keep all:
 
@@ -118,7 +118,7 @@ Report written to report-sprout-design.md
 4 competitor(s) included, 1 excluded.
 ```
 
-Passing a URL is optional but strongly recommended for small or common-named companies. Without one, the tool will refuse to proceed if it can't tell which company you mean — see below.
+Passing a URL is optional but strongly recommended for small or common-named companies. Without one, the tool will refuse to proceed if it can't tell which company you mean (see below).
 
 A full generated report is committed as [`example-report.md`](example-report.md).
 
@@ -128,7 +128,7 @@ A full generated report is committed as [`example-report.md`](example-report.md)
 streamlit run app.py
 ```
 
-Same pipeline, browser-based: a form for the company and URL, live progress while it searches, checkboxes to remove competitors during review, and a download button for the finished report. `app.py` is the only file that imports Streamlit — the pipeline itself (`pipeline.py`, `evaluate.py`, `report.py`, `tools.py`) has no idea a UI exists, which is what lets both entry points share it.
+Same pipeline, browser-based: a form for the company and URL, live progress while it searches, checkboxes to remove competitors during review, and a download button for the finished report. `app.py` is the only file that imports Streamlit. The pipeline itself (`pipeline.py`, `evaluate.py`, `report.py`, `tools.py`) has no idea a UI exists, which is what lets both entry points share it.
 
 **Live:** [Docker on Render](https://competitor-research-agent.onrender.com) · [Streamlit Cloud](https://competitor-research-agent-application.streamlit.app/)
 
@@ -147,11 +147,11 @@ docker run -p 8501:8501 --env-file .env competitor-research-agent
 
 On Render: **New → Web Service**, connect this repo, runtime auto-detects as Docker, add both API keys as environment variables. Three details in the `Dockerfile` matter more than they look:
 
-- **`--server.address=0.0.0.0`** — Streamlit binds `localhost` by default, which inside a container means *reachable only from within that container*. The app would start, report itself healthy, and refuse every external connection.
-- **`${PORT:-8501}`** — container hosts assign a port and expect the app to honour it. Render assigned 10000 on the first deploy; a hardcoded 8501 would have failed its health check.
-- **`exec` in the `CMD`** — makes Streamlit PID 1 so it receives stop signals directly, instead of a shell absorbing them and Streamlit being force-killed on every restart.
+- **`--server.address=0.0.0.0`**: Streamlit binds `localhost` by default, which inside a container means *reachable only from within that container*. The app would start, report itself healthy, and refuse every external connection.
+- **`${PORT:-8501}`**: container hosts assign a port and expect the app to honour it. Render assigned 10000 on the first deploy; a hardcoded 8501 would have failed its health check.
+- **`exec` in the `CMD`**: makes Streamlit PID 1 so it receives stop signals directly, instead of a shell absorbing them and Streamlit being force-killed on every restart.
 
-`.dockerignore` is not optional here. Docker does not read `.gitignore`, so a plain `COPY . .` bakes `.env` — real API keys — permanently into the image, readable by anyone who obtains it. Keys are injected at runtime instead (`--env-file` locally, dashboard variables on Render).
+`.dockerignore` is not optional here. Docker does not read `.gitignore`, so a plain `COPY . .` bakes `.env`, real API keys, permanently into the image, readable by anyone who obtains it. Keys are injected at runtime instead (`--env-file` locally, dashboard variables on Render).
 
 ### Streamlit Community Cloud
 
@@ -164,7 +164,7 @@ TAVILY_API_KEY = "your-key-here"
 
 ### Why the same code runs in three places
 
-Locally keys come from `.env`; on Streamlit Cloud from `st.secrets`; in a container from real environment variables. `app.py` bridges `st.secrets` into environment variables *before* importing the pipeline, so `config.py` — and the CLI, which has never heard of Streamlit — only ever reads `os.environ`. One code path, three sources.
+Locally keys come from `.env`; on Streamlit Cloud from `st.secrets`; in a container from real environment variables. `app.py` bridges `st.secrets` into environment variables *before* importing the pipeline, so `config.py`: and the CLI, which has never heard of Streamlit, only ever reads `os.environ`. One code path, three sources.
 
 ---
 
@@ -173,16 +173,16 @@ Locally keys come from `.env`; on Streamlit Cloud from `st.secrets`; in a contai
 Every safeguard here exists because of a specific observed failure, not because it sounded good in theory.
 
 **Identity is confirmed before research begins.**
-Asked about a two-person studio called "Sprout Design," the system repeatedly produced polished reports about *a different company with the same name* — a UK firm, an unrelated branding studio. Names are ambiguous; a URL is not. When a URL is provided, its page content is treated as authoritative and outranks anything search returns.
+Asked about a two-person studio called "Sprout Design," the system repeatedly produced polished reports about *a different company with the same name*. A UK firm, an unrelated branding studio. Names are ambiguous; a URL is not. When a URL is provided, its page content is treated as authoritative and outranks anything search returns.
 
 **When identity is ambiguous, it stops.**
 An earlier version asked the user "is this the company you meant?" and continued on a yes. That was unsafe: confirming a description that said *"no entity could be verified"* let the research step latch onto the wrong company and spend its whole budget there. Now, low confidence is a hard stop with an explanation. **Refusing to answer is a feature.**
 
 **Verification is a separate call with no shared history.**
-A model asked to re-check its own reasoning tends to agree with itself. The verifier sees the proposed competitors and the target company — but not the reasoning that produced them.
+A model asked to re-check its own reasoning tends to agree with itself. The verifier sees the proposed competitors and the target company, but not the reasoning that produced them.
 
 **The verifier knows the target's scale.**
-An early version passed only the company *name* to the verifier, then asked "is this comparable in scale?" — a question it had no way to answer. Eighty-person agencies sailed through as peers of a two-person studio. The fix: independence means withholding the *reasoning*, never the *subject*.
+An early version passed only the company *name* to the verifier, then asked "is this comparable in scale?", a question it had no way to answer. Eighty-person agencies sailed through as peers of a two-person studio. The fix: independence means withholding the *reasoning*, never the *subject*.
 
 **Verdicts pair by index, not by name.**
 Matching verdicts to competitors by string equality on model-generated names broke whenever the model abbreviated one ("Parallel" vs. "Parallel Design Studios"), producing a report that dropped a competitor and then included it anyway. Competitors are numbered; verdicts echo the number.
@@ -191,19 +191,19 @@ Matching verdicts to competitors by string equality on model-generated names bro
 The model attributes sources per competitor, which is useful but fallible. Separately, the tools record every URL actually fetched. The report contains both: best-effort attribution, and a list that can't be misremembered.
 
 **Fabricated citations are detected automatically, then removed.**
-Because the tools record every URL genuinely fetched, any URL the model cites that isn't in that record was invented. This check found a real case: the model was handed `.../best-mvp-agencies-for-early-stage-products` and cited `.../best-mvp-**design**-agencies-for-early-stage-products` — a plausible-looking link that would 404. No human reading the report would have caught it, sitting as it was among five genuine URLs. Detection alone isn't enough, so fabricated citations are stripped before the report is written: a broken link still looks like evidence.
+Because the tools record every URL genuinely fetched, any URL the model cites that isn't in that record was invented. This check found a real case: the model was handed `.../best-mvp-agencies-for-early-stage-products` and cited `.../best-mvp-**design**-agencies-for-early-stage-products`: a plausible-looking link that would 404. No human reading the report would have caught it, sitting as it was among five genuine URLs. Detection alone isn't enough, so fabricated citations are stripped before the report is written: a broken link still looks like evidence.
 
 **Every competitor is labelled by how corroborated it is, not just whether it has a source.**
-A competitor with one citation and a competitor checked against several independent pages looked identical in earlier versions of the report — both just had a "Sources" list. Now each one is counted by DISTINCT DOMAIN (two pages on the same site aren't independent confirmation of anything) and labelled plainly: corroborated across N sources, single-source and unconfirmed, or none cited at all. Nothing gets rejected for being single-sourced — a small real company legitimately may only have its own website — but nothing is presented with more confidence than the evidence actually supports either.
+A competitor with one citation and a competitor checked against several independent pages looked identical in earlier versions of the report. Both just had a "Sources" list. Now each one is counted by DISTINCT DOMAIN (two pages on the same site aren't independent confirmation of anything) and labelled plainly: corroborated across N sources, single-source and unconfirmed, or none cited at all. Nothing gets rejected for being single-sourced. A small real company legitimately may only have its own website, but nothing is presented with more confidence than the evidence actually supports either.
 
 **Retries are selective.**
-429, 5xx, and raw connection drops (`httpx.TransportError`) are retried, with exponential backoff. A 404 from a retired model name is never retried — it will fail identically forever, so retrying it just wastes quota. Retries cover the tool calls themselves (`search_web`, `extract_company_page`), not just the top-level model calls — a gap found by a live `RemoteProtocolError` during evaluation, in a tool call that had no retry protection at all.
+429, 5xx, and raw connection drops (`httpx.TransportError`) are retried, with exponential backoff. A 404 from a retired model name is never retried. It will fail identically forever, so retrying it just wastes quota. Retries cover the tool calls themselves (`search_web`, `extract_company_page`), not just the top-level model calls. A gap found by a live `RemoteProtocolError` during evaluation, in a tool call that had no retry protection at all.
 
 **Listicle content is labelled at the source, and the research step can verify past it.**
-"Best agencies for X" content isn't concentrated on a few spam domains — the same domain (a real competitor's own blog) can host both their legitimate site and a self-ranking roundup. So instead of blocking domains, `search_web` tags each result whose URL path matches roundup patterns (`/blog/best-`, `-alternatives`, `-vs-`, `/resources/`), and the research step was given a second tool — `extract_company_page`, previously only used for identity — with instructions to fetch a promising candidate's own site once a listicle names them, rather than trust the listicle's stats. A new metric, `primary_source_ratio`, tracks what fraction of citations rest on non-roundup sources.
+"Best agencies for X" content isn't concentrated on a few spam domains. The same domain (a real competitor's own blog) can host both their legitimate site and a self-ranking roundup. So instead of blocking domains, `search_web` tags each result whose URL path matches roundup patterns (`/blog/best-`, `-alternatives`, `-vs-`, `/resources/`), and the research step was given a second tool, `extract_company_page`, previously only used for identity, with instructions to fetch a promising candidate's own site once a listicle names them, rather than trust the listicle's stats. A new metric, `primary_source_ratio`, tracks what fraction of citations rest on non-roundup sources.
 
 **The report publishes what it rejected.**
-Most tools show only what they kept. This one lists every rejected candidate with the reason — automated *and* human — so a reader can audit the judgment, not just the conclusion.
+Most tools show only what they kept. This one lists every rejected candidate with the reason, automated *and* human, so a reader can audit the judgment, not just the conclusion.
 
 ---
 
@@ -214,14 +214,14 @@ python run_eval.py              # every case
 python run_eval.py Duolingo     # one case
 ```
 
-Regression cases live in `eval_cases.py`, and each one exists because the system once got it wrong — early runs returned global design giants as peers of a two-person studio, then CAD-drafting firms, then generic categories. Rather than defining the single "correct" competitor list for a company (which reasonable analysts would disagree about), each case asserts something narrower and checkable: *it must stop here*, or *it must not return these*.
+Regression cases live in `eval_cases.py`, and each one exists because the system once got it wrong: early runs returned global design giants as peers of a two-person studio, then CAD-drafting firms, then generic categories. Rather than defining the single "correct" competitor list for a company (which reasonable analysts would disagree about), each case asserts something narrower and checkable: *it must stop here*, or *it must not return these*.
 
 The cases split into two tiers, and the distinction matters:
 
-- **Gates** — stable assertions that should never break. No fabricated URLs, no generic categories, a well-known company returns real competitors.
-- **Observations** — behaviour that genuinely varies between runs, reported but never failing the suite.
+- **Gates**: stable assertions that should never break. No fabricated URLs, no generic categories, a well-known company returns real competitors.
+- **Observations**: behaviour that genuinely varies between runs, reported but never failing the suite.
 
-That split exists because this system does live web searches. The same input can legitimately produce different results on different days — one run finds no single match for an ambiguous name and stops, another finds a registered entity and proceeds. Asserting on that would be testing what search indexed this morning, not testing this code. **A test that flakes for unrelated reasons teaches you to ignore it**, and then you ignore it when it catches something real.
+That split exists because this system does live web searches. The same input can legitimately produce different results on different days. One run finds no single match for an ambiguous name and stops, another finds a registered entity and proceeds. Asserting on that would be testing what search indexed this morning, not testing this code. **A test that flakes for unrelated reasons teaches you to ignore it**, and then you ignore it when it catches something real.
 
 Each run also reports three metrics, so a change can be judged by a number instead of a guess: `primary_source_ratio` (share of citations that aren't roundup/listicle content), `corroboration_rate` (share of competitors backed by 2+ independent source domains), and a count of precise-claim warnings (oddly specific stats resting on a single source).
 
@@ -275,15 +275,15 @@ python -m benchmarks.retrieval_compare --rescore          # re-score, no network
 ## Project structure
 
 ```
-main.py        CLI orchestration and human review — reads as the workflow
-app.py         Streamlit UI for the same pipeline — the only file that
+main.py        CLI orchestration and human review: reads as the workflow
+app.py         Streamlit UI for the same pipeline: the only file that
                imports Streamlit; pipeline/evaluate/report/tools stay
                framework-agnostic so this and main.py can share them
 pipeline.py    The three LLM steps: identify, research, verify
 prompts.py     All prompt text, with comments on why each constraint exists
 tools.py       search_web / extract_company_page, and source tracking
 schemas.py     Pydantic models defining every structured output
-evaluate.py    Automatic consistency checks — fabricated URLs, generic
+evaluate.py    Automatic consistency checks: fabricated URLs, generic
                names, source corroboration, precise unsourced claims
 eval_cases.py  Regression cases, each one a bug that actually happened
 run_eval.py    Runs the cases and reports gates, observations, and metrics
@@ -299,10 +299,10 @@ Prompts live in their own file deliberately: in an LLM application, most iterati
 
 Stated plainly here and in every generated report:
 
-- **Source quality is improved but not solved.** Search results are still dominated by "best agencies for X" content by construction — that's what ranks for those queries. Labelling roundup content and giving the research step a way to verify candidates against their own site (see Design decisions) measurably raised the primary-source share in testing (roughly 85-90% on the reference cases, versus the earlier reports where nearly every citation traced to a listicle), but it is a mitigation, not a fix — the underlying bias in what the web publishes about small companies hasn't gone away.
+- **Source quality is improved but not solved.** Search results are still dominated by "best agencies for X" content by construction. That's what ranks for those queries. Labelling roundup content and giving the research step a way to verify candidates against their own site (see Design decisions) measurably raised the primary-source share in testing (roughly 85-90% on the reference cases, versus the earlier reports where nearly every citation traced to a listicle), but it is a mitigation, not a fix. The underlying bias in what the web publishes about small companies hasn't gone away.
 - **Scale comparison is a judgment call.** Verification catches obvious mismatches but not every borderline one.
 - **Coverage is not guaranteed.** The tool finds competitors that are findable; a strong competitor with no web presence will be missed.
-- **Small companies remain hard.** Without a URL, a company with a common name and thin web presence may be unidentifiable — by design, the tool stops rather than guessing.
+- **Small companies remain hard.** Without a URL, a company with a common name and thin web presence may be unidentifiable. By design, the tool stops rather than guessing.
 
 ---
 
@@ -318,4 +318,4 @@ Stated plainly here and in every generated report:
 
 Python · [Google Gemini API](https://ai.google.dev) (`google-genai`) · [Tavily](https://tavily.com) search · Pydantic · Tenacity
 
-No agent framework. The tool-calling loop, structured outputs, and verification step are wired directly against the API — the goal was to understand the mechanics rather than inherit them.
+No agent framework. The tool-calling loop, structured outputs, and verification step are wired directly against the API. The goal was to understand the mechanics rather than inherit them.

@@ -1,4 +1,4 @@
-# Firecrawl as a Second Retrieval Backend — Plan
+# Firecrawl as a Second Retrieval Backend: Plan
 
 **Branch:** `firecrawl-backend`
 **Status:** Phase 0 (plan only, no code written)
@@ -33,7 +33,7 @@ pipeline.research_competitors() tools=[search_web, extract_company_page]  max_to
 
 The Gemini SDK's automatic function calling executes them and feeds the
 returned string back into the conversation. **The model only ever sees the
-string these functions return** — it has no access to the raw provider
+string these functions return**. It has no access to the raw provider
 response. That is the seam a provider abstraction slots into cleanly.
 
 Two behaviours in `search_web` shape what the model sees, and both must be
@@ -41,7 +41,7 @@ preserved across providers:
 
 1. Each result is rendered as `Title: / URL: / Content:` blocks.
 2. Results whose URL path matches `_LISTICLE_MARKERS` get an inline
-   `[ROUNDUP/LISTICLE CONTENT — ...]` tag appended to the title.
+   `[ROUNDUP/LISTICLE CONTENT, ...]` tag appended to the title.
 
 `identify_company` additionally calls `extract_company_page` **directly in
 Python** (not as a tool) when a URL is supplied, to anchor identity.
@@ -68,7 +68,7 @@ evaluate.check_sources_are_real   evaluate.drop_fabricated_sources
 accurate record of what was really fetched.** Any new provider must populate it
 with exactly the same semantics, including the critical rule that **a failed
 fetch adds nothing**. If a provider recorded a URL it failed to retrieve, a
-model citation of that URL would wrongly pass the fabrication check — silently
+model citation of that URL would wrongly pass the fabrication check, silently
 weakening the strongest guarantee in the system.
 
 `verify_competitors` does **not** touch retrieval at all. It is a fresh,
@@ -82,11 +82,11 @@ so they are provider-agnostic.
 
 | Component | Coupling to Tavily | Risk |
 |---|---|---|
-| `search_web` return format | High — string shape is the model's input | Format drift changes model behaviour |
-| `_sources_consulted` | High — correctness of fabrication check | A recorded-but-failed fetch breaks the guarantee |
-| `extract_company_page` failure string | Medium — identity step relies on it | Empty string ≠ failure message |
-| `evaluate.*` | None (URL-only) | — |
-| `verify_competitors` | None | — |
+| `search_web` return format | High: string shape is the model's input | Format drift changes model behaviour |
+| `_sources_consulted` | High: correctness of fabrication check | A recorded-but-failed fetch breaks the guarantee |
+| `extract_company_page` failure string | Medium: identity step relies on it | Empty string ≠ failure message |
+| `evaluate.*` | None (URL-only) |: |
+| `verify_competitors` | None |: |
 
 ---
 
@@ -102,9 +102,9 @@ All figures from `docs.firecrawl.dev/billing` and `/features/search`, read
 | `search` | Analogue of `tavily.search` | **2 per 10 results** (rounded up) |
 | `scrape` | Analogue of `tavily.extract` | **1 per page** |
 | `map` | Not used | 1 per call |
-| `crawl` | Not used — whole-site crawling is out of scope | 1 per page |
+| `crawl` | Not used: whole-site crawling is out of scope | 1 per page |
 
-### Cost modifiers — all avoided
+### Cost modifiers: all avoided
 
 | Modifier | Extra cost | Decision |
 |---|---|---|
@@ -137,7 +137,7 @@ Two honest observations to carry into the writeup:
 
 1. **Firecrawl search costs 2× Tavily search** for our result count.
 2. **Tavily extract bills per 5 URLs, Firecrawl scrape bills per page.** Our
-   code fetches one URL per call, so today they tie at 1 credit each — but
+   code fetches one URL per call, so today they tie at 1 credit each, but
    Tavily has 5× headroom we are not using. If page fetching were batched,
    Tavily would be 5× cheaper. This is a real Tavily advantage and must be
    reported, not buried.
@@ -185,7 +185,7 @@ Three implementations:
 | `hybrid` | Tavily search | Firecrawl scrape |
 
 Selected by `RETRIEVAL_PROVIDER`, defaulting to `tavily` when unset or
-unrecognised (with a warning, not a crash — an unrecognised value silently
+unrecognised (with a warning, not a crash, an unrecognised value silently
 changing retrieval would be worse than a loud fallback).
 
 ### What stays in `tools.py`
@@ -210,7 +210,7 @@ timestamp.
 
 Purpose is development iteration, not benchmark integrity. **Benchmark runs use
 `--fresh` to bypass the cache**, because a cached second run would measure
-nothing — latency would be fake and variance would vanish. The cache preserves
+nothing, latency would be fake and variance would vanish. The cache preserves
 raw responses so metrics can be recomputed later without re-spending credits.
 
 ---
@@ -220,7 +220,7 @@ raw responses so metrics can be recomputed later without re-spending credits.
 Two experiments, deliberately separate. Mixing them would confound provider
 quality with agent non-determinism.
 
-### Experiment A — retrieval level (deterministic)
+### Experiment A: retrieval level (deterministic)
 
 Fixed URL and query lists, no LLM in the loop. Directly comparable.
 
@@ -237,7 +237,7 @@ the most arguable metric here. Proposed: a fixed list of marker phrases
 (cookie/subscribe/navigation/footer patterns) plus link-density ratio. It is a
 heuristic and will be labelled as one.
 
-**Key-fact answer key** — per company, 5 facts verifiable from the homepage
+**Key-fact answer key**: per company, 5 facts verifiable from the homepage
 (e.g. one-line product description, pricing presence, a named customer, HQ
 location, a named integration). Presence = case-insensitive substring or a
 small set of accepted variants. **This answer key must be confirmed before
@@ -248,7 +248,7 @@ returning the whole DOM scores well on recall while scoring badly on
 boilerplate share. The two metrics must be read together, and the writeup will
 say so.
 
-### Experiment B — end-to-end
+### Experiment B: end-to-end
 
 Full pipeline per company per mode, measuring what actually reaches a user.
 
@@ -262,7 +262,7 @@ Full pipeline per company per mode, measuring what actually reaches a user.
 | Wall-clock time | Per run |
 | Credits used | Counted by the provider wrapper, not estimated |
 
-**Credits are counted, never estimated** — each provider increments a counter
+**Credits are counted, never estimated**: each provider increments a counter
 using the documented cost rule for the call it just made.
 
 ### Run matrix
@@ -280,11 +280,11 @@ comparison, not a benchmark with error bars.
 
 | Item | Calculation | Credits |
 |---|---|---|
-| Experiment A — scrape | 20 URLs × 2 runs × 1 | 40 |
-| Experiment A — search | 10 queries × 2 runs × 2 | 40 |
-| Experiment B — `firecrawl` mode | 10 co. × 2 runs × ~15 | 300 |
-| Experiment B — `hybrid` mode | 10 co. × 2 runs × ~5 scrapes | 100 |
-| Development & smoke tests | — | 50 |
+| Experiment A: scrape | 20 URLs × 2 runs × 1 | 40 |
+| Experiment A: search | 10 queries × 2 runs × 2 | 40 |
+| Experiment B: `firecrawl` mode | 10 co. × 2 runs × ~15 | 300 |
+| Experiment B: `hybrid` mode | 10 co. × 2 runs × ~5 scrapes | 100 |
+| Development & smoke tests |: | 50 |
 | **Subtotal** | | **530** |
 | **Reserve** (retries, reruns, failures) | | **470** |
 
@@ -296,8 +296,8 @@ comparison, not a benchmark with error bars.
 | Item | Credits |
 |---|---|
 | Experiment A | ~28 |
-| Experiment B — `tavily` mode | ~120 |
-| Experiment B — `hybrid` mode (search only) | ~100 |
+| Experiment B: `tavily` mode | ~120 |
+| Experiment B: `hybrid` mode (search only) | ~100 |
 | **Subtotal** | **~250** |
 
 ### Guardrails
@@ -317,10 +317,10 @@ both providers.
 
 | # | Company | Why included |
 |---|---|---|
-| 1 | Firecrawl | The vendor itself. Dev-tool site, docs-heavy. **Conflict of interest — the audience for this writeup. Results reported unchanged.** |
+| 1 | Firecrawl | The vendor itself. Dev-tool site, docs-heavy. **Conflict of interest: the audience for this writeup. Results reported unchanged.** |
 | 2 | Nango | Dev tool, API-integration category, docs-heavy |
 | 3 | Composio | Dev tool, AI-agent tooling, docs-heavy |
-| 4 | Mobbin | Design-reference product; likely a JS-heavy app shell — the case where a headless-browser scraper should beat a plain fetcher |
+| 4 | Mobbin | Design-reference product; likely a JS-heavy app shell: the case where a headless-browser scraper should beat a plain fetcher |
 | 5 | Brickanta | **Unknown to me.** Site type to be recorded during setup, not guessed. |
 | 6 | Dataleap | **Unknown to me.** Same. |
 | 7 | Manufact | **Unknown to me.** Same. |
@@ -344,7 +344,7 @@ during setup so results can be segmented by type.
    material. Both this plan and the final writeup are project documentation
    meant to be public. Proposed fix: change the ignore rule from `docs/` to
    `docs/*` plus explicit `!docs/FIRECRAWL_PLAN.md` and
-   `!docs/firecrawl_vs_tavily.md` negations — negation cannot rescue a file
+   `!docs/firecrawl_vs_tavily.md` negations, negation cannot rescue a file
    whose parent directory is excluded, so the pattern must exclude *contents*,
    not the directory. Alternative: move prep material to `prep/`.
 
@@ -352,7 +352,7 @@ during setup so results can be segmented by type.
    Proposed: stdlib `unittest` + `unittest.mock`, zero new dependencies.
    Override to pytest if preferred.
 
-3. **`.env.example` does not exist** — will be created, not updated.
+3. **`.env.example` does not exist**: will be created, not updated.
 
 4. **Answer key** for key-fact presence requires confirmation before Phase 2
    runs, per the task. Draft comes at the end of Phase 1 so it can be built

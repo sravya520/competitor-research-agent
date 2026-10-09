@@ -164,7 +164,7 @@ TAVILY_API_KEY = "your-key-here"
 
 ### Why the same code runs in three places
 
-Locally keys come from `.env`; on Streamlit Cloud from `st.secrets`; in a container from real environment variables. `app.py` bridges `st.secrets` into environment variables *before* importing the pipeline, so `config.py`: and the CLI, which has never heard of Streamlit, only ever reads `os.environ`. One code path, three sources.
+Locally keys come from `.env`; on Streamlit Cloud from `st.secrets`; in a container from real environment variables. `app.py` bridges `st.secrets` into environment variables *before* importing the pipeline, so `config.py` (and the CLI, which has never heard of Streamlit) only ever reads `os.environ`. One code path, three sources.
 
 ---
 

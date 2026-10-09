@@ -22,9 +22,9 @@ import streamlit as st
 # system instead. Bridging st.secrets into os.environ here — before the
 # pipeline import below triggers config.py — lets both paths work without
 # config.py (or main.py's CLI) ever needing to know Streamlit exists.
-for _key in ("GEMINI_API_KEY", "TAVILY_API_KEY"):
-    if _key not in os.environ and _key in st.secrets:
-        os.environ[_key] = st.secrets[_key]
+import failures  # stdlib-only, so it is safe to import before config.py
+
+failures.bridge_secrets(st.secrets, os.environ)
 
 from google.genai import errors
 
@@ -142,19 +142,24 @@ if submitted:
                         st.session_state["stage"] = "review"
 
         except errors.APIError as exc:
+            # Logged unconditionally: Streamlit Cloud's "Manage app" panel
+            # captures stdout, and this is the only trace of a deployed
+            # failure. Discarding it is what made a transient 503 look like a
+            # defect in the report.
+            print(failures.api_error_log_line(exc), flush=True)
             st.session_state["stage"] = "input"
-            if exc.code == 429:
-                st.error(
-                    "This demo has hit its free daily usage limit. Please "
-                    "try again later, or take a look at the source code on "
-                    "GitHub in the meantime."
-                )
-            else:
-                st.error(
-                    "Something went wrong talking to the research API "
-                    "(a temporary issue, not a bug in the report itself). "
-                    "Please try again in a moment."
-                )
+            st.error(failures.api_error_message(exc.code))
+
+        except Exception as exc:  # noqa: BLE001 - last resort, and it logs
+            # Anything that is not a provider API error previously reached the
+            # user as a raw traceback: a Tavily failure, a dropped connection,
+            # a missing optional key, or a genuine bug. Streamlit's own
+            # control flow (RerunException, StopException) derives from
+            # BaseException rather than Exception, so it passes through here
+            # untouched.
+            print(failures.unexpected_error_log_line(exc), flush=True)
+            st.session_state["stage"] = "input"
+            st.error(failures.unexpected_error_message())
 
 # --- Terminal states: identity failed / ambiguous / research failed ---
 if st.session_state["stage"] == "identity_failed":

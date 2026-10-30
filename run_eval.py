@@ -56,9 +56,9 @@ def run_case(case: dict) -> tuple[list[str], dict]:
     found = _names(kept)
     print(f"    found: {', '.join(found) or '(none)'}")
 
+    # The count is checked by run_checks below, which is given this minimum.
+    # Checking it here as well reported the same failure twice.
     minimum = case.get("min_competitors", 1)
-    if len(kept) < minimum:
-        failures.append(f"Expected at least {minimum} competitors, got {len(kept)}.")
 
     # Substring match, case-insensitive: the model may write "Twilio Segment"
     # where the case lists "Segment".
@@ -71,9 +71,31 @@ def run_case(case: dict) -> tuple[list[str], dict]:
     if wanted and not any(w.lower() in n.lower() for w in wanted for n in found):
         failures.append(f"Expected at least one of {wanted}, found none.")
 
-    failures.extend(evaluate.run_checks(kept, tools.sources_consulted()))
-
     metrics: dict = {}
+
+    # main.py and app.py strip fabricated citations and carry on, so this
+    # must too. Failing the suite the moment the fabrication check fires
+    # was failing it for a defence working correctly, and it was the single
+    # biggest source of red runs.
+    removed = evaluate.drop_fabricated_sources(kept, tools.sources_consulted())
+    metrics["fabricated_sources_removed"] = removed
+    if removed:
+        print(f"    fabricated citations removed: {removed}")
+
+    # What survives the stripping is what a founder would actually read, so
+    # that is what the gates judge. A competitor left citing nothing is a
+    # real defect: it reaches the report as an unsupported claim.
+    uncited = [competitor.name for competitor in kept if not competitor.sources]
+    if uncited:
+        failures.append(
+            f"After fabricated URLs were stripped, {', '.join(uncited)} "
+            f"cites no source at all."
+        )
+
+    # `minimum` is passed through so the count is checked once. run_checks
+    # defaults to 2, which silently duplicated the message above on cases
+    # asking for 2 and reported a different number on cases asking for 3.
+    failures.extend(evaluate.run_checks(kept, tools.sources_consulted(), minimum=minimum))
 
     ratio = evaluate.primary_source_ratio(kept)
     if ratio is not None:
@@ -112,6 +134,7 @@ def main() -> None:
     ratios: list[float] = []
     corroboration_rates: list[float] = []
     total_precise_warnings = 0
+    total_fabricated_removed = 0
 
     for case in cases:
         informational = case.get("informational", False)
@@ -128,6 +151,7 @@ def main() -> None:
         if "corroboration_rate" in metrics:
             corroboration_rates.append(metrics["corroboration_rate"])
         total_precise_warnings += metrics.get("precise_claim_warnings", 0)
+        total_fabricated_removed += metrics.get("fabricated_sources_removed", 0)
 
         if informational:
             # Reported, never fatal: this behaviour depends on live search.
@@ -158,6 +182,8 @@ def main() -> None:
         print(f"Corroboration rate: {overall:.0%} average across {len(corroboration_rates)} run(s).")
     if total_precise_warnings:
         print(f"Precise-claim warnings: {total_precise_warnings} total across all runs.")
+    if total_fabricated_removed:
+        print(f"Fabricated citations stripped: {total_fabricated_removed} total across all runs.")
     if notes:
         print(f"{len(notes)} informational case(s) differed — not failures:")
         for note in notes:

@@ -35,24 +35,28 @@ tavily_client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
 # bought nothing but four more rejections and 14 seconds of backoff.
 MAX_SUGGESTED_WAIT_SECONDS = 60
 
+# Quota names whose window cannot open inside one request. The real payload
+# from an exhausted free tier names its quota outright:
+#
+#   quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier
+#   description: Generate content requests per day limit exceeded on Free Tier
+#
+# which is a better signal than any duration, because it says what kind of
+# limit was hit rather than how long this particular rejection suggests
+# waiting. A per-minute quota is deliberately absent: that one does clear in
+# seconds and is worth retrying.
+NON_CLEARING_QUOTA_MARKERS = ("perday", "per day", "per_day",
+                              "perhour", "per hour", "per_hour",
+                              "daily")
+
 
 def retry_after_seconds(exception: BaseException | None) -> float | None:
     """How long the provider suggested waiting, or None if it did not.
 
     Google puts it in a RetryInfo entry inside the error payload, as a
-    duration string like "54616s". APIError.details holds the whole response
-    body, so the entry is nested two levels in.
+    duration string like "54616s".
     """
-    if not isinstance(exception, errors.APIError):
-        return None
-
-    payload = getattr(exception, "details", None)
-    if not isinstance(payload, dict):
-        return None
-
-    for entry in (payload.get("error") or {}).get("details") or []:
-        if not isinstance(entry, dict):
-            continue
+    for entry in _error_details(exception):
         if not str(entry.get("@type", "")).endswith("RetryInfo"):
             continue
         try:
@@ -61,6 +65,54 @@ def retry_after_seconds(exception: BaseException | None) -> float | None:
             return None
 
     return None
+
+
+def _error_details(exception: BaseException | None) -> list:
+    """The google.rpc detail entries on an APIError, if any.
+
+    APIError.details holds the whole response body, so the entries are
+    nested two levels in.
+    """
+    if not isinstance(exception, errors.APIError):
+        return []
+
+    payload = getattr(exception, "details", None)
+    if not isinstance(payload, dict):
+        return []
+
+    entries = (payload.get("error") or {}).get("details") or []
+    return [entry for entry in entries if isinstance(entry, dict)]
+
+
+def exhausted_quotas(exception: BaseException | None) -> list[str]:
+    """Names and descriptions of the quotas a QuotaFailure says were hit.
+
+    Returned as plain text rather than parsed: the useful content is spread
+    across quotaId, quotaMetric and description, and which of them carries
+    the word "day" has already varied between payloads.
+    """
+    found = []
+    for entry in _error_details(exception):
+        if not str(entry.get("@type", "")).endswith("QuotaFailure"):
+            continue
+        for violation in entry.get("violations") or []:
+            if not isinstance(violation, dict):
+                continue
+            found.extend(str(violation.get(field, ""))
+                         for field in ("quotaId", "quotaMetric", "description")
+                         if violation.get(field))
+    return found
+
+
+def hit_a_non_clearing_quota(exception: BaseException | None) -> bool:
+    """True when the exceeded quota is one that cannot clear in seconds.
+
+    The main signal for refusing to retry. A daily or hourly allowance is
+    spent until its window rolls over, so no amount of waiting inside this
+    request helps, whatever delay the error happens to suggest.
+    """
+    haystack = " ".join(exhausted_quotas(exception)).casefold()
+    return any(marker in haystack for marker in NON_CLEARING_QUOTA_MARKERS)
 
 
 def short_reason(exception: BaseException | None) -> str:
@@ -87,9 +139,16 @@ def is_retryable_error(exception: BaseException) -> bool:
         if exception.code not in (429, 500, 502, 503, 504):
             return False
 
-        # Retry only when waiting can actually help. A suggestion measured in
-        # hours is the provider saying this request cannot succeed now,
-        # whatever the code is, so it is taken at its word.
+        # Retry only when waiting can actually help, and prefer what the
+        # error SAYS over how long it suggests waiting. An exhausted daily
+        # allowance is spent until its window rolls over, so it is hopeless
+        # even if the payload carries no RetryInfo at all.
+        if hit_a_non_clearing_quota(exception):
+            return False
+
+        # Fallback for anything that does not name its quota: a suggestion
+        # measured in hours is the provider saying this request cannot
+        # succeed now, whatever the code is, so take it at its word.
         suggested = retry_after_seconds(exception)
         return suggested is None or suggested <= MAX_SUGGESTED_WAIT_SECONDS
 

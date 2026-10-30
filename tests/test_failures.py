@@ -39,16 +39,17 @@ def api_error(code, status="ERROR"):
 
 
 def api_error_after(code, delay, status="RESOURCE_EXHAUSTED"):
-    """An APIError carrying RetryInfo, the way a real quota error does.
+    """An APIError carrying RetryInfo and nothing else.
 
     `delay` is the duration string the provider sends, such as "54616s".
+    No QuotaFailure, deliberately: these exercise the duration fallback on
+    its own. An error that also names a daily quota is refused on that
+    ground first, which is what RealQuotaPayload covers.
     """
     return errors.APIError(code, {"error": {
         "code": code, "status": status,
-        "message": f"synthetic {code}; quotaMetric generate_content_requests",
+        "message": f"synthetic {code}",
         "details": [
-            {"@type": "type.googleapis.com/google.rpc.QuotaFailure",
-             "violations": [{"quotaId": "PerDayPerProject"}]},
             {"@type": "type.googleapis.com/google.rpc.RetryInfo",
              "retryDelay": delay},
         ],
@@ -167,6 +168,135 @@ class RetryWiring(unittest.TestCase):
 
     def test_non_retryable_is_attempted_once(self):
         self.assertEqual(self.attempts_for(404), 1)
+
+
+# Trimmed from a real payload captured on 2026-10-30, when the free tier's
+# daily allowance ran out mid-development. Only the long prose and the Help
+# link are cut; the quota fields and the RetryInfo are verbatim.
+REAL_DAILY_QUOTA_429 = {"error": {
+    "code": 429,
+    "status": "RESOURCE_EXHAUSTED",
+    "message": ("You exceeded your current quota. Quota exceeded for metric: "
+                "generativelanguage.googleapis.com/"
+                "generate_content_free_tier_requests, limit: 500, model: "
+                "gemini-3.5-flash-lite. Please retry in 14h39m36s."),
+    "details": [
+        {"@type": "type.googleapis.com/google.rpc.Help",
+         "links": [{"description": "Learn more about Gemini API quotas",
+                    "url": "https://ai.google.dev/gemini-api/docs/rate-limits"}]},
+        {"@type": "type.googleapis.com/google.rpc.QuotaFailure",
+         "violations": [{
+             "description": ("Generate content requests per day limit "
+                             "exceeded on Free Tier."),
+             "quotaMetric": ("generativelanguage.googleapis.com/"
+                             "generate_content_free_tier_requests"),
+             "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+             "quotaDimensions": {"model": "gemini-3.5-flash-lite",
+                                 "location": "global"},
+             "quotaValue": "500"}]},
+        {"@type": "type.googleapis.com/google.rpc.RetryInfo",
+         "retryDelay": "52776s"},
+    ],
+}}
+
+
+def quota_error(violations, retry_delay=None):
+    """A 429 naming specific quota violations, optionally with RetryInfo."""
+    details = [{"@type": "type.googleapis.com/google.rpc.QuotaFailure",
+                "violations": violations}]
+    if retry_delay is not None:
+        details.append({"@type": "type.googleapis.com/google.rpc.RetryInfo",
+                        "retryDelay": retry_delay})
+    return errors.APIError(429, {"error": {
+        "code": 429, "status": "RESOURCE_EXHAUSTED", "message": "quota",
+        "details": details}})
+
+
+class RealQuotaPayload(unittest.TestCase):
+    """Classification driven by what the error says, not how long it asks for.
+
+    The payload below is the one that actually stopped development. It names
+    its quota as a per-day allowance, which is the honest signal: a daily
+    limit is spent until its window rolls over, so retrying inside one
+    request is hopeless however short the suggested delay happens to be.
+    """
+
+    def real(self):
+        return errors.APIError(429, REAL_DAILY_QUOTA_429)
+
+    def test_the_exceeded_quota_is_identified(self):
+        found = " ".join(config.exhausted_quotas(self.real()))
+        self.assertIn("GenerateRequestsPerDayPerProjectPerModel", found)
+        self.assertIn("per day limit", found)
+
+    def test_a_daily_quota_is_recognised_as_non_clearing(self):
+        self.assertTrue(config.hit_a_non_clearing_quota(self.real()))
+
+    def test_the_real_payload_is_not_retried(self):
+        self.assertFalse(config.is_retryable_error(self.real()))
+
+    def test_it_is_attempted_once(self):
+        from tenacity import retry, wait_none
+
+        calls = {"n": 0}
+
+        @retry(**{**config.RETRY_SETTINGS, "wait": wait_none(),
+                  "before_sleep": None})
+        def always_fails():
+            calls["n"] += 1
+            raise errors.APIError(429, REAL_DAILY_QUOTA_429)
+
+        with self.assertRaises(errors.APIError):
+            always_fails()
+        self.assertEqual(calls["n"], 1)
+
+    def test_the_quota_name_decides_even_without_retry_info(self):
+        """The point of preferring the quota name: a daily limit is hopeless
+        whether or not the payload says how long to wait."""
+        error = quota_error([{
+            "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"}])
+        self.assertIsNone(config.retry_after_seconds(error))
+        self.assertFalse(config.is_retryable_error(error))
+
+    def test_a_per_minute_quota_is_still_retried(self):
+        """This one really does clear in seconds, which is why the rule
+        names the quotas that do not rather than all of them."""
+        error = quota_error(
+            [{"quotaId": "GenerateRequestsPerMinutePerProjectPerModel",
+              "description": "Generate content requests per minute limit "
+                             "exceeded on Free Tier."}],
+            retry_delay="21s")
+        self.assertFalse(config.hit_a_non_clearing_quota(error))
+        self.assertTrue(config.is_retryable_error(error))
+
+    def test_a_per_minute_quota_with_no_delay_is_still_retried(self):
+        error = quota_error(
+            [{"quotaId": "GenerateRequestsPerMinutePerProjectPerModel"}])
+        self.assertTrue(config.is_retryable_error(error))
+
+    def test_an_hourly_quota_is_also_hopeless(self):
+        error = quota_error([{"quotaId": "SomethingPerHourPerProject"}])
+        self.assertFalse(config.is_retryable_error(error))
+
+    def test_a_quota_free_error_is_unaffected(self):
+        """500s and transport drops must keep their old behaviour."""
+        self.assertFalse(config.hit_a_non_clearing_quota(api_error(503)))
+        self.assertTrue(config.is_retryable_error(api_error(503)))
+        self.assertEqual(config.exhausted_quotas(ValueError("nope")), [])
+        self.assertEqual(config.exhausted_quotas(None), [])
+
+    def test_malformed_violations_do_not_crash(self):
+        for violations in ([], [None], ["text"], [{}], None):
+            with self.subTest(violations=violations):
+                error = quota_error(violations)
+                self.assertFalse(config.hit_a_non_clearing_quota(error))
+
+    def test_the_retry_log_still_fits_on_one_line(self):
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            config.log_retry(FakeRetryState(1, self.real()))
+        self.assertLess(len(buffer.getvalue()), 120)
+        self.assertNotIn("quotaValue", buffer.getvalue())
 
 
 class SuggestedDelay(unittest.TestCase):

@@ -70,14 +70,25 @@ def api_error_log_line(exc) -> str:
     return f"[api-error] code={code} status={status} {type(exc).__name__}: {exc}"
 
 
-def api_error_message(code) -> str:
+def api_error_message(code, surface: str = "web") -> str:
     """What to show the user for a provider error code.
 
     The three cases are genuinely different actions: wait for tomorrow, retry
     in a minute, or report a bug. Collapsing them into one message is what
     made a transient upstream outage look like a defect in the report.
+
+    surface="cli" changes the quota message only. The web wording addresses a
+    visitor to a demo running on somebody else's key, who can do nothing but
+    come back later. A CLI user owns the key, so the useful facts are whose
+    limit it is and when it resets. Everything else is identical, so the two
+    surfaces cannot drift apart on anything but that.
     """
     if code == 429:
+        if surface == "cli":
+            return (
+                "Your Gemini key has hit its daily free limit; it resets at "
+                "midnight Pacific time."
+            )
         return (
             "This demo has hit its free daily usage limit. Please try again "
             "later, or take a look at the source code on GitHub in the "

@@ -27,6 +27,51 @@ gemini_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 tavily_client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
 
 
+# A provider error can carry RetryInfo saying how long to wait. Waiting
+# longer than this inside one request is pointless: the caller is blocked on
+# it, and a daily quota measured in hours will not clear. Beyond this, the
+# right answer is to fail at once and say so. Found live: an exhausted daily
+# quota said "retry in 15h10m" and was retried four times anyway, which
+# bought nothing but four more rejections and 14 seconds of backoff.
+MAX_SUGGESTED_WAIT_SECONDS = 60
+
+
+def retry_after_seconds(exception: BaseException | None) -> float | None:
+    """How long the provider suggested waiting, or None if it did not.
+
+    Google puts it in a RetryInfo entry inside the error payload, as a
+    duration string like "54616s". APIError.details holds the whole response
+    body, so the entry is nested two levels in.
+    """
+    if not isinstance(exception, errors.APIError):
+        return None
+
+    payload = getattr(exception, "details", None)
+    if not isinstance(payload, dict):
+        return None
+
+    for entry in (payload.get("error") or {}).get("details") or []:
+        if not isinstance(entry, dict):
+            continue
+        if not str(entry.get("@type", "")).endswith("RetryInfo"):
+            continue
+        try:
+            return float(str(entry.get("retryDelay", "")).strip().rstrip("s"))
+        except ValueError:
+            return None
+
+    return None
+
+
+def short_reason(exception: BaseException | None) -> str:
+    """A few words naming a failure, for a one-line retry log."""
+    if isinstance(exception, errors.APIError):
+        return f"{exception.code} {exception.status}"
+    if exception is None:
+        return "unknown"
+    return type(exception).__name__
+
+
 def is_retryable_error(exception: BaseException) -> bool:
     """True only for failures that a later attempt might actually survive.
 
@@ -39,13 +84,28 @@ def is_retryable_error(exception: BaseException) -> bool:
     it's always worth one more attempt.
     """
     if isinstance(exception, errors.APIError):
-        return exception.code in (429, 500, 502, 503, 504)
+        if exception.code not in (429, 500, 502, 503, 504):
+            return False
+
+        # Retry only when waiting can actually help. A suggestion measured in
+        # hours is the provider saying this request cannot succeed now,
+        # whatever the code is, so it is taken at its word.
+        suggested = retry_after_seconds(exception)
+        return suggested is None or suggested <= MAX_SUGGESTED_WAIT_SECONDS
+
     return isinstance(exception, httpx.TransportError)
 
 
 def log_retry(retry_state) -> None:
+    """One line per retry: which attempt, and a few words on why.
+
+    It used to print the whole exception. A Gemini quota error embeds its
+    entire JSON payload in its message, so four retries filled the terminal
+    with four screens of near-identical text and buried the actual outcome.
+    The full exception is still logged once, by the handler that gives up.
+    """
     print(f"[retry] attempt {retry_state.attempt_number} failed "
-          f"({retry_state.outcome.exception()}), retrying...")
+          f"({short_reason(retry_state.outcome.exception())}), retrying...")
 
 
 # A 503 means the model is overloaded, not that the request is wrong. The
@@ -91,9 +151,18 @@ _wait_widened = wait_exponential_jitter(initial=2, max=45, jitter=3)
 
 
 def wait_by_cause(retry_state) -> float:
-    """Jittered backoff for an overloaded provider, the original curve
-    otherwise, so 429 timing is unchanged."""
-    if _is_widened(_last_exception(retry_state)):
+    """What the provider asked for, else jittered backoff for an overloaded
+    provider, else the original curve, so 429 timing is unchanged."""
+    exception = _last_exception(retry_state)
+
+    # A short, explicit suggestion beats guessing with a curve: the provider
+    # knows when its own window opens. Long suggestions never reach here,
+    # because is_retryable_error refuses to retry them at all.
+    suggested = retry_after_seconds(exception)
+    if suggested is not None:
+        return min(suggested, MAX_SUGGESTED_WAIT_SECONDS) + 0.5
+
+    if _is_widened(exception):
         return _wait_widened(retry_state)
     return _wait_standard(retry_state)
 

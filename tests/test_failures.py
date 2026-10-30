@@ -16,12 +16,16 @@ local reproduction to identify. Three things are protected here:
    which left the provider switch dead on Streamlit Cloud.
 """
 
+import contextlib
+import io
 import os
 import unittest
 from unittest.mock import patch
 
 os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
 os.environ.setdefault("TAVILY_API_KEY", "test-tavily-key")
+
+import httpx  # noqa: E402
 
 import failures  # noqa: E402
 import config  # noqa: E402
@@ -32,6 +36,23 @@ def api_error(code, status="ERROR"):
     """A google-genai APIError carrying a specific HTTP code."""
     return errors.APIError(code, {"error": {"code": code, "status": status,
                                             "message": f"synthetic {code}"}})
+
+
+def api_error_after(code, delay, status="RESOURCE_EXHAUSTED"):
+    """An APIError carrying RetryInfo, the way a real quota error does.
+
+    `delay` is the duration string the provider sends, such as "54616s".
+    """
+    return errors.APIError(code, {"error": {
+        "code": code, "status": status,
+        "message": f"synthetic {code}; quotaMetric generate_content_requests",
+        "details": [
+            {"@type": "type.googleapis.com/google.rpc.QuotaFailure",
+             "violations": [{"quotaId": "PerDayPerProject"}]},
+            {"@type": "type.googleapis.com/google.rpc.RetryInfo",
+             "retryDelay": delay},
+        ],
+    }})
 
 
 class FakeOutcome:
@@ -148,6 +169,120 @@ class RetryWiring(unittest.TestCase):
         self.assertEqual(self.attempts_for(404), 1)
 
 
+class SuggestedDelay(unittest.TestCase):
+    """Retry only when waiting can help.
+
+    Found live: an exhausted daily quota answered "Please retry in 15h10m"
+    and was retried four times anyway. The provider had already said the
+    request could not succeed; four more rejections and fourteen seconds of
+    backoff were the only result.
+    """
+
+    def test_the_suggested_delay_is_read(self):
+        self.assertEqual(config.retry_after_seconds(
+            api_error_after(429, "54616s")), 54616.0)
+        self.assertEqual(config.retry_after_seconds(
+            api_error_after(429, "7s")), 7.0)
+        self.assertEqual(config.retry_after_seconds(
+            api_error_after(429, "1.5s")), 1.5)
+
+    def test_no_retry_info_means_no_suggestion(self):
+        self.assertIsNone(config.retry_after_seconds(api_error(429)))
+        self.assertIsNone(config.retry_after_seconds(ValueError("nope")))
+        self.assertIsNone(config.retry_after_seconds(None))
+
+    def test_an_unparseable_delay_is_ignored(self):
+        """Falls back to the existing budget rather than crashing or
+        refusing to retry on a format change."""
+        self.assertIsNone(config.retry_after_seconds(
+            api_error_after(429, "soon")))
+        self.assertTrue(config.is_retryable_error(api_error_after(429, "soon")))
+
+    def test_a_long_wait_is_not_retried(self):
+        for delay in ("61s", "300s", "54616s"):
+            with self.subTest(delay=delay):
+                self.assertFalse(
+                    config.is_retryable_error(api_error_after(429, delay)))
+
+    def test_a_short_wait_is_retried(self):
+        for delay in ("1s", "12s", "60s"):
+            with self.subTest(delay=delay):
+                self.assertTrue(
+                    config.is_retryable_error(api_error_after(429, delay)))
+
+    def test_the_boundary_is_inclusive(self):
+        limit = config.MAX_SUGGESTED_WAIT_SECONDS
+        self.assertTrue(config.is_retryable_error(
+            api_error_after(429, f"{limit}s")))
+        self.assertFalse(config.is_retryable_error(
+            api_error_after(429, f"{limit + 1}s")))
+
+    def test_the_rule_applies_to_any_code_that_carries_it(self):
+        """A 503 saying "retry in two hours" is no more retryable than a
+        429 saying it."""
+        self.assertFalse(config.is_retryable_error(
+            api_error_after(503, "7200s", status="UNAVAILABLE")))
+        self.assertTrue(config.is_retryable_error(
+            api_error_after(503, "4s", status="UNAVAILABLE")))
+
+    def test_a_short_suggestion_sets_the_wait(self):
+        """The provider knows when its own window opens, so its number beats
+        the backoff curve."""
+        wait = config.wait_by_cause(FakeRetryState(1, api_error_after(429, "9s")))
+        self.assertGreaterEqual(wait, 9.0)
+        self.assertLess(wait, 11.0)
+
+    def test_a_429_without_retry_info_keeps_the_old_curve(self):
+        waits = {config.wait_by_cause(FakeRetryState(3, api_error(429)))
+                 for _ in range(20)}
+        self.assertEqual(len(waits), 1, "429 backoff should stay deterministic")
+
+    def test_a_hopeless_quota_error_is_attempted_once(self):
+        from tenacity import retry, wait_none
+
+        calls = {"n": 0}
+
+        @retry(**{**config.RETRY_SETTINGS, "wait": wait_none(),
+                  "before_sleep": None})
+        def always_fails():
+            calls["n"] += 1
+            raise api_error_after(429, "54616s")
+
+        with self.assertRaises(errors.APIError):
+            always_fails()
+        self.assertEqual(calls["n"], 1, "no point retrying a 15-hour wait")
+
+
+class RetryLogging(unittest.TestCase):
+    def line_for(self, exception):
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            config.log_retry(FakeRetryState(2, exception))
+        return buffer.getvalue()
+
+    def test_the_retry_log_is_one_line(self):
+        line = self.line_for(api_error_after(429, "54616s"))
+        self.assertEqual(len(line.strip().splitlines()), 1)
+
+    def test_it_names_the_code_and_status(self):
+        line = self.line_for(api_error_after(429, "54616s"))
+        self.assertIn("attempt 2", line)
+        self.assertIn("429", line)
+        self.assertIn("RESOURCE_EXHAUSTED", line)
+
+    def test_it_does_not_dump_the_payload(self):
+        """A quota error embeds its whole JSON body in its message. Four
+        retries of that filled the terminal and buried the outcome."""
+        line = self.line_for(api_error_after(429, "54616s"))
+        self.assertNotIn("quotaMetric", line)
+        self.assertNotIn("retryDelay", line)
+        self.assertLess(len(line), 120)
+
+    def test_a_non_api_failure_is_named_by_type(self):
+        self.assertIn("TransportError",
+                      self.line_for(httpx.TransportError("dropped")))
+
+
 class UserMessages(unittest.TestCase):
     def test_quota_message_for_429(self):
         message = failures.api_error_message(429)
@@ -213,17 +348,30 @@ class CliFailures(unittest.TestCase):
 
     def test_an_exhausted_quota_is_a_sentence(self):
         message = self.exit_message(api_error(429))
-        self.assertIn("daily usage limit", message)
+        self.assertIn("daily free limit", message)
         self.assertNotIn("Traceback", message)
         self.assertNotIn("RESOURCE_EXHAUSTED", message)
 
     def test_an_upstream_failure_still_names_the_code(self):
         self.assertIn("503", self.exit_message(api_error(503)))
 
-    def test_the_same_message_as_the_web_ui(self):
-        """One wording for both surfaces, from failures.py."""
-        self.assertEqual(self.exit_message(api_error(429)),
-                         failures.api_error_message(429))
+    def test_the_quota_message_is_written_for_a_key_owner(self):
+        """The web wording addresses a visitor to someone else's demo, who
+        can only come back later. A CLI user owns the key, so the useful
+        facts are whose limit it is and when it resets."""
+        message = self.exit_message(api_error(429))
+        self.assertIn("Your Gemini key", message)
+        self.assertIn("midnight Pacific", message)
+        self.assertNotIn("demo", message)
+        self.assertNotEqual(message, failures.api_error_message(429))
+
+    def test_only_the_quota_wording_differs_by_surface(self):
+        """Everything else stays shared, so the two surfaces cannot drift
+        apart on anything but the one message that needed to."""
+        for code in (500, 502, 503, 504, 400, 404):
+            with self.subTest(code=code):
+                self.assertEqual(failures.api_error_message(code, "cli"),
+                                 failures.api_error_message(code))
 
     def test_ctrl_c_is_not_a_crash(self):
         self.assertIn("Stopped", self.exit_message(KeyboardInterrupt()))

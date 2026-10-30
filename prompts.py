@@ -47,6 +47,15 @@ where it is based — do not assume it is large or established. If you can
 identify the company's own official website, include it in `website`;
 leave it unset rather than guessing if you're not sure.
 
+In `scale_and_stage`, record how BIG and how MATURE this company is:
+headcount, funding raised, number of customers, years active, or whether
+it is pre-revenue, piloting, or scaled. The verification step compares
+candidates against this, so a missing value makes it guess. If your
+searches establish nothing, write what you can support, for example
+"early-stage university spin-off, no headcount or funding found", rather
+than leaving it unset. Never inflate: an absence of coverage is evidence
+of a small company, not a large one.
+
 Be economical — at most 2 searches.
 """
 
@@ -79,6 +88,14 @@ answers). If your searches do not surface enough specific real
 competitors, return fewer than 5 rather than padding the list with vague
 placeholders — an honest, shorter list is far more useful than a
 complete-looking but generic one.
+
+For each competitor, record `scale_and_stage` in the same terms used for
+the target above: headcount, funding, customer count, years active, or
+whether it is piloting or scaled. Verification compares this against the
+target, and a competitor whose scale you leave unrecorded is liable to be
+rejected as unverifiable even when it is a genuine peer. Say what your
+sources support, and say plainly when they support little, for example
+"early-stage, no headcount found".
 
 For each competitor, include the specific source URL(s) — from the actual
 search results you were given — that support what you say about them.
@@ -125,6 +142,7 @@ def verification_prompt(
         summaries += f"[{i}] Name: {competitor.name}\n"
         summaries += f"Why relevant: {competitor.why_relevant}\n"
         summaries += f"Positioning: {competitor.positioning}\n"
+        summaries += f"Scale and stage: {competitor.scale_and_stage or 'not recorded'}\n"
         summaries += f"Target customers: {competitor.target_customers}\n\n"
 
     return f"""A researcher proposed these competitors for "{company_name}".
@@ -132,6 +150,7 @@ def verification_prompt(
 THE TARGET COMPANY — this is what a competitor must be comparable to:
 {identity.description}
 Location: {identity.location or 'unknown'}
+Scale and stage: {identity.scale_and_stage or 'NOT ESTABLISHED'}
 
 PROPOSED COMPETITORS:
 {summaries}
@@ -145,6 +164,15 @@ For EACH numbered competitor above, independently assess TWO things:
    studio of a few people, an agency of 50+ staff serving enterprise
    clients is NOT a peer, even in the same industry — reject it.
    Geography alone is never disqualifying; only scale/stage mismatch is.
+   Judge both sides on the evidence shown above. If the target's
+   scale is NOT ESTABLISHED, treat it as early-stage and small:
+   thin public coverage means a small company, so do not resolve
+   that gap in favour of keeping a large candidate. If a
+   CANDIDATE's scale is not recorded, do not reject it for that
+   alone; reject it only where what you do know, its public
+   prominence included, shows a real mismatch. A small peer and an
+   unrecorded scale look alike, and dropping every unrecorded
+   candidate leaves the founder with nothing.
 
 Be skeptical — do not assume a competitor is valid just because it was
 proposed. Return exactly one verification entry per competitor, echoing

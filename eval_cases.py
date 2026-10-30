@@ -79,10 +79,25 @@ CASES = [
             "CustomerLabs",
             "Salesforce",
             "HubSpot",
+            # Added after a baseline run PASSED while returning these. They
+            # are the same defect as the names above, a small Bengaluru
+            # startup matched against public companies and late-stage
+            # platforms, but the case could not see it because it listed
+            # only the specific wrong answers from the previous occurrence.
+            "Freshworks",
+            "Intercom",
+            "Yellow.ai",
+            "Brevo",
+            "HighLevel",
+            "Zendesk",
+            "Braze",
         ],
         "why": (
             "A generic query surfaced large enterprise customer-data "
-            "platforms rather than peers of a small Bangalore startup."
+            "platforms rather than peers of a small Bangalore startup. "
+            "The banned list names companies far larger than the target "
+            "rather than a fixed set of wrong answers, because the failure "
+            "recurs with different names each time."
         ),
     },
     {

@@ -68,6 +68,29 @@ def reset() -> None:
 
 # --- Step 0/1/2: identify, research, verify -- runs once per company ---
 
+EXAMPLE_REPORT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "example-report.md")
+
+
+def show_example_report() -> None:
+    """Show the committed example report when the demo cannot run.
+
+    The daily limit is shared across every visitor, so someone arriving
+    late sees only an apology and no idea what the tool produces. This is a
+    real report from an earlier run, so they can still judge the output.
+    """
+    try:
+        with open(EXAMPLE_REPORT, encoding="utf-8") as handle:
+            content = handle.read()
+    except OSError:
+        return  # Nothing to show, and this is already the failure path.
+
+    st.info("That limit is shared across all visitors. Here is a real report "
+            "this tool produced earlier, so you can see what it does.")
+    with st.expander("Example report", expanded=True):
+        st.markdown(content)
+
+
 def research_company() -> None:
     """Identify, research, verify. Reads and writes st.session_state only.
 
@@ -164,6 +187,9 @@ def research_company() -> None:
         print(failures.api_error_log_line(exc), flush=True)
         st.session_state["stage"] = "input"
         st.error(failures.api_error_message(exc.code))
+
+        if exc.code == 429:
+            show_example_report()
 
     except Exception as exc:  # noqa: BLE001 - last resort, and it logs
         # Anything that is not a provider API error previously reached the

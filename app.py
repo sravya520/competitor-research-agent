@@ -85,9 +85,14 @@ def show_example_report() -> None:
     except OSError:
         return  # Nothing to show, and this is already the failure path.
 
-    st.info("That limit is shared across all visitors. Here is a real report "
-            "this tool produced earlier, so you can see what it does.")
-    with st.expander("Example report", expanded=True):
+    st.info("That limit is shared across all visitors, so nothing was "
+            "researched for you just now. Below is a saved example from an "
+            "earlier run, kept in the repository, so you can still see what "
+            "this tool produces. It is not a report about the company you "
+            "entered.")
+    with st.expander("Saved example report (not your result)", expanded=True):
+        st.caption("Saved example: a different company, researched on an "
+                   "earlier date. Not your result.")
         st.markdown(content)
 
 

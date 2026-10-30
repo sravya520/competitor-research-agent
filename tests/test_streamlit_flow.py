@@ -247,12 +247,34 @@ class MemoryFlow(unittest.TestCase):
 
         self.assertTrue(any("daily usage limit" in error.value
                             for error in app.error))
-        self.assertTrue(any("real report" in info.value for info in app.info))
+        self.assertTrue(any("saved example" in info.value for info in app.info))
         self.assertTrue(
             any("Competitor Research" in block.value for block in app.markdown),
             "the example report itself should be on the page")
         self.assertEqual(app.session_state["stage"], "input",
                          "the form stays usable for a later try")
+
+    def test_the_example_is_labelled_as_not_the_visitors_result(self):
+        """A full report appearing after a failure could be mistaken for the
+        visitor's own output, which would be worse than showing nothing. The
+        page has to say so before the report and again beside it."""
+        from google.genai import errors
+
+        quota = errors.APIError(429, {"error": {
+            "code": 429, "status": "RESOURCE_EXHAUSTED", "message": "spent"}})
+
+        with patch.object(recall, "establish_identity", side_effect=quota):
+            app = self.submit(self.started(), "Sprout Design",
+                              url="https://sproutdesign.in")
+
+        notice = " ".join(info.value for info in app.info).casefold()
+        self.assertIn("saved example", notice)
+        self.assertIn("nothing was researched for you", notice)
+        self.assertIn("not a report about the company you entered", notice)
+
+        beside = " ".join(caption.value for caption in app.caption).casefold()
+        self.assertIn("saved example", beside)
+        self.assertIn("not your result", beside)
 
     def test_another_failure_does_not_show_the_example(self):
         """Only the shared-quota case. An upstream blip is worth retrying in

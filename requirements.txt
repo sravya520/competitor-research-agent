@@ -6,3 +6,8 @@ streamlit
 pydantic
 httpx
 firecrawl-py
+# Pinned exactly: the Streamable HTTP transport changed shape between majors,
+# and parallel_mcp.py is written against 2.x. httpx2 is mcp's own HTTP client
+# and is listed because parallel_mcp.py imports it directly.
+mcp==2.3.0
+httpx2

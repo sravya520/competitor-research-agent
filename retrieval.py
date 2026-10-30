@@ -1,4 +1,4 @@
-"""Pluggable retrieval backends: Tavily, Firecrawl, or a hybrid of both.
+"""Pluggable retrieval backends: Parallel MCP, Tavily, Firecrawl, or hybrid.
 
 The pipeline never imports this module directly. `tools.py` owns the two
 functions the agent actually calls, and asks a provider from here to do the
@@ -25,6 +25,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Protocol
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field
 from tenacity import retry
@@ -34,7 +35,13 @@ from config import RETRY_SETTINGS
 # Firecrawl free tier allows 10 requests/minute on scrape/search. 6.5s between
 # live calls keeps us under it with margin. Tavily publishes no free-tier RPM,
 # so it gets a smaller self-imposed delay purely to be a good citizen.
-_MIN_INTERVAL_S = {"firecrawl": 6.5, "tavily": 1.0}
+#
+# Parallel publishes no fixed rate limit for the anonymous MCP endpoint, so
+# there is no number to stay under. 2.0s is the deliberately conservative
+# reading of that: slower than the Tavily courtesy delay, because an
+# unauthenticated shared service deserves more margin than an account we pay
+# for, and well short of the 6.5s that only exists to satisfy a documented cap.
+_MIN_INTERVAL_S = {"firecrawl": 6.5, "parallel": 2.0, "tavily": 1.0}
 
 DEFAULT_TIMEOUT_S = 45
 
@@ -231,6 +238,8 @@ class TavilyProvider(_BaseProvider):
         if client is None:
             from config import tavily_client
             client = tavily_client
+            if client is None:
+                raise ValueError("TAVILY_API_KEY is required for the Tavily backend")
         self.client = client
         # "basic" is Tavily's default and what production has always used, so it
         # stays the default here. "advanced" exists because comparing Firecrawl's
@@ -304,6 +313,107 @@ class TavilyProvider(_BaseProvider):
                 doc.error = "Tavily returned empty content"
 
         self.cache.put(self.name, "fetch", payload, [doc])
+        return doc
+
+
+def _comparable_url(url: str) -> str:
+    """Reduce a URL to the parts a redirect is not expected to change.
+
+    Scheme, `www.`, a default port and a trailing slash all move around on a
+    plain redirect without the page changing, so none of them may decide
+    whether a fetched document answers the request. The query string does
+    decide, so it stays.
+    """
+    parsed = urlsplit(url)
+    host = (parsed.hostname or "").removeprefix("www.")
+    port = "" if parsed.port in (None, 80, 443) else f":{parsed.port}"
+    return f"{host}{port}{parsed.path.rstrip('/')}?{parsed.query}".lower()
+
+
+class ParallelProvider(_BaseProvider):
+    """Anonymous Search MCP, adapted to the existing source-ledger contract."""
+
+    name = "parallel"
+
+    def __init__(self, client=None, **kw):
+        super().__init__(**kw)
+        if client is None:
+            from parallel_mcp import ParallelMCPClient
+            client = ParallelMCPClient(timeout=DEFAULT_TIMEOUT_S)
+        self.client = client
+
+    @retry(**RETRY_SETTINGS)
+    def search(self, query: str, max_results: int = 5) -> list[RetrievedDoc]:
+        if max_results <= 0:
+            return []
+        payload = f"{query}|{max_results}"
+        cached = self._cached("search", payload)
+        if cached is not None:
+            return cached
+
+        self._wait_turn()
+        started = time.monotonic()
+        results = self.client.call("web_search", {
+            "objective": query, "search_queries": [query],
+        })
+        latency = int((time.monotonic() - started) * 1000)
+        docs = [RetrievedDoc(
+            url=r.url, title=r.title or "", content="\n\n".join(r.excerpts),
+            provider=self.name, latency_ms=latency,
+        ) for r in results[:max_results]]
+        # Anonymous MCP has no billed provider credits. Track calls without
+        # claiming equivalence to Tavily/Firecrawl billing units.
+        self.meter.record(self.name, "search", 0)
+        self.cache.put(self.name, "search", payload, docs)
+        return docs
+
+    @staticmethod
+    def _answer_for(url: str, results: list) -> object | None:
+        """Pick the document that answers a one-URL web_fetch.
+
+        A redirect comes back under its destination URL, so comparing against
+        the requested URL and giving up on a mismatch reported "no extractable
+        content" for pages that were fetched perfectly well. Every call here
+        requests exactly one URL, so a lone result IS that page whatever it
+        ended up being called. The URL comparisons below only decide anything
+        if the service ever answers one request with several documents, and in
+        that case an unmatched set still yields nothing rather than a guess.
+        """
+        if len(results) == 1:
+            return results[0]
+        exact = next((r for r in results if r.url == url), None)
+        if exact is not None:
+            return exact
+        wanted = _comparable_url(url)
+        return next((r for r in results if _comparable_url(r.url) == wanted), None)
+
+    @retry(**RETRY_SETTINGS)
+    def fetch(self, url: str) -> RetrievedDoc:
+        from parallel_mcp import validate_url
+        validate_url(url)
+        cached = self._cached("fetch", url)
+        if cached is not None:
+            return cached[0]
+
+        self._wait_turn()
+        started = time.monotonic()
+        results = self.client.call("web_fetch", {
+            "urls": [url], "full_content": True,
+        })
+        latency = int((time.monotonic() - started) * 1000)
+        self.meter.record(self.name, "fetch", 0)
+        # The doc keeps the requested URL, not the redirect destination: that is
+        # the URL the model cited and the one the ledger has always recorded,
+        # and Tavily and Firecrawl report a redirected page the same way.
+        result = self._answer_for(url, results)
+        content = (result.full_content or "\n\n".join(result.excerpts)) if result else ""
+        doc = RetrievedDoc(
+            url=url, title=(result.title or "") if result else "",
+            content=content, provider=self.name, latency_ms=latency,
+            error=None if content else "Parallel returned no extractable content",
+        )
+        if doc.ok:
+            self.cache.put(self.name, "fetch", url, [doc])
         return doc
 
 
@@ -540,6 +650,7 @@ class HybridProvider:
 # --------------------------------------------------------------------------
 
 _PROVIDERS = {
+    "parallel": ParallelProvider,
     "tavily": TavilyProvider,
     "firecrawl": FirecrawlProvider,
     "firecrawl_scrape": FirecrawlScrapeSearchProvider,
@@ -553,7 +664,9 @@ def get_provider(name: str | None = None, **kw):
     """Build a provider. Falls back to tavily loudly, never silently.
 
     An unrecognised RETRIEVAL_PROVIDER value changing retrieval without saying
-    so would be worse than the typo it came from.
+    so would be worse than the typo it came from. Which credentials happen to be
+    present is not a selection signal either: a backend nobody asked for is the
+    same surprise, minus the warning.
     """
     requested = (name or os.environ.get("RETRIEVAL_PROVIDER") or DEFAULT_PROVIDER).strip().lower()
 

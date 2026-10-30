@@ -225,15 +225,29 @@ That split exists because this system does live web searches. The same input can
 
 Each run also reports three metrics, so a change can be judged by a number instead of a guess: `primary_source_ratio` (share of citations that aren't roundup/listicle content), `corroboration_rate` (share of competitors backed by 2+ independent source domains), and a count of precise-claim warnings (oddly specific stats resting on a single source).
 
-## Retrieval is pluggable, and both backends are benchmarked
+## Retrieval is pluggable, and two of the backends are benchmarked
 
 Retrieval sits behind a provider protocol (`retrieval.py`), so the fetcher is a
 swappable part rather than something welded into the tools. Tavily is the
 default and the deployed behaviour is unchanged; `RETRIEVAL_PROVIDER` selects
-`tavily`, `firecrawl`, `firecrawl_scrape` or `hybrid`.
+`tavily`, `parallel`, `firecrawl`, `firecrawl_scrape` or `hybrid`. Nothing picks
+a backend implicitly: an unset value is `tavily`, an unrecognised value warns and
+falls back to `tavily`, and a missing credential fails rather than switching
+backend behind your back.
+
+`parallel` is [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp),
+reached over the official MCP client's Streamable HTTP transport at
+`https://search.parallel.ai/mcp`. It is the one backend that needs no account and
+no API key, which makes it the cheapest way to try the tool, so it has to be asked
+for by name (`RETRIEVAL_PROVIDER=parallel`) rather than appearing on its own when
+another key is absent. Search excerpts and full-page fetches feed the existing tool
+callbacks and source ledger unchanged, calls carry a 45-second deadline, and a
+service error propagates instead of retrying against a different provider. A Gemini
+key is still required to run the agent.
 
 Adding a second backend is only interesting if you can say which one is better,
-so there is a benchmark rather than an opinion. It runs at two levels: a
+so there is a benchmark rather than an opinion. The numbers below compare Tavily
+and Firecrawl; Parallel is not in them. It runs at two levels: a
 deterministic retrieval comparison with no LLM in the loop, and a full
 end-to-end comparison where the backend is the only variable.
 
@@ -289,6 +303,9 @@ eval_cases.py  Regression cases, each one a bug that actually happened
 run_eval.py    Runs the cases and reports gates, observations, and metrics
 report.py      Markdown generation, with corroboration labels inline
 config.py      Clients, model choice, retry policy
+retrieval.py   Provider selection, normalised documents, caching and metering
+parallel_mcp.py
+               Anonymous search and page fetch over the official MCP client
 memory.py      The run ledger: a stable key per company, and one appended
                JSON line per finished run
 recall.py      Where memory meets the pipeline: when a stored identity may
@@ -364,6 +381,6 @@ Stated plainly here and in every generated report:
 
 ## Built with
 
-Python · [Google Gemini API](https://ai.google.dev) (`google-genai`) · [Tavily](https://tavily.com) search · Pydantic · Tenacity
+Python · [Google Gemini API](https://ai.google.dev) (`google-genai`) · [Tavily](https://tavily.com) search · [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp) · Firecrawl · Pydantic · Tenacity
 
 No agent framework. The tool-calling loop, structured outputs, and verification step are wired directly against the API. The goal was to understand the mechanics rather than inherit them.

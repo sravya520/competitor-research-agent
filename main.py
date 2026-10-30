@@ -240,6 +240,7 @@ def main() -> None:
             problems=problems,
             sources=sources_consulted(),
             model=MODEL,
+            model_resolved=pipeline.model_versions(),
             retrieval_provider=getattr(active_provider(), "name", ""),
             url_source=("remembered" if url_remembered
                         else "typed" if company_url else "none"),
@@ -276,7 +277,7 @@ def run() -> None:
         main()
     except errors.APIError as exc:
         print(failures.api_error_log_line(exc), flush=True)
-        sys.exit(failures.api_error_message(exc.code))
+        sys.exit(failures.api_error_message(exc.code, surface="cli"))
     except KeyboardInterrupt:
         sys.exit("\nStopped.")
 

@@ -43,9 +43,10 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 # 2 added url_source and url_remembered_from. 3 added identity_established_at.
-# Older lines simply lack those fields, and every read here uses .get with a
-# fallback, so a version 1 or 2 ledger stays readable without a migration.
-SCHEMA_VERSION = 3
+# 4 added model_resolved. Older lines simply lack those fields, and every read
+# here uses .get with a fallback, so an older ledger stays readable without a
+# migration.
+SCHEMA_VERSION = 4
 
 LEDGER_PATH_ENV = "MEMORY_PATH"
 
@@ -238,6 +239,7 @@ def build_record(
     problems=(),
     sources=(),
     model: str = "",
+    model_resolved=(),
     retrieval_provider: str = "",
     url_source: str = "",
     url_remembered_from: str = "",
@@ -286,7 +288,11 @@ def build_record(
         "excluded_auto": [[name, reason] for name, reason in excluded_auto],
         "excluded_by_human": list(removed_by_human),
         "problems": list(problems),
+        # The alias that was configured, and the versions the API said
+        # actually answered. "gemini-flash-lite-latest" is not an answer to
+        # "which model produced this run"; it is a pointer that moves.
         "model": model,
+        "model_resolved": list(model_resolved),
         "retrieval_provider": retrieval_provider,
         # How the URL that anchored this run was obtained: "typed", or
         # "remembered" when the user accepted one this ledger offered, with

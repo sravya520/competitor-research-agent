@@ -33,16 +33,47 @@ def _agent_config(response_schema, tools: list, max_tool_calls: int, use_system_
     )
 
 
+# Every model version the API reported while answering this run. MODEL is an
+# alias ending in "-latest", which moves to a new model without warning: it
+# resolved to gemini-3.5-flash-lite the last time an error named it. A run
+# recorded without this is not comparable with a later one, because a changed
+# competitor set would look like a changed market when the model changed
+# underneath it.
+#
+# Collected here and read through an accessor, the same shape as
+# tools.sources_consulted(), rather than returned: run_eval.py calls these
+# functions too, and no caller should have to change signature to ignore it.
+_model_versions: set[str] = set()
+
+
+def model_versions() -> list[str]:
+    """Resolved model versions seen during this run, sorted."""
+    return sorted(_model_versions)
+
+
+def reset_model_versions() -> None:
+    """Clear them, so one run's versions do not leak into the next."""
+    _model_versions.clear()
+
+
+def _note_model_version(response):
+    """Record which model actually answered, then pass the response along."""
+    version = getattr(response, "model_version", None)
+    if version:
+        _model_versions.add(version)
+    return response
+
+
 @retry(**RETRY_SETTINGS)
 def _send(chat, prompt: str):
-    return chat.send_message(prompt)
+    return _note_model_version(chat.send_message(prompt))
 
 
 @retry(**RETRY_SETTINGS)
 def _generate(prompt: str, config):
-    return gemini_client.models.generate_content(
+    return _note_model_version(gemini_client.models.generate_content(
         model=MODEL, contents=prompt, config=config,
-    )
+    ))
 
 
 def identify_company(company_name: str, company_url: str) -> CompanyIdentity | None:

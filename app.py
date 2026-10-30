@@ -200,6 +200,7 @@ if submitted:
     else:
         reset()
         tools.reset_sources()
+        pipeline.reset_model_versions()
         st.session_state["company_name"] = company_name.strip()
         st.session_state["company_url"] = company_url.strip()
         st.session_state["allow_recall"] = not fresh_identity
@@ -354,6 +355,7 @@ elif st.session_state["stage"] == "review":
                             problems=problems,
                             sources=tools.sources_consulted(),
                             model=MODEL,
+                            model_resolved=pipeline.model_versions(),
                             retrieval_provider=getattr(
                                 tools.active_provider(), "name", ""),
                             url_source=(

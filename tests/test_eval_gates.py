@@ -29,6 +29,7 @@ os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
 os.environ.setdefault("TAVILY_API_KEY", "test-tavily-key")
 
 import run_eval  # noqa: E402
+from runstate import RunState  # noqa: E402
 from schemas import CompanyIdentity, CompetitorResearch, Competitor  # noqa: E402
 
 REAL = "https://realsite.example/about"
@@ -66,11 +67,24 @@ def run_case_with(competitors, consulted, case=None):
     case = case or {"id": "t", "company": "Target", "url": None,
                     "expect_stop": False, "min_competitors": 2}
 
-    with patch.object(run_eval.tools, "reset_sources"), \
-         patch.object(run_eval.tools, "sources_consulted", return_value=consulted), \
-         patch.object(run_eval.pipeline, "identify_company", return_value=identity), \
-         patch.object(run_eval.pipeline, "research_competitors", return_value=research), \
-         patch.object(run_eval.pipeline, "verify_competitors", return_value=[]), \
+    # run_case builds its own RunState, so the ledger is seeded by handing
+    # it a prepared one rather than by patching a module-level accessor.
+    # There is no module-level ledger left to patch, which is the point.
+    def prepared_run():
+        run = RunState(progress=None)
+        for url in consulted:
+            run.record_source(url)
+        return run
+
+    # The stubs take `run` positionally, exactly as the real steps now do,
+    # so a signature drift fails here instead of passing silently.
+    with patch.object(run_eval, "RunState", prepared_run), \
+         patch.object(run_eval.pipeline, "identify_company",
+                      side_effect=lambda name, url, run: identity), \
+         patch.object(run_eval.pipeline, "research_competitors",
+                      side_effect=lambda name, found, run: research), \
+         patch.object(run_eval.pipeline, "verify_competitors",
+                      side_effect=lambda name, found, proposed, run: []), \
          patch.object(run_eval.pipeline, "apply_verifications",
                       return_value=(competitors, [])):
         return run_eval.run_case(case)

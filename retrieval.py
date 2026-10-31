@@ -21,6 +21,7 @@ import hashlib
 import json
 import math
 import os
+import tempfile
 import threading
 import time
 from datetime import datetime, timezone
@@ -162,6 +163,9 @@ class ResponseCache:
         self.enabled = enabled
         self.hits = 0
         self.misses = 0
+        # Writes that could not be stored. A cache is allowed to fail; it is
+        # not allowed to fail silently forever.
+        self.write_failures = 0
         if enabled:
             self.dir.mkdir(parents=True, exist_ok=True)
 
@@ -170,32 +174,92 @@ class ResponseCache:
         return self.dir / f"{provider}_{operation}_{digest}.json"
 
     def get(self, provider: str, operation: str, payload: str) -> list[dict] | None:
+        """The cached docs, or None for a miss.
+
+        A file that cannot be read or parsed counts as a miss rather than an
+        error. One entry is one provider response, so the worst a corrupt
+        file costs is re-fetching it; raising here would instead kill a run,
+        and a JSONDecodeError is not retryable, so the run would not recover.
+        """
         if not self.enabled:
             return None
         path = self._path(provider, operation, payload)
         if not path.exists():
             self.misses += 1
             return None
+
+        try:
+            docs = json.loads(path.read_text(encoding="utf-8"))["docs"]
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError,
+                TypeError):
+            self.misses += 1
+            return None
+
         self.hits += 1
-        return json.loads(path.read_text(encoding="utf-8"))["docs"]
+        return docs
 
     def put(self, provider: str, operation: str, payload: str, docs: list[RetrievedDoc]) -> None:
+        """Write one entry, atomically.
+
+        Write-then-rename rather than writing in place: one cache directory
+        is shared by every run in the process, so two runs can write the same
+        entry at the same moment. Writing in place truncates first, which
+        leaves a window where a third run reads half a file. os.replace is
+        atomic on both Windows and POSIX, so a reader sees either the old
+        entry or the new one, never a partial one.
+        """
         if not self.enabled:
             return
+
         path = self._path(provider, operation, payload)
-        path.write_text(
-            json.dumps(
-                {
-                    "provider": provider,
-                    "operation": operation,
-                    "payload": payload,
-                    "cached_at": datetime.now(timezone.utc).isoformat(),
-                    "docs": [d.model_dump(mode="json") for d in docs],
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
+        body = json.dumps(
+            {
+                "provider": provider,
+                "operation": operation,
+                "payload": payload,
+                "cached_at": datetime.now(timezone.utc).isoformat(),
+                "docs": [d.model_dump(mode="json") for d in docs],
+            },
+            indent=2,
         )
+
+        # The temporary file has to be in the same directory: os.replace is
+        # only atomic within one filesystem.
+        handle, temporary = tempfile.mkstemp(dir=self.dir, suffix=".tmp")
+        try:
+            with os.fdopen(handle, "w", encoding="utf-8") as stream:
+                stream.write(body)
+            self._replace_with_retry(Path(temporary), path)
+        except OSError:
+            # A cache write that fails is a cache miss next time and nothing
+            # worse, so it must never take a run down. Counted rather than
+            # silent, so a cache that has stopped working is visible.
+            self.write_failures += 1
+        finally:
+            if os.path.exists(temporary):
+                try:
+                    os.unlink(temporary)
+                except OSError:
+                    pass
+
+    def _replace_with_retry(self, temporary: Path, path: Path,
+                            attempts: int = 5, pause: float = 0.01) -> None:
+        """os.replace, retried briefly.
+
+        On Windows, renaming over a file another thread currently has open
+        for reading raises PermissionError, and one cache directory is shared
+        by every run in the process. A few milliseconds covers the overlap.
+        Giving up after that is acceptable: the entry is only a cache, and
+        the caller counts the failure rather than raising.
+        """
+        for attempt in range(attempts):
+            try:
+                os.replace(temporary, path)
+                return
+            except PermissionError:
+                if attempt == attempts - 1:
+                    raise
+                time.sleep(pause)
 
 
 _last_call_at: dict[str, float] = {}

@@ -26,11 +26,13 @@ parameters or docstring would change the prompt without changing any
 behaviour a test would otherwise notice.
 """
 
+import json
 import os
 import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
 os.environ.setdefault("TAVILY_API_KEY", "test-tavily-key")
@@ -269,6 +271,127 @@ class SharedCaches(unittest.TestCase):
         tools.reset_providers()
         self.addCleanup(tools.reset_providers)
         self.assertIs(tools.provider_for("tavily"), tools.provider_for("tavily"))
+
+
+class CacheWrites(unittest.TestCase):
+    """One cache directory is shared by every run in the process.
+
+    So two runs can write the same entry at the same moment, and a third can
+    read it while they do. Writing in place truncated first, which left a
+    window where a reader saw half a file; the reader then parsed it with no
+    guard, and a JSONDecodeError is not retryable, so the run died rather
+    than re-fetching one page.
+    """
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.cache = ResponseCache(directory=Path(self.directory.name),
+                                   enabled=True)
+        self.docs = [RetrievedDoc(url="https://good.example",
+                                  provider="tavily", content="text")]
+
+    def entry(self):
+        return self.cache._path("tavily", "search", "acme")
+
+    def test_a_truncated_entry_reads_as_a_miss(self):
+        self.cache.put("tavily", "search", "acme", self.docs)
+        self.entry().write_text('{"docs": [{"url": "https://goo',
+                                encoding="utf-8")
+
+        self.assertIsNone(self.cache.get("tavily", "search", "acme"))
+        self.assertEqual(self.cache.hits, 0)
+        self.assertEqual(self.cache.misses, 1)
+
+    def test_a_valid_entry_still_reads(self):
+        self.cache.put("tavily", "search", "acme", self.docs)
+        cached = self.cache.get("tavily", "search", "acme")
+        self.assertEqual([d["url"] for d in cached], ["https://good.example"])
+        self.assertEqual(self.cache.hits, 1)
+
+    def test_an_entry_without_docs_reads_as_a_miss(self):
+        """A file from an older or different writer, not a crash."""
+        for body in ('{"provider": "tavily"}', "[]", "null", "not json at all"):
+            with self.subTest(body=body):
+                self.entry().write_text(body, encoding="utf-8")
+                self.assertIsNone(self.cache.get("tavily", "search", "acme"))
+
+    def test_a_concurrent_reader_never_sees_a_partial_entry(self):
+        """Hammer one entry from two writers while a reader watches.
+
+        Writer exceptions are collected and asserted on. Without that this
+        test passed while both writers were crashing: an exception in a
+        thread does not fail the test that started it, and os.replace over a
+        file a reader has open raises PermissionError on Windows. The test
+        was green and the cache was broken.
+
+        The claim is not that the reader gets a hit, which is timing. It is
+        that it never sees a half-written file, that the writers do not
+        raise, and that the entry on disk parses afterwards.
+        """
+        stop = threading.Event()
+        seen_partial = []
+        writer_errors = []
+
+        def writer(label):
+            docs = [RetrievedDoc(url=f"https://{label}.example",
+                                 provider="tavily", content="x" * 4000)]
+            try:
+                for _ in range(40):
+                    self.cache.put("tavily", "search", "acme", docs)
+            except BaseException as exc:  # noqa: BLE001 - reported below
+                writer_errors.append(f"{type(exc).__name__}: {exc}")
+
+        def reader():
+            while not stop.is_set():
+                path = self.entry()
+                if not path.exists():
+                    continue
+                try:
+                    body = path.read_text(encoding="utf-8")
+                except OSError:
+                    continue
+                if not body:
+                    continue
+                try:
+                    json.loads(body)
+                except json.JSONDecodeError:
+                    seen_partial.append(body[:40])
+                    return
+
+        watcher = threading.Thread(target=reader, daemon=True)
+        watcher.start()
+        threads = [threading.Thread(target=writer, args=("one",), daemon=True),
+                   threading.Thread(target=writer, args=("two",), daemon=True)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=WAIT)
+            self.assertFalse(thread.is_alive(), "a writer did not finish")
+        stop.set()
+        watcher.join(timeout=WAIT)
+
+        self.assertEqual(writer_errors, [], "a cache write raised")
+        self.assertEqual(seen_partial, [], "a reader saw a half-written entry")
+        self.assertIsNotNone(self.cache.get("tavily", "search", "acme"))
+
+    def test_a_write_that_cannot_land_is_counted_not_raised(self):
+        """A cache is allowed to fail. It is not allowed to kill a run, and
+        it is not allowed to fail silently forever."""
+        with patch.object(ResponseCache, "_replace_with_retry",
+                          side_effect=PermissionError("held open")):
+            self.cache.put("tavily", "search", "acme", self.docs)
+
+        self.assertEqual(self.cache.write_failures, 1)
+        self.assertIsNone(self.cache.get("tavily", "search", "acme"))
+        self.assertEqual([p.name for p in Path(self.directory.name).glob("*.tmp")],
+                         [], "a failed write must not leave a temporary file")
+
+    def test_no_temporary_files_are_left_behind(self):
+        for _ in range(5):
+            self.cache.put("tavily", "search", "acme", self.docs)
+        leftovers = [p.name for p in Path(self.directory.name).glob("*.tmp")]
+        self.assertEqual(leftovers, [])
 
 
 class ToolSchema(unittest.TestCase):

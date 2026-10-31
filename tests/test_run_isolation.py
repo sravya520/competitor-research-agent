@@ -70,25 +70,82 @@ def tavily_client(search_results=None, extract_results=None):
     return Client()
 
 
-class TwoRuns:
-    """Runs two callables as threads and fails the test if either stalls."""
+def run_in_threads(test, *functions, timeout=WAIT):
+    """Run each function in its own thread. Fail the test if any raised.
 
-    def __init__(self, test, first, second):
-        self.test = test
-        self.threads = [threading.Thread(target=first, daemon=True),
-                        threading.Thread(target=second, daemon=True)]
+    An exception inside a thread does not fail the test that started it, so
+    a concurrency test written without this can pass while the code under
+    test crashes on every call. That is not hypothetical: the cache write
+    test here was green while os.replace raised PermissionError on all 80
+    writes, because Windows refuses to rename over a file another thread
+    holds open. Collecting and asserting is the whole point.
 
-    def __enter__(self):
-        for thread in self.threads:
-            thread.start()
-        return self
+    Also fails on a thread that never finishes, so a deadlock shows up as a
+    failure rather than a hung suite.
+    """
+    failures = []
 
-    def __exit__(self, *_):
-        for thread in self.threads:
-            thread.join(timeout=WAIT)
-            self.test.assertFalse(thread.is_alive(),
-                                  "a run thread did not finish in time")
-        return False
+    def guarded(function):
+        def wrapper():
+            try:
+                function()
+            except BaseException as exc:  # noqa: BLE001 - reported below
+                failures.append(
+                    f"{getattr(function, '__name__', function)}: "
+                    f"{type(exc).__name__}: {exc}")
+        return wrapper
+
+    threads = [threading.Thread(target=guarded(function), daemon=True)
+               for function in functions]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=timeout)
+        test.assertFalse(thread.is_alive(),
+                         "a thread did not finish in time")
+
+    test.assertEqual(failures, [], "a thread raised")
+
+
+class TheHelperItself(unittest.TestCase):
+    """The helper has to fail loudly, or it reintroduces the blind spot.
+
+    Every concurrency test in this file depends on run_in_threads noticing
+    a thread that raised. If it ever stopped noticing, those tests would go
+    on passing and say nothing, which is how the cache bug survived a green
+    suite in the first place.
+    """
+
+    def test_a_raising_thread_fails_the_test(self):
+        def fine():
+            return None
+
+        def boom():
+            raise ValueError("thread blew up")
+
+        with self.assertRaises(AssertionError) as caught:
+            run_in_threads(self, fine, boom)
+
+        self.assertIn("boom", str(caught.exception))
+        self.assertIn("ValueError", str(caught.exception))
+
+    def test_a_thread_that_never_finishes_fails_the_test(self):
+        """A deadlock should be a failure, not a hung suite."""
+        release = threading.Event()
+        self.addCleanup(release.set)
+
+        def stuck():
+            release.wait(timeout=30)
+
+        with self.assertRaises(AssertionError) as caught:
+            run_in_threads(self, stuck, timeout=0.2)
+
+        self.assertIn("did not finish", str(caught.exception))
+
+    def test_threads_that_behave_pass_quietly(self):
+        results = []
+        run_in_threads(self, lambda: results.append(1), lambda: results.append(2))
+        self.assertEqual(sorted(results), [1, 2])
 
 
 class SourceLedger(unittest.TestCase):
@@ -111,8 +168,7 @@ class SourceLedger(unittest.TestCase):
             two_fetched.set()
             seen["two"] = run.sources_consulted()
 
-        with TwoRuns(self, visitor_one, visitor_two):
-            pass
+        run_in_threads(self, visitor_one, visitor_two)
 
         self.assertEqual(seen.get("one"), ["https://sproutdesign.in"])
         self.assertEqual(seen.get("two"), ["https://sprout-design.co.uk"])
@@ -140,8 +196,7 @@ class SourceLedger(unittest.TestCase):
             RunState(progress=None).record_source("https://elsewhere.example")
             two_started.set()
 
-        with TwoRuns(self, visitor_one, visitor_two):
-            pass
+        run_in_threads(self, visitor_one, visitor_two)
 
         self.assertEqual(seen.get("dropped"), 0,
                          "a URL this run really fetched was called fabricated")
@@ -173,8 +228,7 @@ class ModelVersions(unittest.TestCase):
             two_noted.set()
             seen["two"] = run.model_versions()
 
-        with TwoRuns(self, visitor_one, visitor_two):
-            pass
+        run_in_threads(self, visitor_one, visitor_two)
 
         self.assertEqual(seen.get("one"), ["gemini-3.5-flash-lite"])
         self.assertEqual(seen.get("two"), ["gemini-3.6-flash-lite"])
@@ -204,8 +258,7 @@ class ProgressOutput(unittest.TestCase):
             RunState(progress=two_panel.append)
             two_ready.set()
 
-        with TwoRuns(self, visitor_one, visitor_two):
-            pass
+        run_in_threads(self, visitor_one, visitor_two)
 
         self.assertEqual(one_panel, ["[search] sprout design"])
         self.assertEqual(two_panel, [], "another run's progress leaked in")
@@ -326,24 +379,34 @@ class CacheWrites(unittest.TestCase):
         was green and the cache was broken.
 
         The claim is not that the reader gets a hit, which is timing. It is
-        that it never sees a half-written file, that the writers do not
-        raise, and that the entry on disk parses afterwards.
-        """
-        stop = threading.Event()
-        seen_partial = []
-        writer_errors = []
+        that it never sees a half-written file, that no thread raises, and
+        that the entry on disk parses afterwards.
 
-        def writer(label):
+        All three threads go through run_in_threads, so the reader is held
+        to the same standard as the writers. The writers announce when they
+        are done rather than being stopped from outside, which is what lets
+        the reader finish on its own and the helper join all three.
+        """
+        seen_partial = []
+        done = [threading.Event(), threading.Event()]
+
+        def write(label, finished):
             docs = [RetrievedDoc(url=f"https://{label}.example",
                                  provider="tavily", content="x" * 4000)]
             try:
                 for _ in range(40):
                     self.cache.put("tavily", "search", "acme", docs)
-            except BaseException as exc:  # noqa: BLE001 - reported below
-                writer_errors.append(f"{type(exc).__name__}: {exc}")
+            finally:
+                finished.set()
+
+        def writer_one():
+            write("one", done[0])
+
+        def writer_two():
+            write("two", done[1])
 
         def reader():
-            while not stop.is_set():
+            while not all(event.is_set() for event in done):
                 path = self.entry()
                 if not path.exists():
                     continue
@@ -359,19 +422,8 @@ class CacheWrites(unittest.TestCase):
                     seen_partial.append(body[:40])
                     return
 
-        watcher = threading.Thread(target=reader, daemon=True)
-        watcher.start()
-        threads = [threading.Thread(target=writer, args=("one",), daemon=True),
-                   threading.Thread(target=writer, args=("two",), daemon=True)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(timeout=WAIT)
-            self.assertFalse(thread.is_alive(), "a writer did not finish")
-        stop.set()
-        watcher.join(timeout=WAIT)
+        run_in_threads(self, writer_one, writer_two, reader)
 
-        self.assertEqual(writer_errors, [], "a cache write raised")
         self.assertEqual(seen_partial, [], "a reader saw a half-written entry")
         self.assertIsNotNone(self.cache.get("tavily", "search", "acme"))
 

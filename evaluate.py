@@ -127,7 +127,7 @@ def check_source_corroboration(
         elif count < minimum_domains:
             problems.append(
                 f"{competitor.name}'s profile rests on a single source "
-                f"domain — not independently corroborated."
+                f"domain: not independently corroborated."
             )
     return problems
 
@@ -177,7 +177,7 @@ def check_precise_claims_are_corroborated(
         if stat:
             problems.append(
                 f"{competitor.name}'s profile cites a precise figure "
-                f"({stat!r}) backed by only one source — treat it as an "
+                f"({stat!r}) backed by only one source. Treat it as an "
                 f"unverified claim, not an established fact."
             )
     return problems

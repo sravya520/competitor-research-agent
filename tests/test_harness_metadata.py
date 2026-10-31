@@ -76,5 +76,114 @@ class CacheWriteFailures(unittest.TestCase):
         self.assertEqual(result.cache_write_failures, 0)
 
 
+REAL = "https://real.example/about"
+FAKE = "https://invented.example/news"
+
+
+def competitor(sources):
+    from schemas import Competitor
+
+    return Competitor(
+        name="Peer", why_relevant="r", product_or_service="p",
+        target_customers="t", positioning="pos", pricing=None,
+        strengths=["s"], weaknesses=["w"], differentiators=["d"],
+        sources=list(sources))
+
+
+class UnfetchedCitations(unittest.TestCase):
+    """The rule itself, which lives in evaluate.py so it cannot drift from
+    the one drop_fabricated_sources applies."""
+
+    def test_a_citation_outside_the_ledger_is_named(self):
+        import evaluate
+
+        self.assertEqual(
+            evaluate.unfetched_citations([competitor([REAL, FAKE])], [REAL]),
+            [FAKE])
+
+    def test_citations_in_the_ledger_are_not_named(self):
+        import evaluate
+
+        self.assertEqual(
+            evaluate.unfetched_citations([competitor([REAL])], [REAL]), [])
+
+    def test_it_uses_the_same_normalisation_as_the_stripping(self):
+        """A trailing slash or different case is the same page, so it must
+        not be reported as unfetched."""
+        import evaluate
+
+        self.assertEqual(
+            evaluate.unfetched_citations(
+                [competitor(["https://Real.example/about/"])], [REAL]),
+            [])
+
+    def test_the_same_url_cited_twice_is_reported_once(self):
+        import evaluate
+
+        self.assertEqual(
+            evaluate.unfetched_citations(
+                [competitor([FAKE]), competitor([FAKE])], [REAL]),
+            [FAKE])
+
+
+class RecordedUrls(unittest.TestCase):
+    """The harness records both lists, so a later reader can check them."""
+
+    def run_once_with(self, competitors, fetched):
+        from schemas import CompanyIdentity, CompetitorResearch
+
+        identity = CompanyIdentity(description="A target", location="L",
+                                   confident_match=True)
+        research = CompetitorResearch(
+            company_name="Acme", competitors=competitors, market_trends=[],
+            market_gaps_opportunities=[], potential_threats=[])
+
+        def seeded_run(**kwargs):
+            from runstate import RunState
+
+            run = RunState(progress=None, **kwargs)
+            for url in fetched:
+                run.record_source(url)
+            return run
+
+        with patch.object(harness, "build_provider",
+                          return_value=fake_provider()), \
+             patch.object(harness, "RunState", seeded_run), \
+             patch.object(harness.pipeline, "identify_company",
+                          return_value=identity), \
+             patch.object(harness.pipeline, "research_competitors",
+                          return_value=research), \
+             patch.object(harness.pipeline, "verify_competitors",
+                          return_value=[]), \
+             patch.object(harness.pipeline, "apply_verifications",
+                          return_value=(competitors, [])):
+            return harness.run_once("tavily", "Acme")
+
+    def test_the_rejected_urls_are_recorded_not_just_counted(self):
+        result = self.run_once_with([competitor([REAL, FAKE])], [REAL])
+
+        self.assertEqual(result.rejected_citations, [FAKE])
+        self.assertEqual(result.fabricated_urls_dropped, 1,
+                         "the count must still agree with the list")
+
+    def test_everything_fetched_is_recorded(self):
+        result = self.run_once_with([competitor([REAL])], [REAL, FAKE])
+
+        self.assertEqual(result.fetched_urls, sorted([REAL, FAKE]))
+        self.assertEqual(result.sources_consulted, 2,
+                         "the count is derived from the list, so they agree")
+
+    def test_a_clean_run_records_an_empty_rejection_list(self):
+        result = self.run_once_with([competitor([REAL])], [REAL])
+        self.assertEqual(result.rejected_citations, [])
+
+    def test_both_lists_survive_serialisation(self):
+        result = self.run_once_with([competitor([REAL, FAKE])], [REAL])
+        serialised = asdict(result)
+
+        self.assertEqual(serialised["rejected_citations"], [FAKE])
+        self.assertEqual(serialised["fetched_urls"], [REAL])
+
+
 if __name__ == "__main__":
     unittest.main()

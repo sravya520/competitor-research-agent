@@ -78,6 +78,12 @@ class RunResult:
     # not, so the count travels with the run.
     cache_write_failures: int = 0
 
+    # The citations refused, and everything this run actually fetched. The
+    # published runs recorded only the counts, so their 48 rejections can
+    # never be examined. These two lists make the next benchmark auditable.
+    rejected_citations: list = field(default_factory=list)
+    fetched_urls: list = field(default_factory=list)
+
     # Firecrawl's own accounting, for cross-checking our computed meter.
     firecrawl_credits_before: dict | None = None
     firecrawl_credits_after: dict | None = None
@@ -174,6 +180,12 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False,
                     result.verification_pass_rate = len(kept) / len(proposed)
 
                 consulted = run.sources_consulted()
+                # Named, not just counted, and recorded before the stripping
+                # below mutates the sources. The published runs counted their
+                # rejections and lost the URLs, which is why nobody can say
+                # what those 48 actually were.
+                result.rejected_citations = evaluate.unfetched_citations(
+                    kept, consulted)
                 result.fabrication_failures = len(
                     evaluate.check_sources_are_real(kept, consulted))
                 result.generic_name_failures = len(
@@ -188,7 +200,8 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False,
         result.error = f"{type(exc).__name__}: {exc}"
 
     result.wall_clock_s = round(time.monotonic() - started, 2)
-    result.sources_consulted = len(run.sources_consulted())
+    result.fetched_urls = run.sources_consulted()
+    result.sources_consulted = len(result.fetched_urls)
     result.truncation_settings = run.truncation_settings()
     result.truncation_stats = run.truncation_stats()
     result.cache_write_failures = getattr(

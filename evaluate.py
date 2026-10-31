@@ -216,6 +216,26 @@ def primary_source_ratio(competitors: list[Competitor]) -> float | None:
     return primary / len(all_sources)
 
 
+def unfetched_citations(
+    competitors: list[Competitor],
+    consulted_urls: list[str],
+) -> list[str]:
+    """The cited URLs that are not in the ledger, by the same rule as below.
+
+    drop_fabricated_sources reports how many it removed, which is enough to
+    see a pattern and not enough to audit one: the published benchmark
+    counted 48 rejections whose URLs are now unrecoverable, so it cannot say
+    how many were invented, recalled from training, or the same page in a
+    different URL format. This returns the URLs so a caller can record them.
+
+    Call it BEFORE dropping, which mutates the sources.
+    """
+    consulted = {normalise_url(url) for url in consulted_urls}
+    return sorted({source for competitor in competitors
+                   for source in competitor.sources
+                   if normalise_url(source) not in consulted})
+
+
 def drop_fabricated_sources(
     competitors: list[Competitor],
     consulted_urls: list[str],

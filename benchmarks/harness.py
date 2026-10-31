@@ -73,6 +73,11 @@ class RunResult:
     truncation_settings: dict = field(default_factory=dict)
     truncation_stats: dict = field(default_factory=dict)
 
+    # Cache writes that could not be stored. A cache is allowed to fail; a
+    # result that silently came from a cache which had stopped working is
+    # not, so the count travels with the run.
+    cache_write_failures: int = 0
+
     # Firecrawl's own accounting, for cross-checking our computed meter.
     firecrawl_credits_before: dict | None = None
     firecrawl_credits_after: dict | None = None
@@ -186,6 +191,8 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False,
     result.sources_consulted = len(run.sources_consulted())
     result.truncation_settings = run.truncation_settings()
     result.truncation_stats = run.truncation_stats()
+    result.cache_write_failures = getattr(
+        getattr(provider, "cache", None), "write_failures", 0)
 
     snapshot = meter.snapshot()
     result.credits_as_implemented = snapshot["as_implemented"]

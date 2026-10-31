@@ -36,14 +36,15 @@ import memory
 NOTION = ("notion.so", True)
 
 
-def identity(website=None, description="A workspace company", location="US"):
+def identity(website=None, description="A workspace company", location="US",
+             scale_and_stage="about 120 staff, Series B, scaled"):
     """Stand-in for a CompanyIdentity.
 
     memory.py reads these fields with getattr and never imports schemas.py,
     so a plain namespace is enough -- no pydantic, no API key.
     """
     return SimpleNamespace(description=description, location=location,
-                           website=website)
+                           website=website, scale_and_stage=scale_and_stage)
 
 
 def competitor(name, positioning="Cheaper and simpler", pricing="$10/mo",

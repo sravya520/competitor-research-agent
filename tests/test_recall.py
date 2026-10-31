@@ -70,6 +70,7 @@ class Establish(unittest.TestCase):
         self.runs_seen.append(run)
         return SimpleNamespace(description="freshly identified",
                                location=None, website=None,
+                               scale_and_stage="early stage, no funding found",
                                confident_match=True, ambiguity_note=None)
 
     def remember(self, days_ago=2, name="Notion", website="https://notion.so",
@@ -77,7 +78,8 @@ class Establish(unittest.TestCase):
         memory.record_run(
             path=self.path, company_name=name, run_at=stamp(days_ago),
             identity=SimpleNamespace(description=description, location=location,
-                                     website=website),
+                                     website=website,
+                                     scale_and_stage="about 120 staff, Series B, scaled"),
         )
 
     def establish(self, name="Notion", url="https://notion.so"):
@@ -203,7 +205,8 @@ class Candidates(unittest.TestCase):
         memory.record_run(
             path=self.path, company_name=name, run_at=stamp(days_ago),
             identity=SimpleNamespace(description=f"{name} the company",
-                                     location=None, website=website),
+                                     location=None, website=website,
+                                     scale_and_stage="about 120 staff, Series B, scaled"),
         )
 
     def find(self, name="Notion"):
@@ -281,7 +284,8 @@ class Candidates(unittest.TestCase):
         memory.record_run(path=self.path, company_name="Notion",
                           run_at=stamp(1),
                           identity=SimpleNamespace(description="Notion",
-                                                   location=None, website=None))
+                                                   location=None, website=None,
+                                                   scale_and_stage="about 120 staff, Series B, scaled"))
         self.assertEqual(self.find(), [])
 
     def test_the_list_is_capped(self):
@@ -313,7 +317,8 @@ class ForceLiveIdentity(unittest.TestCase):
             path=self.path, company_name="Notion", run_at=stamp(1),
             identity=SimpleNamespace(description="remembered description",
                                      location=None,
-                                     website="https://notion.so"))
+                                     website="https://notion.so",
+                                     scale_and_stage="about 120 staff, Series B, scaled"))
 
     def test_allow_recall_false_forces_the_live_step(self):
         with patch.object(recall.pipeline, "identify_company",
@@ -420,7 +425,8 @@ class Disclosure(unittest.TestCase):
         return report_module.build_report(
             company_name="Notion", company_url="notion.so",
             identity=SimpleNamespace(description="Workspace tool",
-                                     location="US", website="https://notion.so"),
+                                     location="US", website="https://notion.so",
+                                     scale_and_stage="about 120 staff, Series B, scaled"),
             research=CompetitorResearch(company_name="Notion", competitors=[],
                                         market_trends=[],
                                         market_gaps_opportunities=[],

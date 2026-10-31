@@ -55,6 +55,7 @@ def stamp(days_ago):
 def an_identity(description="A design agency", website="https://sproutdesign.in"):
     return SimpleNamespace(description=description, location="IN",
                            website=website, confident_match=True,
+                           scale_and_stage="about 12 staff, bootstrapped",
                            ambiguity_note=None)
 
 
@@ -113,7 +114,8 @@ class MemoryFlow(unittest.TestCase):
         memory.record_run(
             path=self.path, company_name=name, company_url=website,
             identity=SimpleNamespace(description=f"{name} the company",
-                                     location="IN", website=website),
+                                     location="IN", website=website,
+                                     scale_and_stage="about 120 staff, Series B, scaled"),
             run_at=stamp(days_ago))
 
     def started(self):

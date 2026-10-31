@@ -283,6 +283,10 @@ def build_record(
             "description": getattr(identity, "description", "") or "",
             "location": getattr(identity, "location", None),
             "website": getattr(identity, "website", None),
+            # Verification compares a candidate's scale against the
+            # target's, so an identity without this makes it guess. Stored
+            # here because a reused identity has to carry it too.
+            "scale_and_stage": getattr(identity, "scale_and_stage", None),
         },
         "competitors": [_competitor_record(c) for c in competitors],
         "excluded_auto": [[name, reason] for name, reason in excluded_auto],
@@ -416,6 +420,16 @@ def recall_identity(
         if not identity.get("description"):
             continue
 
+        # An identity with no scale recorded is not reusable, however fresh
+        # it is. Every ledger line written before scale_and_stage existed
+        # lacks it, and reusing one would hand the verifier "NOT
+        # ESTABLISHED", which it is told to read as early-stage and small.
+        # For a large target that silently reinstates the guessing this
+        # field was added to remove. Re-establishing costs one call; a
+        # wrong scale costs the whole verification pass.
+        if not (identity.get("scale_and_stage") or "").strip():
+            continue
+
         # Measured from when the identity was established, never from when
         # this record was written: a reused identity writes a fresh record,
         # and measuring from that would renew the limit on every run.
@@ -427,6 +441,7 @@ def recall_identity(
             "description": identity["description"],
             "location": identity.get("location"),
             "website": identity.get("website"),
+            "scale_and_stage": identity.get("scale_and_stage"),
             # When the identity itself was established, which is the date
             # worth showing a user, and what a later reuse copies forward.
             "established_at": identity_established_at(record),

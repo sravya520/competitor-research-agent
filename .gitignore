@@ -17,6 +17,11 @@ report-*.md
 memory.jsonl
 *.jsonl
 
+# Benchmark results are committed evidence, and the pattern above was broad
+# enough to swallow them: a NEW raw_*.jsonl would have been skipped silently
+# by git add, since the ones already tracked stay tracked either way.
+!benchmarks/results/*.jsonl
+
 streamlit_out.log
 streamlit_err.log
 

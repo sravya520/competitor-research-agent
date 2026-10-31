@@ -21,6 +21,21 @@ __pycache__/
 memory.jsonl
 *.jsonl
 report-*.md
+
+# Nothing below is read at runtime: the only file the app opens that is not
+# code is example-report.md, which stays. COPY . . would otherwise bake all
+# of this into a published image.
+#
+# prep/ is personal job-prep material, kept out of git for the same reason.
+# .claude/ holds a second checkout of this repository as a git worktree.
+# The GIF is a 20MB README animation, assets/ its screenshots, and
+# benchmarks/cache/ is cached provider responses from benchmark runs.
+prep/
+.claude/
+*.gif
+assets/
+docs/
+benchmarks/cache/
 streamlit_out.log
 streamlit_err.log
 .git/

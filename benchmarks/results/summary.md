@@ -2,11 +2,11 @@
 
 Generated 2026-10-08T16:32:49.284236+00:00
 Model held constant across all modes: `gemini-flash-lite-latest`
-Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`)
+Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`). Each is scored once per fetch and every page is fetched twice, so each arm below has 68 fact checks.
 
 ## Experiment A: retrieval level (no LLM)
 
-| fetcher | success | latency p50 | latency p95 | content chars | boilerplate | key-fact recall |
+| fetcher | success | latency p50 (per page) | latency p95 (per page) | content chars | boilerplate | key-fact recall (of 68 checks) |
 |---|---|---|---|---|---|---|
 | tavily | 100% | 250ms | 1125ms | 11735 | 6% | 82% (56/68) |
 | firecrawl | 100% | 1390ms | 1797ms | 16258 | 4% | 97% (66/68) |
@@ -14,7 +14,7 @@ Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`
 
 ## Experiment B: end to end
 
-| mode | runs scored | excluded (LLM quota) | budget hit | completed | kept (median) | verif. pass | citations rejected | time p50 | credits |
+| mode | runs scored | excluded (LLM quota) | budget hit | completed | kept (median) | verif. pass | citations rejected | time p50 (per run) | credits |
 |---|---|---|---|---|---|---|---|---|---|
 | firecrawl_bare | 5 | 5 of 10 | 0% | 100% | 5 | 92% | 2 | 58.7s | 69.0 |
 | firecrawl_scrape | 18 | 12 of 30 | 50% | 50% | 1.0 | 96% | 48 | 47.9s | 630.0 |

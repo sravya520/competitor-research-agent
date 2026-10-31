@@ -32,9 +32,9 @@ is not the same question.
 
 ## Experiment A: the headline
 
-20 pages, 2 runs each, 68 scored fact-checks per arm.
+20 pages, 2 runs each. The answer key holds **34 distinct facts**, and each is scored once per fetch, so every arm has **68 fact checks** (34 facts x 2 runs). Recall below is over those 68 checks, not over 68 separate facts.
 
-| backend | success | latency p50 | latency p95 | median chars | boilerplate | fact recall |
+| backend | success | latency p50 (per page) | latency p95 (per page) | median chars | boilerplate | fact recall |
 |---|---|---|---|---|---|---|
 | Tavily (basic extract) | 100% | 250ms | 1,125ms | 11,735 | 6% | **82%** (56/68) |
 | Tavily (advanced extract) | 95% | 265ms | 344ms | 12,286 | 7% | 76% (52/68) |
@@ -47,7 +47,7 @@ against 6%, though its worst page was dirtier (23% against 15%).
 
 The cost of that recall is speed and money:
 
-- **Latency:** 1,390ms against 250ms at p50, about 5.6 times slower. Firecrawl
+- **Latency:** 1,390ms against 250ms at p50 **per page fetched**, about 5.6 times slower. Firecrawl
   was more predictable at the tail, though, with a p95 of 1,797ms against
   Tavily's 1,125ms spread.
 - **Credits:** Firecrawl bills 1 credit per page. Tavily's basic extract bills 1
@@ -84,7 +84,7 @@ on basic extract, so the headline comparison stands.
 
 ## Experiment B: retrieval breadth governs grounding
 
-| mode | runs scored | excluded (LLM quota) | budget hit | completed | kept (median) | verification pass | citations rejected | time p50 | credits |
+| mode | runs scored | excluded (LLM quota) | budget hit | completed | kept (median) | verification pass | citations rejected | time p50 (per run) | credits |
 |---|---|---|---|---|---|---|---|---|---|
 | tavily | 20 | 4 of 24 | 5% | 95% | 5.0 | 91% | 4 | 32.3s | 156 |
 | hybrid | 20 | 0 of 20 | 5% | 95% | 5.0 | 87% | 6 | 33.6s | 156 |

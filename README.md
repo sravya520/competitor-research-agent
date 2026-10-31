@@ -247,15 +247,18 @@ end-to-end comparison where the backend is the only variable.
 
 **Headline, from 20 pages fetched twice by each backend with no LLM involved:**
 
-| backend | success | latency p50 | median chars | boilerplate | fact recall |
+| backend | success | latency p50 (per page) | median chars | boilerplate | fact recall |
 |---|---|---|---|---|---|
 | Tavily (basic extract) | 100% | 250ms | 11,735 | 6% | 82% (56/68) |
 | Firecrawl (`only_main_content=True`) | 100% | 1,390ms | 16,258 | 4% | **97%** (66/68) |
 
-Firecrawl found 97% of independently verified facts against Tavily's 82%, at
-about 5.6x the latency and about 5x the per-page credit cost. Facts come from an
-answer key read off each official page by a plain HTTP request that used neither
-vendor.
+Firecrawl found 97% of the fact checks against Tavily's 82%, at about 5.6x the
+per-page latency and about 5x the per-page credit cost. Facts come from an answer
+key read off each official page by a plain HTTP request that used neither vendor.
+
+The denominator is **34 facts, each fetched twice per provider, so 68 fact
+checks** per backend: 20 pages were fetched twice each, and a page carries one to
+three facts. 68 is the number of checks, not the number of distinct facts.
 
 The end-to-end runs produced a more transferable result: **the number of
 citations rejected by the fabrication check tracks how many sources the agent

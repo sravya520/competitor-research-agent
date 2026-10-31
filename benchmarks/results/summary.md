@@ -21,7 +21,7 @@ Answer key: 34 facts, independently verified (see `docs/ANSWER_KEY_CHECKLIST.md`
 | hybrid | 20 | 0 of 20 | 5% | 95% | 5.0 | 87% | 6 | 33.6s | 156.0 |
 | tavily | 20 | 4 of 24 | 5% | 95% | 5.0 | 91% | 4 | 32.3s | 156.0 |
 
-**Citations rejected** counts source URLs the fabrication check refused: a deterministic test that every cited URL appears in the ledger of pages our own code actually fetched. It is set membership, not a judgement, so it rejects every citation that is not in the ledger. In both entry points (`main.py`, `app.py`) the rejected citations are stripped before the report is built and before corroboration is checked, so 100% of them were caught and none reached a final report. The check cannot detect a citation whose URL *was* fetched but is described wrongly; corroboration and the precise-claims check cover that separately.
+**Citations rejected** counts citations the agent had not fetched in that run: a deterministic test that every cited URL appears in the ledger of pages our own code actually fetched. It is set membership, not a judgement, so it rejects every citation that is not in the ledger. In both entry points (`main.py`, `app.py`) the rejected citations are stripped before the report is built and before corroboration is checked, so 100% of them were caught and none reached a final report. The check cannot detect a citation whose URL *was* fetched but is described wrongly; corroboration and the precise-claims check cover that separately. It also records only the counts, not the rejected URLs, so this data cannot say how many were invented outright, recalled from the model's training data, or the same page in a different URL format.
 
 ### Credits, both ways
 

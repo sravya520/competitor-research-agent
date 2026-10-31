@@ -91,10 +91,16 @@ on basic extract, so the headline comparison stands.
 | firecrawl_scrape | 18 | 12 of 30 | 50% | 50% | 1.0 | 96% | 48 | 47.9s | 630 |
 | firecrawl_bare | 5 | 5 of 10 | 0% | 100% | 5.0 | 92% | 2 | 58.7s | 69 |
 
-**Citations rejected** counts source URLs refused by a deterministic check: every
-cited URL must appear in a ledger of pages the code actually fetched. It is set
-membership, not a judgement. Rejected citations are stripped before the report is
-built, so none reached a final report in any run.
+**Citations rejected** counts citations the agent had not fetched in that run: a
+deterministic check that every cited URL appears in a ledger of pages the code
+actually fetched. It is set membership, not a judgement. Rejected citations are
+stripped before the report is built, so none reached a final report in any run.
+
+The benchmark recorded these counts but not the rejected URLs, so it cannot say
+how many were invented outright, recalled from the model's training data, or the
+same page in a different URL format. The breadth pattern below is what the data
+supports; the mechanism behind each individual rejection is not recoverable from
+it.
 
 The pattern that matters is not which vendor won. It is that **the number of
 rejected citations tracks how many sources the agent managed to consult**, with

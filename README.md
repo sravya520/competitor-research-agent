@@ -261,12 +261,17 @@ checks** per backend: 20 pages were fetched twice each, and a page carries one t
 three facts. 68 is the number of checks, not the number of distinct facts.
 
 The end-to-end runs produced a more transferable result: **the number of
-citations rejected by the fabrication check tracks how many sources the agent
+citations the agent had not fetched in that run tracks how many sources it
 managed to consult**, with model, prompts and temperature held constant. The
 mode that consulted a median of 6 sources had 48 citations rejected; the mode
 that consulted 31 had 4. Starve an agent of sources and it starts citing pages
-it never retrieved, which looks like a hallucination problem but is a retrieval
-problem.
+that are not in the ledger of what it retrieved, which looks like a
+hallucination problem but is a retrieval problem.
+
+One limit on that reading: the benchmark recorded the counts but not the
+rejected URLs themselves, so it cannot say how many were invented outright,
+recalled from the model's training data, or the same page in a different URL
+format.
 
 Also measured, and worth knowing before you copy a config: Firecrawl's
 `only_main_content=True` cut boilerplate on every page tested and on one page

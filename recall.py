@@ -115,6 +115,11 @@ def _identity_from(recalled: dict) -> CompanyIdentity:
         description=recalled["description"],
         location=recalled.get("location"),
         website=recalled.get("website"),
+        # Carried through because verification reads it. memory.py refuses
+        # to recall an identity that has none, so this is never empty here;
+        # rebuilding a partial identity would feed the verifier "NOT
+        # ESTABLISHED" and undo the comparison it was added for.
+        scale_and_stage=recalled.get("scale_and_stage"),
         confident_match=True,
         ambiguity_note=None,
     )

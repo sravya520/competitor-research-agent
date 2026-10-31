@@ -27,8 +27,8 @@ import pipeline
 import recall
 import report as report_module
 from config import MODEL
+from runstate import RunState
 from schemas import Competitor
-from tools import active_provider, sources_consulted
 
 
 def clean_input(prompt: str) -> str:
@@ -139,6 +139,11 @@ def review_competitors(
 def main() -> None:
     allow_recall = FRESH_IDENTITY_FLAG not in sys.argv
 
+    # One run, one state: its own source ledger, progress output and model
+    # versions. Nothing about a run lives at module level, so two runs can
+    # never read or clear each other's evidence.
+    run = RunState()
+
     company_name = clean_input("Enter a company or startup name: ")
     company_url = clean_input(
         "Company website or LinkedIn URL (optional, press Enter to skip): "
@@ -156,7 +161,7 @@ def main() -> None:
     # before under its own domain can reuse that answer; see recall.py for
     # when it may not.
     identity, identity_recalled = recall.establish_identity(
-        company_name, company_url, allow_recall=allow_recall,
+        company_name, company_url, run, allow_recall=allow_recall,
     )
 
     if identity is None:
@@ -181,19 +186,20 @@ def main() -> None:
           + (f" | Website: {identity.website}" if identity.website else "") + "\n")
 
     # Step 1 — research, with the agent choosing its own searches.
-    research = pipeline.research_competitors(company_name, identity)
+    research = pipeline.research_competitors(company_name, identity, run)
 
     if research is None:
         sys.exit("The agent didn't finish within its allowed number of tool calls.")
 
     # Step 2 — independent verification.
-    verifications = pipeline.verify_competitors(company_name, identity, research.competitors)
+    verifications = pipeline.verify_competitors(
+        company_name, identity, research.competitors, run)
     verified, excluded = pipeline.apply_verifications(research.competitors, verifications)
 
     # Automatic consistency checks. Detecting a fabricated citation isn't
     # enough — a link that 404s still looks like evidence, so it is removed.
-    problems = evaluate.run_checks(verified, sources_consulted())
-    removed = evaluate.drop_fabricated_sources(verified, sources_consulted())
+    problems = evaluate.run_checks(verified, run.sources_consulted())
+    removed = evaluate.drop_fabricated_sources(verified, run.sources_consulted())
     if removed:
         problems.append(f"Removed {removed} fabricated source URL(s) from the report.")
 
@@ -220,7 +226,7 @@ def main() -> None:
         research=research,
         competitors=final,
         excluded=excluded,
-        sources=sources_consulted(),
+        sources=run.sources_consulted(),
         identity_recalled=identity_recalled,
         url_remembered=url_remembered,
     )
@@ -238,10 +244,10 @@ def main() -> None:
             excluded_auto=excluded_auto,
             removed_by_human=removed_by_human,
             problems=problems,
-            sources=sources_consulted(),
+            sources=run.sources_consulted(),
             model=MODEL,
-            model_resolved=pipeline.model_versions(),
-            retrieval_provider=getattr(active_provider(), "name", ""),
+            model_resolved=run.model_versions(),
+            retrieval_provider=getattr(run.provider, "name", ""),
             url_source=("remembered" if url_remembered
                         else "typed" if company_url else "none"),
             url_remembered_from=(url_remembered["run_at"] if url_remembered

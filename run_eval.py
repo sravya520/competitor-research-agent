@@ -11,7 +11,7 @@ import sys
 
 import evaluate
 import pipeline
-import tools
+from runstate import RunState
 from eval_cases import CASES
 
 
@@ -27,10 +27,13 @@ def run_case(case: dict) -> tuple[list[str], dict]:
     to measure. Kept as a dict rather than several return values so adding
     a new metric later doesn't mean changing this function's signature.
     """
-    tools.reset_sources()
+    # One RunState per case, so a case cannot inherit the previous one's
+    # source ledger. This replaces reset_sources(), which only worked
+    # because the cases run one after another in one process.
+    run = RunState()
     failures: list[str] = []
 
-    identity = pipeline.identify_company(case["company"], case["url"] or "")
+    identity = pipeline.identify_company(case["company"], case["url"] or "", run)
     stopped = identity is None or not identity.confident_match
 
     if case["expect_stop"]:
@@ -46,12 +49,13 @@ def run_case(case: dict) -> tuple[list[str], dict]:
         failures.append(f"Expected a confident identification, but stopped: {note}")
         return failures, {}
 
-    research = pipeline.research_competitors(case["company"], identity)
+    research = pipeline.research_competitors(case["company"], identity, run)
     if research is None:
         failures.append("Research step returned nothing (ran out of tool calls).")
         return failures, {}
 
-    verifications = pipeline.verify_competitors(case["company"], identity, research.competitors)
+    verifications = pipeline.verify_competitors(
+        case["company"], identity, research.competitors, run)
     kept, _ = pipeline.apply_verifications(research.competitors, verifications)
     found = _names(kept)
     print(f"    found: {', '.join(found) or '(none)'}")
@@ -71,7 +75,7 @@ def run_case(case: dict) -> tuple[list[str], dict]:
     if wanted and not any(w.lower() in n.lower() for w in wanted for n in found):
         failures.append(f"Expected at least one of {wanted}, found none.")
 
-    failures.extend(evaluate.run_checks(kept, tools.sources_consulted()))
+    failures.extend(evaluate.run_checks(kept, run.sources_consulted()))
 
     metrics: dict = {}
 

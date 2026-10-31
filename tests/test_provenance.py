@@ -9,7 +9,7 @@ competitor set against an earlier one, and without this a changed model
 would read as a changed market.
 
 pipeline.py collects the versions and exposes them through an accessor, the
-same shape as tools.sources_consulted(). Nothing here makes an API call: the
+same shape as the run ledger. Nothing here makes an API call: the
 responses are stand-ins carrying only the field that matters.
 """
 
@@ -22,6 +22,7 @@ os.environ.setdefault("TAVILY_API_KEY", "test-tavily-key")
 
 import memory  # noqa: E402
 import pipeline  # noqa: E402
+from runstate import RunState  # noqa: E402
 
 
 def response(model_version):
@@ -29,29 +30,35 @@ def response(model_version):
 
 
 class ModelVersions(unittest.TestCase):
+    """One run's versions, recorded on that run.
+
+    There is nothing to reset between tests: each builds its own RunState,
+    which is the point of the change.
+    """
+
     def setUp(self):
-        pipeline.reset_model_versions()
-        self.addCleanup(pipeline.reset_model_versions)
+        self.run = RunState()
 
     def test_nothing_recorded_before_a_call(self):
-        self.assertEqual(pipeline.model_versions(), [])
+        self.assertEqual(self.run.model_versions(), [])
 
     def test_a_response_records_its_version(self):
-        pipeline._note_model_version(response("gemini-3.5-flash-lite"))
-        self.assertEqual(pipeline.model_versions(), ["gemini-3.5-flash-lite"])
+        pipeline._note_model_version(self.run, response("gemini-3.5-flash-lite"))
+        self.assertEqual(self.run.model_versions(), ["gemini-3.5-flash-lite"])
 
     def test_the_response_is_passed_through_unchanged(self):
         """It wraps the API call, so it must not swallow the result."""
         original = response("gemini-3.5-flash-lite")
-        self.assertIs(pipeline._note_model_version(original), original)
+        self.assertIs(pipeline._note_model_version(self.run, original),
+                      original)
 
     def test_several_versions_in_one_run_are_all_kept(self):
         """The identify, research and verify calls can land on different
         versions mid-rollout, and that is exactly worth knowing."""
-        pipeline._note_model_version(response("gemini-3.5-flash-lite"))
-        pipeline._note_model_version(response("gemini-3.6-flash-lite"))
-        pipeline._note_model_version(response("gemini-3.5-flash-lite"))
-        self.assertEqual(pipeline.model_versions(),
+        pipeline._note_model_version(self.run, response("gemini-3.5-flash-lite"))
+        pipeline._note_model_version(self.run, response("gemini-3.6-flash-lite"))
+        pipeline._note_model_version(self.run, response("gemini-3.5-flash-lite"))
+        self.assertEqual(self.run.model_versions(),
                          ["gemini-3.5-flash-lite", "gemini-3.6-flash-lite"])
 
     def test_a_response_without_a_version_is_ignored(self):
@@ -60,15 +67,15 @@ class ModelVersions(unittest.TestCase):
         for stub in (response(None), response(""), SimpleNamespace(),
                      object()):
             with self.subTest(stub=type(stub).__name__):
-                pipeline._note_model_version(stub)
-        self.assertEqual(pipeline.model_versions(), [])
+                pipeline._note_model_version(self.run, stub)
+        self.assertEqual(self.run.model_versions(), [])
 
-    def test_reset_clears_them(self):
-        """Needed because the Streamlit app researches several companies in
-        one process, exactly like tools.reset_sources()."""
-        pipeline._note_model_version(response("gemini-3.5-flash-lite"))
-        pipeline.reset_model_versions()
-        self.assertEqual(pipeline.model_versions(), [])
+    def test_a_second_run_starts_empty(self):
+        """What reset_model_versions() used to be for. The Streamlit app
+        researches several companies in one process, and now each gets its
+        own run instead of sharing one cleared set."""
+        pipeline._note_model_version(self.run, response("gemini-3.5-flash-lite"))
+        self.assertEqual(RunState().model_versions(), [])
 
 
 class RecordedProvenance(unittest.TestCase):
@@ -92,7 +99,7 @@ class RecordedProvenance(unittest.TestCase):
         self.assertEqual(self.record()["model_resolved"], [])
 
     def test_the_versions_are_copied_not_aliased(self):
-        """pipeline.model_versions() is rebuilt per call today, but the
+        """self.run.model_versions() is rebuilt per call today, but the
         record must not share a list with its caller either way."""
         versions = ["gemini-3.5-flash-lite"]
         record = self.record(model_resolved=versions)

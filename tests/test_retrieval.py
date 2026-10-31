@@ -26,6 +26,7 @@ os.environ.setdefault("TAVILY_API_KEY", "test-tavily-key")
 os.environ.setdefault("FIRECRAWL_API_KEY", "test-firecrawl-key")
 
 import tools  # noqa: E402
+from runstate import DEFAULT_TRUNCATION, RunState  # noqa: E402
 from retrieval import (  # noqa: E402
     CreditMeter,
     FirecrawlProvider,
@@ -37,6 +38,30 @@ from retrieval import (  # noqa: E402
 )
 
 NO_CACHE = lambda: ResponseCache(enabled=False)  # noqa: E731
+
+
+class ProviderCase(unittest.TestCase):
+    """Base for tests that drive the tools against a stub provider.
+
+    Each test builds its own RunState and its own pair of tools, so there is
+    nothing to reset between tests and nothing a later test can inherit. The
+    setUp/tearDown pairs that used to clear module-level state are gone with
+    the state itself.
+    """
+
+    def use(self, provider, truncation=None):
+        """Point this test's run at a provider and build its two tools."""
+        self.run = RunState(provider=provider, truncation=truncation)
+        self.search_web, self.extract_company_page = tools.make_tools(self.run)
+        return self.run
+
+    def sources(self):
+        return self.run.sources_consulted()
+
+
+def capped(**limits):
+    """A truncation setting with the benchmark cap enabled."""
+    return {**DEFAULT_TRUNCATION, "enabled": True, **limits}
 
 
 def tavily_search_payload(results):
@@ -63,22 +88,15 @@ def make_firecrawl(web=None, markdown="content", raises=None):
     return client
 
 
-class TavilyOutputUnchanged(unittest.TestCase):
+class TavilyOutputUnchanged(ProviderCase):
     """The format the model sees must be identical to the pre-refactor code."""
-
-    def setUp(self):
-        tools.reset_sources()
-
-    def tearDown(self):
-        tools.set_provider(None)
-        tools.reset_sources()
 
     def test_search_output_is_byte_identical(self):
         client = make_tavily(search_results=[
             {"title": "Acme", "url": "https://acme.com", "content": "We make things."},
             {"title": "Beta", "url": "https://beta.io/about", "content": "Beta does X."},
         ])
-        tools.set_provider(TavilyProvider(client=client, cache=NO_CACHE(), throttle=False))
+        self.use(TavilyProvider(client=client, cache=NO_CACHE(), throttle=False))
 
         expected = (
             "Title: Acme\n"
@@ -90,72 +108,65 @@ class TavilyOutputUnchanged(unittest.TestCase):
             "Content: Beta does X.\n"
             "\n"
         )
-        self.assertEqual(tools.search_web("acme"), expected)
+        self.assertEqual(self.search_web("acme"), expected)
 
     def test_listicle_tag_still_applied(self):
         client = make_tavily(search_results=[
             {"title": "Top 10 CRMs", "url": "https://x.com/blog/best-crms",
              "content": "A roundup."},
         ])
-        tools.set_provider(TavilyProvider(client=client, cache=NO_CACHE(), throttle=False))
+        self.use(TavilyProvider(client=client, cache=NO_CACHE(), throttle=False))
 
-        out = tools.search_web("crm")
+        out = self.search_web("crm")
         self.assertIn("Title: Top 10 CRMs [ROUNDUP/LISTICLE CONTENT", out)
         self.assertIn("do not treat its stats or claims as verified facts", out)
 
     def test_extract_returns_raw_content(self):
         client = make_tavily(extract_results=[{"raw_content": "Full page text."}])
-        tools.set_provider(TavilyProvider(client=client, cache=NO_CACHE(), throttle=False))
+        self.use(TavilyProvider(client=client, cache=NO_CACHE(), throttle=False))
 
         self.assertEqual(
-            tools.extract_company_page("https://acme.com"), "Full page text."
+            self.extract_company_page("https://acme.com"), "Full page text."
         )
 
     def test_extract_failure_message_unchanged(self):
         client = make_tavily(extract_results=[])
-        tools.set_provider(TavilyProvider(client=client, cache=NO_CACHE(), throttle=False))
+        self.use(TavilyProvider(client=client, cache=NO_CACHE(), throttle=False))
 
         self.assertEqual(
-            tools.extract_company_page("https://acme.com"),
+            self.extract_company_page("https://acme.com"),
             "Could not read the page at https://acme.com. "
             "It may be blocked, private, or unavailable.",
         )
 
 
-class LedgerInvariant(unittest.TestCase):
+class LedgerInvariant(ProviderCase):
     """A failed fetch records nothing. Tested per provider, as required."""
-
-    def setUp(self):
-        tools.reset_sources()
-
-    def tearDown(self):
-        tools.set_provider(None)
-        tools.reset_sources()
 
     # ---- failed fetch records nothing -------------------------------------
 
     def test_tavily_failed_fetch_records_nothing(self):
-        tools.set_provider(TavilyProvider(
+        self.use(TavilyProvider(
             client=make_tavily(extract_results=[]), cache=NO_CACHE(), throttle=False))
 
-        tools.extract_company_page("https://unreachable.example")
-        self.assertEqual(tools.sources_consulted(), [])
+        self.extract_company_page("https://unreachable.example")
+        self.assertEqual(self.sources(), [])
 
     def test_firecrawl_failed_fetch_records_nothing(self):
-        tools.set_provider(FirecrawlProvider(
+        self.use(FirecrawlProvider(
             client=make_firecrawl(raises=RuntimeError("502 upstream")),
             cache=NO_CACHE(), throttle=False))
 
-        tools.extract_company_page("https://unreachable.example")
-        self.assertEqual(tools.sources_consulted(), [])
+        self.extract_company_page("https://unreachable.example")
+        self.assertEqual(self.sources(), [])
 
     def test_firecrawl_empty_content_records_nothing(self):
         """Empty markdown is a failure, not an empty-but-valid page."""
-        tools.set_provider(FirecrawlProvider(
+        self.use(FirecrawlProvider(
             client=make_firecrawl(markdown=""), cache=NO_CACHE(), throttle=False))
 
-        tools.extract_company_page("https://blank.example")
-        self.assertEqual(tools.sources_consulted(), [])
+        self.extract_company_page("https://blank.example")
+        self.assertEqual(self.sources(), [])
 
     def test_hybrid_failed_fetch_records_nothing(self):
         hybrid = HybridProvider(
@@ -164,10 +175,10 @@ class LedgerInvariant(unittest.TestCase):
                 client=make_firecrawl(raises=TimeoutError("timed out")),
                 cache=NO_CACHE(), throttle=False),
         )
-        tools.set_provider(hybrid)
+        self.use(hybrid)
 
-        tools.extract_company_page("https://unreachable.example")
-        self.assertEqual(tools.sources_consulted(), [])
+        self.extract_company_page("https://unreachable.example")
+        self.assertEqual(self.sources(), [])
 
     # ---- partial batch records only successes -----------------------------
 
@@ -177,11 +188,11 @@ class LedgerInvariant(unittest.TestCase):
             {"title": "Bad", "url": "https://bad.com", "content": ""},
             {"title": "Also good", "url": "https://also-good.com", "content": "real"},
         ])
-        tools.set_provider(TavilyProvider(client=client, cache=NO_CACHE(), throttle=False))
+        self.use(TavilyProvider(client=client, cache=NO_CACHE(), throttle=False))
 
-        out = tools.search_web("q")
+        out = self.search_web("q")
         self.assertEqual(
-            tools.sources_consulted(), ["https://also-good.com", "https://good.com"])
+            self.sources(), ["https://also-good.com", "https://good.com"])
         # The unusable result is not shown to the model either, or it would be
         # a URL in context that is absent from the ledger.
         self.assertNotIn("https://bad.com", out)
@@ -191,10 +202,10 @@ class LedgerInvariant(unittest.TestCase):
             {"url": "https://good.com", "title": "Good", "description": "snippet"},
             {"url": "https://empty.com", "title": "Empty", "description": ""},
         ])
-        tools.set_provider(FirecrawlProvider(client=client, cache=NO_CACHE(), throttle=False))
+        self.use(FirecrawlProvider(client=client, cache=NO_CACHE(), throttle=False))
 
-        out = tools.search_web("q")
-        self.assertEqual(tools.sources_consulted(), ["https://good.com"])
+        out = self.search_web("q")
+        self.assertEqual(self.sources(), ["https://good.com"])
         self.assertNotIn("https://empty.com", out)
 
     def test_hybrid_partial_batch_records_only_successes(self):
@@ -205,10 +216,10 @@ class LedgerInvariant(unittest.TestCase):
             ]), cache=NO_CACHE(), throttle=False),
             firecrawl=FirecrawlProvider(client=make_firecrawl(), cache=NO_CACHE(), throttle=False),
         )
-        tools.set_provider(hybrid)
+        self.use(hybrid)
 
-        tools.search_web("q")
-        self.assertEqual(tools.sources_consulted(), ["https://good.com"])
+        self.search_web("q")
+        self.assertEqual(self.sources(), ["https://good.com"])
 
 
 class DocInvariant(unittest.TestCase):
@@ -268,63 +279,53 @@ class CreditAccounting(unittest.TestCase):
         self.assertEqual(provider.meter.as_implemented, 1.0)
 
 
-class Truncation(unittest.TestCase):
+class Truncation(ProviderCase):
     """The shared per-result cap used only for benchmark fairness."""
-
-    def setUp(self):
-        tools.reset_sources()
-        tools.reset_truncation_stats()
-
-    def tearDown(self):
-        tools.set_truncation(False)
-        tools.reset_truncation_stats()
-        tools.set_provider(None)
-        tools.reset_sources()
 
     def test_off_by_default_leaves_content_untouched(self):
         """Production behaviour must be unchanged when nobody enables this."""
         long_text = "x" * 9000
-        tools.set_provider(TavilyProvider(client=make_tavily(search_results=[
+        self.use(TavilyProvider(client=make_tavily(search_results=[
             {"title": "T", "url": "https://t.com", "content": long_text}]),
             cache=NO_CACHE(), throttle=False))
 
-        self.assertIn(long_text, tools.search_web("q"))
+        self.assertIn(long_text, self.search_web("q"))
 
     def test_search_content_capped_when_enabled(self):
-        tools.set_truncation(True, search_chars=1500, page_chars=25000)
-        tools.set_provider(TavilyProvider(client=make_tavily(search_results=[
+        self.use(TavilyProvider(client=make_tavily(search_results=[
             {"title": "T", "url": "https://t.com", "content": "x" * 9000}]),
-            cache=NO_CACHE(), throttle=False))
+            cache=NO_CACHE(), throttle=False),
+            truncation=capped(search_chars=1500, page_chars=25000))
 
-        out = tools.search_web("q")
+        out = self.search_web("q")
         self.assertIn("x" * 1500, out)
         self.assertNotIn("x" * 1501, out)
 
     def test_page_content_capped_when_enabled(self):
-        tools.set_truncation(True, search_chars=1500, page_chars=25000)
-        tools.set_provider(TavilyProvider(
+        self.use(TavilyProvider(
             client=make_tavily(extract_results=[{"raw_content": "y" * 40000}]),
-            cache=NO_CACHE(), throttle=False))
+            cache=NO_CACHE(), throttle=False),
+            truncation=capped(search_chars=1500, page_chars=25000))
 
-        self.assertEqual(len(tools.extract_company_page("https://t.com")), 25000)
+        self.assertEqual(
+            len(self.extract_company_page("https://t.com")), 25000)
 
     def test_short_content_is_not_counted_as_truncated(self):
-        tools.set_truncation(True)
-        tools.set_provider(TavilyProvider(client=make_tavily(search_results=[
+        self.use(TavilyProvider(client=make_tavily(search_results=[
             {"title": "A", "url": "https://a.com", "content": "short"},
             {"title": "B", "url": "https://b.com", "content": "z" * 5000}]),
-            cache=NO_CACHE(), throttle=False))
+            cache=NO_CACHE(), throttle=False), truncation=capped())
 
-        tools.search_web("q")
-        stats = tools.truncation_stats()
+        self.search_web("q")
+        stats = self.run.truncation_stats()
         self.assertEqual(stats["search_results"], 2)
         self.assertEqual(stats["search_truncated"], 1)
         self.assertEqual(stats["search_truncated_share"], 0.5)
 
     def test_settings_are_reportable(self):
-        tools.set_truncation(True, search_chars=1500, page_chars=25000)
+        run = RunState(truncation=capped(search_chars=1500, page_chars=25000))
         self.assertEqual(
-            tools.truncation_settings(),
+            run.truncation_settings(),
             {"enabled": True, "search_chars": 1500, "page_chars": 25000},
         )
 

@@ -123,6 +123,7 @@ def _identity_from(recalled: dict) -> CompanyIdentity:
 def establish_identity(
     company_name: str,
     company_url: str,
+    run,
     path: str | None = None,
     allow_recall: bool = True,
 ) -> tuple[CompanyIdentity | None, dict | None]:
@@ -132,6 +133,10 @@ def establish_identity(
     when memory was used and None when the live step ran, so callers can
     label a reused identity with its date. `identity` is None only when the
     live step failed to produce one, exactly as before.
+
+    `run` is passed straight through to the live step, which needs it for
+    its source ledger. It is required even though a recalled identity never
+    touches it: a caller that has no run has no business starting one.
 
     allow_recall=False forces the live step even when a fresh record exists.
     Both UIs expose that, because a reused identity is still a judgement the
@@ -151,4 +156,4 @@ def establish_identity(
         if recalled:
             return _identity_from(recalled), recalled
 
-    return pipeline.identify_company(company_name, company_url), None
+    return pipeline.identify_company(company_name, company_url, run), None

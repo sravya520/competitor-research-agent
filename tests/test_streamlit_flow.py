@@ -86,13 +86,13 @@ class MemoryFlow(unittest.TestCase):
 
     # --- stand-ins for the expensive steps --------------------------------
 
-    def fake_establish(self, company_name, company_url, allow_recall=True,
-                       **kwargs):
+    def fake_establish(self, company_name, company_url, run,
+                       allow_recall=True, **kwargs):
         self.establish_calls.append({"name": company_name, "url": company_url,
-                                     "allow_recall": allow_recall})
+                                     "allow_recall": allow_recall, "run": run})
         return an_identity(), None
 
-    def fake_research(self, company_name, identity):
+    def fake_research(self, company_name, identity, run):
         return CompetitorResearch(
             company_name=company_name,
             competitors=[Competitor(
@@ -103,7 +103,7 @@ class MemoryFlow(unittest.TestCase):
             market_trends=[], market_gaps_opportunities=[],
             potential_threats=[])
 
-    def fake_verify(self, company_name, identity, competitors):
+    def fake_verify(self, company_name, identity, competitors, run):
         return [CompetitorVerification(index=0, name="Studio Nine",
                                        verified=True, reason="Checked.")]
 
@@ -132,6 +132,27 @@ class MemoryFlow(unittest.TestCase):
         return app
 
     # --- the flow ---------------------------------------------------------
+
+    def test_the_run_state_lives_in_this_session_not_at_module_level(self):
+        """It has to outlive the script run that created it, because the
+        report is written from the review screen, which is a later rerun.
+        Keeping it in session_state is what makes it per visitor."""
+        app = self.submit(self.started(), "Sprout Design",
+                          url="https://sproutdesign.in")
+
+        run = app.session_state["run"]
+        self.assertIsNotNone(run)
+        self.assertIs(self.establish_calls[0]["run"], run,
+                      "the pipeline must be given this session's run")
+
+    def test_a_new_search_starts_a_new_run(self):
+        """Two companies researched in one session must not share a ledger."""
+        app = self.submit(self.started(), "Sprout Design",
+                          url="https://sproutdesign.in")
+        first = app.session_state["run"]
+
+        app = self.submit(app, "Duolingo", url="https://duolingo.com")
+        self.assertIsNot(app.session_state["run"], first)
 
     def test_a_name_only_run_offers_the_remembered_websites(self):
         self.remember("Sprout Design", "https://sproutdesign.in", days_ago=3)

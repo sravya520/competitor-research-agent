@@ -10,8 +10,8 @@ from tenacity import retry
 
 import prompts
 from config import MODEL, RETRY_SETTINGS, SYSTEM_INSTRUCTION, gemini_client
+import tools
 from schemas import CompanyIdentity, Competitor, CompetitorResearch, CompetitorVerification
-from tools import extract_company_page, search_web
 
 
 def _agent_config(response_schema, tools: list, max_tool_calls: int, use_system_prompt: bool = True):
@@ -33,55 +33,42 @@ def _agent_config(response_schema, tools: list, max_tool_calls: int, use_system_
     )
 
 
-# Every model version the API reported while answering this run. MODEL is an
-# alias ending in "-latest", which moves to a new model without warning: it
-# resolved to gemini-3.5-flash-lite the last time an error named it. A run
-# recorded without this is not comparable with a later one, because a changed
-# competitor set would look like a changed market when the model changed
-# underneath it.
-#
-# Collected here and read through an accessor, the same shape as
-# tools.sources_consulted(), rather than returned: run_eval.py calls these
-# functions too, and no caller should have to change signature to ignore it.
-_model_versions: set[str] = set()
+def _note_model_version(run, response):
+    """Record which model actually answered, then pass the response along.
 
-
-def model_versions() -> list[str]:
-    """Resolved model versions seen during this run, sorted."""
-    return sorted(_model_versions)
-
-
-def reset_model_versions() -> None:
-    """Clear them, so one run's versions do not leak into the next."""
-    _model_versions.clear()
-
-
-def _note_model_version(response):
-    """Record which model actually answered, then pass the response along."""
-    version = getattr(response, "model_version", None)
-    if version:
-        _model_versions.add(version)
+    MODEL is an alias ending in "-latest", which moves to a new model
+    without warning: it resolved to gemini-3.5-flash-lite the last time an
+    error named it. A run recorded without this is not comparable with a
+    later one, because a changed competitor set would look like a changed
+    market when the model changed underneath it.
+    """
+    run.note_model_version(getattr(response, "model_version", None))
     return response
 
 
 @retry(**RETRY_SETTINGS)
-def _send(chat, prompt: str):
-    return _note_model_version(chat.send_message(prompt))
+def _send(chat, prompt: str, run):
+    return _note_model_version(run, chat.send_message(prompt))
 
 
 @retry(**RETRY_SETTINGS)
-def _generate(prompt: str, config):
-    return _note_model_version(gemini_client.models.generate_content(
+def _generate(prompt: str, config, run):
+    return _note_model_version(run, gemini_client.models.generate_content(
         model=MODEL, contents=prompt, config=config,
     ))
 
 
-def identify_company(company_name: str, company_url: str) -> CompanyIdentity | None:
+def identify_company(company_name: str, company_url: str, run) -> CompanyIdentity | None:
     """Establish which company we are actually researching.
 
     When a URL is given, its page content anchors the identity and outranks
     search results. Returns None if the model never produced a valid answer.
+
+    `run` is required, with no default: every URL fetched here belongs in
+    that run's ledger, and a step that could silently fall back to shared
+    state is how one visitor's evidence ended up in another's report.
     """
+    search_web, extract_company_page = tools.make_tools(run)
     anchor_content = extract_company_page(company_url) if company_url else ""
 
     chat = gemini_client.chats.create(
@@ -90,11 +77,13 @@ def identify_company(company_name: str, company_url: str) -> CompanyIdentity | N
             CompanyIdentity, tools=[search_web], max_tool_calls=3, use_system_prompt=False,
         ),
     )
-    response = _send(chat, prompts.identity_prompt(company_name, company_url, anchor_content))
+    response = _send(
+        chat, prompts.identity_prompt(company_name, company_url, anchor_content), run)
     return response.parsed
 
 
-def research_competitors(company_name: str, identity: CompanyIdentity) -> CompetitorResearch | None:
+def research_competitors(company_name: str, identity: CompanyIdentity,
+                         run) -> CompetitorResearch | None:
     """Find competitors, letting the model choose its own searches.
 
     Given both search_web and extract_company_page: search alone tends to
@@ -108,7 +97,7 @@ def research_competitors(company_name: str, identity: CompanyIdentity) -> Compet
         model=MODEL,
         config=_agent_config(
             CompetitorResearch,
-            tools=[search_web, extract_company_page],
+            tools=tools.make_tools(run),
             # Prompt hard-caps the model at 7 tool calls; budget needs to be
             # at least one more than that (the final answer costs a unit
             # too — see _agent_config's docstring), plus a little slack for
@@ -116,7 +105,7 @@ def research_competitors(company_name: str, identity: CompanyIdentity) -> Compet
             max_tool_calls=9,
         ),
     )
-    response = _send(chat, prompts.research_prompt(company_name, identity))
+    response = _send(chat, prompts.research_prompt(company_name, identity), run)
     return response.parsed
 
 
@@ -124,6 +113,7 @@ def verify_competitors(
     company_name: str,
     identity: CompanyIdentity,
     competitors: list[Competitor],
+    run,
 ) -> list[CompetitorVerification]:
     """Second opinion on the proposed competitors.
 
@@ -134,7 +124,8 @@ def verify_competitors(
         response_mime_type="application/json",
         response_schema=list[CompetitorVerification],
     )
-    response = _generate(prompts.verification_prompt(company_name, identity, competitors), config)
+    response = _generate(
+        prompts.verification_prompt(company_name, identity, competitors), config, run)
     return response.parsed or []
 
 

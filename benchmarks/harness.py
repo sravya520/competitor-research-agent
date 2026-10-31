@@ -15,8 +15,8 @@ from datetime import datetime, timezone
 
 import evaluate
 import pipeline
-import tools
 from config import MODEL
+from runstate import DEFAULT_TRUNCATION, RunState
 from retrieval import (
     CreditMeter,
     FirecrawlProvider,
@@ -130,17 +130,18 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False,
     provider = build_provider(mode, meter, use_cache)
     fc = _firecrawl_half(provider)
 
-    tools.reset_sources()
-    tools.reset_truncation_stats()
-    tools.set_truncation(truncate)
-    tools.set_provider(provider)
+    # One RunState per benchmark case. The provider belongs to the run,
+    # which is what lets a case pick its own backend without reaching into
+    # module state that another case, or another thread, can see.
+    run = RunState(provider=provider,
+                   truncation={**DEFAULT_TRUNCATION, "enabled": truncate})
 
     if fc is not None:
         result.firecrawl_credits_before = fc.live_credit_usage()
 
     started = time.monotonic()
     try:
-        identity = pipeline.identify_company(company, url)
+        identity = pipeline.identify_company(company, url, run)
 
         if identity is None:
             result.identity_stopped_reason = "no identity returned"
@@ -150,7 +151,7 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False,
             result.identity_confirmed = True
 
             calls_before_research = _total_calls(meter)
-            research = pipeline.research_competitors(company, identity)
+            research = pipeline.research_competitors(company, identity, run)
             result.research_provider_calls = _total_calls(meter) - calls_before_research
 
             if research is None:
@@ -161,13 +162,13 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False,
                 proposed = research.competitors
                 result.competitors_proposed = len(proposed)
 
-                verifications = pipeline.verify_competitors(company, identity, proposed)
+                verifications = pipeline.verify_competitors(company, identity, proposed, run)
                 kept, _excluded = pipeline.apply_verifications(proposed, verifications)
                 result.competitors_kept = len(kept)
                 if proposed:
                     result.verification_pass_rate = len(kept) / len(proposed)
 
-                consulted = tools.sources_consulted()
+                consulted = run.sources_consulted()
                 result.fabrication_failures = len(
                     evaluate.check_sources_are_real(kept, consulted))
                 result.generic_name_failures = len(
@@ -182,9 +183,9 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False,
         result.error = f"{type(exc).__name__}: {exc}"
 
     result.wall_clock_s = round(time.monotonic() - started, 2)
-    result.sources_consulted = len(tools.sources_consulted())
-    result.truncation_settings = tools.truncation_settings()
-    result.truncation_stats = tools.truncation_stats()
+    result.sources_consulted = len(run.sources_consulted())
+    result.truncation_settings = run.truncation_settings()
+    result.truncation_stats = run.truncation_stats()
 
     snapshot = meter.snapshot()
     result.credits_as_implemented = snapshot["as_implemented"]
@@ -208,8 +209,10 @@ def run_once(mode: str, company: str, url: str = "", use_cache: bool = False,
             result.credit_meter_gap = round(
                 result.firecrawl_credits_delta - fc_computed, 2)
 
-    tools.set_provider(None)
-    tools.set_truncation(False)  # never leave production behaviour altered
+    # No global state to restore: the provider and the truncation cap
+    # belonged to `run`, which goes out of scope here. The old version had to
+    # undo both by hand, and forgetting either left production behaviour
+    # altered for whatever ran next in the process.
     return result
 
 

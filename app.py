@@ -33,8 +33,8 @@ import memory
 import pipeline
 import recall
 import report as report_module
-import tools
 from config import MODEL
+from runstate import RunState
 
 st.set_page_config(page_title="Competitor Research Agent", page_icon="🔍")
 st.title("Competitor Research Agent")
@@ -47,7 +47,7 @@ st.caption(
 # --- one-time state so a rerun (checkbox click, etc.) doesn't lose results ---
 for key in ("stage", "identity", "research", "verified", "excluded", "problems",
             "company_name", "company_url", "report_text", "run_logged",
-            "identity_recalled", "candidates", "url_remembered"):
+            "identity_recalled", "candidates", "url_remembered", "run"):
     st.session_state.setdefault(key, None)
 
 # Not in the loop above: None is falsy, and this one defaults to on.
@@ -60,7 +60,7 @@ def reset() -> None:
     """Clear everything so a new company starts from a clean slate."""
     for key in ("identity", "research", "verified", "excluded", "problems",
                 "report_text", "run_logged", "identity_recalled",
-                "candidates", "url_remembered"):
+                "candidates", "url_remembered", "run"):
         st.session_state[key] = None
     st.session_state["allow_recall"] = True
     st.session_state["stage"] = "input"
@@ -116,10 +116,11 @@ def research_company() -> None:
     """
     try:
         with st.status("Identifying the company...", expanded=True) as status:
-            tools.set_progress_hook(status.write)
+            st.session_state["run"].progress = status.write
             identity, identity_recalled = recall.establish_identity(
                 st.session_state["company_name"],
                 st.session_state["company_url"],
+                st.session_state["run"],
                 allow_recall=st.session_state["allow_recall"],
             )
             st.session_state["identity_recalled"] = identity_recalled
@@ -146,9 +147,10 @@ def research_company() -> None:
 
         if st.session_state["stage"] == "researching":
             with st.status("Researching competitors...", expanded=True) as status:
-                tools.set_progress_hook(status.write)
+                st.session_state["run"].progress = status.write
                 research = pipeline.research_competitors(
-                    st.session_state["company_name"], identity
+                    st.session_state["company_name"], identity,
+                    st.session_state["run"]
                 )
 
                 if research is None:
@@ -159,15 +161,15 @@ def research_company() -> None:
                     status.write("Independently verifying each competitor...")
                     verifications = pipeline.verify_competitors(
                         st.session_state["company_name"], identity,
-                        research.competitors
+                        research.competitors, st.session_state["run"]
                     )
                     verified, excluded = pipeline.apply_verifications(
                         research.competitors, verifications
                     )
 
-                    problems = evaluate.run_checks(verified, tools.sources_consulted())
+                    problems = evaluate.run_checks(verified, st.session_state["run"].sources_consulted())
                     removed = evaluate.drop_fabricated_sources(
-                        verified, tools.sources_consulted())
+                        verified, st.session_state["run"].sources_consulted())
                     if removed:
                         problems.append(f"Removed {removed} fabricated source URL(s).")
                     # After stripping fabricated URLs above, not before --
@@ -230,8 +232,13 @@ if submitted:
         st.error("Enter a company name first.")
     else:
         reset()
-        tools.reset_sources()
-        pipeline.reset_model_versions()
+
+        # One RunState per research, created INSIDE the script run and kept
+        # in session_state: this visitor's ledger, progress output and model
+        # versions, reachable by no other session. It must outlive this
+        # rerun, because the report is written from the review screen, which
+        # is a later one.
+        st.session_state["run"] = RunState()
         st.session_state["company_name"] = company_name.strip()
         st.session_state["company_url"] = company_url.strip()
         st.session_state["allow_recall"] = not fresh_identity
@@ -363,7 +370,7 @@ elif st.session_state["stage"] == "review":
                     research=st.session_state["research"],
                     competitors=final,
                     excluded=final_excluded,
-                    sources=tools.sources_consulted(),
+                    sources=st.session_state["run"].sources_consulted(),
                     identity_recalled=st.session_state["identity_recalled"],
                     url_remembered=st.session_state["url_remembered"],
                 )
@@ -384,11 +391,11 @@ elif st.session_state["stage"] == "review":
                             excluded_auto=excluded,
                             removed_by_human=removed_now,
                             problems=problems,
-                            sources=tools.sources_consulted(),
+                            sources=st.session_state["run"].sources_consulted(),
                             model=MODEL,
-                            model_resolved=pipeline.model_versions(),
+                            model_resolved=st.session_state["run"].model_versions(),
                             retrieval_provider=getattr(
-                                tools.active_provider(), "name", ""),
+                                st.session_state["run"].provider, "name", ""),
                             url_source=(
                                 "remembered"
                                 if st.session_state["url_remembered"]

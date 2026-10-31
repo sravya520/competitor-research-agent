@@ -37,6 +37,7 @@ os.environ.setdefault("TAVILY_API_KEY", "test-tavily-key")
 
 import memory  # noqa: E402
 import recall  # noqa: E402
+from runstate import RunState  # noqa: E402
 
 NOW = datetime.now(timezone.utc)
 
@@ -52,14 +53,21 @@ class Establish(unittest.TestCase):
         self.path = os.path.join(self.directory.name, "memory.jsonl")
 
         self.live_calls = []
+        self.runs_seen = []
         patcher = patch.object(recall.pipeline, "identify_company",
                                side_effect=self.fake_identify)
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def fake_identify(self, company_name, company_url):
-        """Stand-in for the LLM step: records that it was reached."""
+    def fake_identify(self, company_name, company_url, run):
+        """Stand-in for the LLM step: records that it was reached.
+
+        `run` is positional and required, matching the real signature: a
+        pipeline step that could fall back to shared state is the bug this
+        argument exists to prevent.
+        """
         self.live_calls.append((company_name, company_url))
+        self.runs_seen.append(run)
         return SimpleNamespace(description="freshly identified",
                                location=None, website=None,
                                confident_match=True, ambiguity_note=None)
@@ -73,7 +81,8 @@ class Establish(unittest.TestCase):
         )
 
     def establish(self, name="Notion", url="https://notion.so"):
-        return recall.establish_identity(name, url, path=self.path)
+        return recall.establish_identity(name, url, RunState(progress=None),
+                                         path=self.path)
 
     # --- the shortcut -----------------------------------------------------
 
@@ -135,7 +144,7 @@ class Establish(unittest.TestCase):
                               website=None))
 
         identity, recalled = recall.establish_identity(
-            "Sprout Design", "", path=self.path)
+            "Sprout Design", "", RunState(progress=None), path=self.path)
 
         self.assertEqual(len(self.live_calls), 1)
         self.assertIsNone(recalled)
@@ -313,8 +322,8 @@ class ForceLiveIdentity(unittest.TestCase):
                               website=None, confident_match=True,
                               ambiguity_note=None)) as live:
             identity, recalled = recall.establish_identity(
-                "Notion", "https://notion.so", path=self.path,
-                allow_recall=False)
+                "Notion", "https://notion.so", RunState(progress=None),
+                path=self.path, allow_recall=False)
 
         self.assertEqual(live.call_count, 1)
         self.assertIsNone(recalled)
@@ -323,7 +332,8 @@ class ForceLiveIdentity(unittest.TestCase):
     def test_the_default_still_reuses(self):
         with patch.object(recall.pipeline, "identify_company") as live:
             identity, recalled = recall.establish_identity(
-                "Notion", "https://notion.so", path=self.path)
+                "Notion", "https://notion.so", RunState(progress=None),
+                path=self.path)
 
         self.assertEqual(live.call_count, 0)
         self.assertIsNotNone(recalled)
@@ -335,7 +345,7 @@ class ForceLiveIdentity(unittest.TestCase):
 
         seen = {}
 
-        def fake_establish(name, url, allow_recall=True, **kwargs):
+        def fake_establish(name, url, run, allow_recall=True, **kwargs):
             seen["allow_recall"] = allow_recall
             return None, None  # main exits immediately after this
 

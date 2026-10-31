@@ -21,6 +21,7 @@ import hashlib
 import json
 import math
 import os
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -90,6 +91,10 @@ class CreditMeter:
     """
 
     def __init__(self) -> None:
+        # A provider instance is shared process-wide, so two concurrent runs
+        # report into one meter. Credits are a running total and calls is a
+        # read-modify-write per key, neither of which survives interleaving.
+        self._lock = threading.Lock()
         self.as_implemented: float = 0.0
         self.calls: dict[str, int] = {}
         # Credits per provider, kept alongside the call counts. Without it,
@@ -101,29 +106,41 @@ class CreditMeter:
         self._tavily_urls_fetched = 0
 
     def record(self, provider: str, operation: str, credits: float, urls: int = 0) -> None:
-        self.as_implemented += credits
-        key = f"{provider}.{operation}"
-        self.calls[key] = self.calls.get(key, 0) + 1
-        self.credits_by_provider[provider] = (
-            self.credits_by_provider.get(provider, 0.0) + credits)
-        if provider == "tavily" and operation == "fetch":
-            self._tavily_urls_fetched += urls
+        with self._lock:
+            self.as_implemented += credits
+            key = f"{provider}.{operation}"
+            self.calls[key] = self.calls.get(key, 0) + 1
+            self.credits_by_provider[provider] = (
+                self.credits_by_provider.get(provider, 0.0) + credits)
+            if provider == "tavily" and operation == "fetch":
+                self._tavily_urls_fetched += urls
 
     @property
     def theoretical_batched(self) -> float:
         """Tavily basic extract bills 1 credit per 5 URLs. Fetching one at a
         time wastes 4/5 of each credit. This is what batching would have cost.
         """
+        with self._lock:
+            return self._theoretical_batched()
+
+    def _theoretical_batched(self) -> float:
+        """As above, for callers that already hold the lock.
+
+        Separate because threading.Lock is not reentrant: snapshot() takes
+        the lock and needs this number, and going through the property there
+        would deadlock.
+        """
         unbatched = float(self._tavily_urls_fetched)
         batched = math.ceil(self._tavily_urls_fetched / 5) if self._tavily_urls_fetched else 0
         return self.as_implemented - unbatched + batched
 
     def snapshot(self) -> dict:
-        return {
-            "as_implemented": round(self.as_implemented, 2),
-            "theoretical_tavily_batched": round(self.theoretical_batched, 2),
-            "calls": dict(self.calls),
-        }
+        with self._lock:
+            return {
+                "as_implemented": round(self.as_implemented, 2),
+                "theoretical_tavily_batched": round(self._theoretical_batched(), 2),
+                "calls": dict(self.calls),
+            }
 
 
 # --------------------------------------------------------------------------

@@ -178,6 +178,14 @@ Asked about a two-person studio called "Sprout Design," the system repeatedly pr
 **When identity is ambiguous, it stops.**
 An earlier version asked the user "is this the company you meant?" and continued on a yes. That was unsafe: confirming a description that said *"no entity could be verified"* let the research step latch onto the wrong company and spend its whole budget there. Now, low confidence is a hard stop with an explanation. **Refusing to answer is a feature.**
 
+**Run state belongs to the run, not to the process.** The source ledger, the progress sink, the model versions and the benchmark counters all live on a `RunState` created once per run and passed explicitly: one per CLI invocation, one per web research (kept in `st.session_state`, because the report is written in a later rerun), one per eval case, one per benchmark case. `tools.make_tools(run)` builds that run's `search_web` and `extract_company_page` as closures over it.
+
+This started as a CLI, where one run per process made module-level state correct and simpler. It is wrong for the deployed app: Streamlit gives each browser session its own script-runner thread inside one process, so a module-level ledger is shared by every visitor at once. One visitor submitting cleared another's ledger mid-run, and because `evaluate.drop_fabricated_sources` treats that ledger as proof a URL was really fetched, the second visitor's genuine citations were then stripped from their report as fabricated. The anti-hallucination check was deleting true evidence. Two further symptoms: model versions mixed between runs, making a stored record untrue for both, and the progress sink printed one visitor's searches into a stranger's status panel.
+
+The closures are not `contextvars`: the state travels with the function rather than with the thread, which holds even if the SDK invokes a tool from a worker thread. Each closure keeps its name, parameters, type hints and docstring, because all four are part of the schema sent to Gemini (the docstring is prompt text), and a test pins each declared schema so a refactor cannot quietly reword the prompt. There are no compatibility shims: the old module-level accessors are gone, so a missed call site fails loudly rather than silently sharing state again.
+
+What stays process-wide is what should be shared: the HTTP clients, the disk response cache and the credit meter, built lazily under a lock, since a warm cache is why a rerun costs no credits. A cache hit still records the URL in that run's ledger, because whether the bytes came from the network or from disk is a billing detail, not an evidence one.
+
 **Verification is a separate call with no shared history.**
 A model asked to re-check its own reasoning tends to agree with itself. The verifier sees the proposed competitors and the target company, but not the reasoning that produced them.
 
@@ -281,7 +289,10 @@ app.py         Streamlit UI for the same pipeline: the only file that
                framework-agnostic so this and main.py can share them
 pipeline.py    The three LLM steps: identify, research, verify
 prompts.py     All prompt text, with comments on why each constraint exists
-tools.py       search_web / extract_company_page, and source tracking
+tools.py       make_tools(run): the two functions the agent can call,
+               built per run, plus the roundup-content rule
+runstate.py    one run's own state: its source ledger, progress sink,
+               model versions and benchmark counters
 schemas.py     Pydantic models defining every structured output
 evaluate.py    Automatic consistency checks: fabricated URLs, generic
                names, source corroboration, precise unsourced claims

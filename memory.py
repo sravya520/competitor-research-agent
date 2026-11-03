@@ -43,10 +43,10 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 # 2 added url_source and url_remembered_from. 3 added identity_established_at.
-# 4 added model_resolved. Older lines simply lack those fields, and every read
-# here uses .get with a fallback, so an older ledger stays readable without a
-# migration.
-SCHEMA_VERSION = 4
+# 4 added model_resolved. 5 added competitor_domain inside each competitor.
+# Older lines simply lack those fields, and every read here uses .get with a
+# fallback, so an older ledger stays readable without a migration.
+SCHEMA_VERSION = 5
 
 LEDGER_PATH_ENV = "MEMORY_PATH"
 
@@ -212,6 +212,90 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# Suffixes that are not a company's own label. Without a public suffix list
+# the second-to-last label is usually the registrable name, except under a
+# second-level suffix like .co.uk, where it is the one before that.
+SECOND_LEVEL_SUFFIXES = {"co", "com", "org", "net", "ac", "gov", "edu"}
+
+
+def _name_tokens(name: str) -> set[str]:
+    """The words of a company name, alphanumeric only and case folded.
+
+    "GitHub Issues & Projects" becomes {github, issues, projects}, and
+    "Jira (Atlassian)" becomes {jira, atlassian}.
+    """
+    cleaned = "".join(ch if ch.isalnum() else " " for ch in name or "")
+    return {token.casefold() for token in cleaned.split() if token}
+
+
+def registrable_name(host: str) -> str:
+    """The label a company owns in a host: "atlassian" in atlassian.com.
+
+    Returns "" when there is no such label to read.
+    """
+    labels = [label for label in (host or "").split(".") if label]
+    if len(labels) < 2:
+        return ""
+
+    candidate = labels[-2]
+    if candidate in SECOND_LEVEL_SUFFIXES and len(labels) >= 3:
+        candidate = labels[-3]
+    return "".join(ch for ch in candidate if ch.isalnum()).casefold()
+
+
+def registrable_domain(host: str) -> str:
+    """The host reduced to what the company owns: blog.notion.so -> notion.so.
+
+    Stored rather than the full host so two runs that happen to cite
+    different pages of the same company, one on a subdomain, still match as
+    the same company.
+    """
+    labels = [label for label in (host or "").split(".") if label]
+    if len(labels) < 2:
+        return ""
+
+    keep = 3 if (len(labels) >= 3 and labels[-2] in SECOND_LEVEL_SUFFIXES) else 2
+    return ".".join(labels[-keep:]).casefold()
+
+
+def competitor_domain(competitor) -> str:
+    """The competitor's own domain, read off its cited sources, or "".
+
+    A cited host counts as the company's own site only when its registrable
+    name EQUALS a whole token of the company's name: "atlassian" matches
+    "Jira (Atlassian)", and "planet" does not match "Plane". Equality
+    rather than containment, because a substring rule would confidently
+    attach planet.com to Plane.
+
+    Deliberately derived rather than asked for. The research step already
+    fetches competitors' own pages, so the evidence is in the record
+    already, and adding a field for the model to fill would change a prompt
+    for memory's benefit, which this project does not do.
+
+    Note that this rule and DIRECTORY_HOSTS serve different purposes and do
+    not contradict each other. DIRECTORY_HOSTS stops a platform host being
+    used as the KEY for a company, because a page there identifies no one
+    company. Here the same host is admissible, but only through the token
+    match: "GitHub Issues & Projects" earns github.com, and no other
+    competitor can, because no other name contains that token.
+
+    Zero matches, or two different matching hosts, both give "": an
+    ambiguous answer is worse than none, and the caller falls back to
+    matching by name.
+    """
+    tokens = _name_tokens(getattr(competitor, "name", ""))
+    if not tokens:
+        return ""
+
+    matches = set()
+    for source in getattr(competitor, "sources", None) or []:
+        host = _host(source)
+        if host and registrable_name(host) in tokens:
+            matches.add(registrable_domain(host))
+
+    return matches.pop() if len(matches) == 1 else ""
+
+
 def _competitor_record(competitor) -> dict:
     """The fields a later diff needs, read off a Competitor.
 
@@ -225,6 +309,9 @@ def _competitor_record(competitor) -> dict:
         "positioning": getattr(competitor, "positioning", "") or "",
         "pricing": getattr(competitor, "pricing", None),
         "sources": list(getattr(competitor, "sources", None) or []),
+        # Derived, not asked for. Empty when the cited sources do not
+        # establish it; the comparison then matches by name and says so.
+        "competitor_domain": competitor_domain(competitor),
     }
 
 

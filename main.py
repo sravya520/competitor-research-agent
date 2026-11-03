@@ -219,6 +219,18 @@ def main() -> None:
         sys.exit("\nNo competitors remain, so there is no report to write.")
 
     # Step 4 — write it out.
+    # How this run differs from the last one for the same company. Returns
+    # None, and so writes no section, unless memory is on and a prior run
+    # exists under a strong key.
+    key, key_is_strong = memory.canonical_key(
+        identity.website or company_url, company_name)
+    comparison = recall.since_last_run(
+        key, key_is_strong, final,
+        excluded_names=[name for name, _ in excluded],
+        current_model_resolved=run.model_versions(),
+        current_retrieval_provider=getattr(run.provider, "name", ""),
+    )
+
     content = report_module.build_report(
         company_name=company_name,
         company_url=company_url,
@@ -229,6 +241,7 @@ def main() -> None:
         sources=run.sources_consulted(),
         identity_recalled=identity_recalled,
         url_remembered=url_remembered,
+        since_last_run=comparison,
     )
     filename = report_module.save_report(company_name, content)
 

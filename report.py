@@ -60,6 +60,79 @@ def _sources_section(lines: list[str], competitor: Competitor) -> None:
     lines.append("")
 
 
+def _since_last_run_section(lines: list[str], comparison: dict) -> None:
+    """Compare this run with the previous one, in plain arithmetic.
+
+    Nothing here is model-written. The section exists because a founder
+    running this monthly wants the delta, and a delta invented by a model
+    would be worse than none.
+
+    The wording avoids saying a competitor was dropped or disappeared.
+    Retrieval varies between runs, so an absence is evidence about this
+    run's search, not about the company.
+    """
+    established = (comparison.get("previous_run_at") or "")[:10]
+    age = comparison.get("age_days")
+    if age is None:
+        when = ""
+    elif age < 1:
+        when = " (earlier today)"
+    else:
+        when = f" ({age:.0f} days ago)"
+
+    lines += [f"## Since your last run on {established}{when}", ""]
+
+    provenance = comparison.get("provenance_changed")
+    if provenance:
+        previous_model = ", ".join(provenance["previous_model"]) or "not recorded"
+        current_model = ", ".join(provenance["current_model"]) or "not recorded"
+        lines += [
+            "**Read the differences below with care:** this run and the "
+            "previous one did not use the same setup, so a change here may "
+            "come from the model or the retrieval backend rather than from "
+            "the market.",
+            "",
+            f"- Model: {previous_model} previously, {current_model} this run",
+            f"- Retrieval: {provenance['previous_provider'] or 'not recorded'} "
+            f"previously, {provenance['current_provider'] or 'not recorded'} "
+            f"this run",
+            "",
+        ]
+
+    if comparison["new"]:
+        lines += ["**New this run:**", ""]
+        lines += [f"- {name}" for name in comparison["new"]]
+        lines.append("")
+
+    if comparison["not_found"]:
+        lines += ["**Not found this time:**", ""]
+        lines += [f"- {name}" for name in comparison["not_found"]]
+        lines += [
+            "",
+            "Live search varies between runs, so this does not mean the "
+            "company stopped competing.",
+            "",
+        ]
+
+    if comparison["still_present"]:
+        lines += ["**Still present:**", ""]
+        for entry in comparison["still_present"]:
+            notes = []
+            if entry["matched_by_name"]:
+                notes.append("matched by name")
+            if entry["pricing_before"]:
+                notes.append(f"pricing changed: {entry['pricing_before']} "
+                             f"to {entry['pricing_after']}")
+            suffix = f" _({'; '.join(notes)})_" if notes else ""
+            lines.append(f"- {entry['name']}{suffix}")
+        lines.append("")
+
+    if not (comparison["new"] or comparison["not_found"]
+            or comparison["still_present"]):
+        lines += ["Nothing to compare: the previous run recorded no "
+                  "competitors.", ""]
+
+
 def build_report(
     company_name: str,
     company_url: str,
@@ -70,6 +143,7 @@ def build_report(
     sources: list[str],
     identity_recalled: dict | None = None,
     url_remembered: dict | None = None,
+    since_last_run: dict | None = None,
 ) -> str:
     lines: list[str] = [
         f"# Competitor Research: {company_name}",
@@ -111,7 +185,14 @@ def build_report(
             f"re-established for this report")
     if memory_notes:
         lines.append(f"- **From memory:** {'; '.join(memory_notes)}")
-    lines += ["", f"## Competitors ({len(competitors)})", ""]
+    lines.append("")
+
+    # Placed before the competitor list: a repeat reader wants the delta
+    # first, and a first-time reader never sees this section at all.
+    if since_last_run:
+        _since_last_run_section(lines, since_last_run)
+
+    lines += [f"## Competitors ({len(competitors)})", ""]
 
     for competitor in competitors:
         lines += [

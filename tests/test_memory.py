@@ -261,6 +261,9 @@ class Records(unittest.TestCase):
             "positioning": "Cheaper and simpler",
             "pricing": "$10/mo",
             "sources": ["https://example.com"],
+            # Derived from the sources; empty here because example.com is
+            # not Coda's own site. See tests/test_since_last_run.py.
+            "competitor_domain": "",
         }])
 
     def test_a_missing_pricing_survives_as_null(self):

@@ -346,6 +346,14 @@ Two things, both of which the user can see and overrule.
 
 Anything taken from an earlier run is disclosed with that run's date, in the terminal, in the web UI and as a line in the report. A cached claim otherwise reads exactly like one checked today, which is the opposite of what these reports are for.
 
+### Since your last run
+
+When memory is on and this company was researched before under a strong key, the report opens with a short comparison against the previous run: which competitors are new, which the search did not surface this time, and which are still present, with a price change noted only when both runs quote a figure and the figures differ.
+
+It is arithmetic over two stored lists. No model is asked to summarise anything, because a delta a model invented would be worse than no delta: a founder reading "Miro is new this month" will act on it. Companies are matched by a domain derived from their own cited sources, falling back to the name only when one side has no domain, and saying "matched by name" when it does.
+
+What it does not claim. A competitor under **Not found this time** has not necessarily stopped competing: live search varies between runs, and the section says so every time rather than reporting a disappearance. A missing domain on either side means the match rests on a name, which is weaker, so it is labelled. Rewording is not a price change, and a price quoted in one run but not the other is treated as missing data rather than a cut. If the model version or the retrieval backend differed between the two runs, that is stated before any of the lists, because a difference may come from the change in setup rather than from the market. The section is skipped entirely for a weak key, since two runs under a name-based key may be about two different companies.
+
 ### What memory does not do
 
 **It never reaches the model.** No prompt changes, ever. A remembered website is shown to the user, not fed to the LLM as a candidate: the model tends to agree with what it is shown, and that would bias it toward repeating a past misidentification on exactly the ambiguous names the pipeline is designed to stop on. Memory either replaces the identify call with a stored, dated, disclosed identity, or it stays out of the way.

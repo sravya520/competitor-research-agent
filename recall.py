@@ -26,9 +26,37 @@ the web UI and in the report, because a cached claim otherwise reads exactly
 like a freshly established one.
 """
 
+import re
+
 import memory
 import pipeline
 from schemas import CompanyIdentity
+
+# A figure only counts as a price when a currency symbol anchors it. Without
+# that anchor, "AGPL-3.0" reads as the numbers 3 and 0.
+_PRICE = re.compile(r"[$£€]\s?(\d+(?:[.,]\d+)?)")
+
+
+def _price_figures(text) -> frozenset:
+    return frozenset(_PRICE.findall(text or ""))
+
+
+def _pricing_change(before, after):
+    """(before, after) when the FIGURES differ, else (None, None).
+
+    Rewording is not a price move. Two live runs described ClickUp as "$7
+    /user/month ... $12" and "from $7/user/month ... $12 (billed annually)":
+    identical figures, different prose. Comparing the strings called that a
+    price change, which is the most misleading thing this section could say.
+
+    Deliberately conservative. When either side quotes no figure at all,
+    nothing is reported, even though the prose differs: one run finding a
+    price and the other not is missing data, not a change in the market.
+    """
+    mine, theirs = _price_figures(before), _price_figures(after)
+    if not (mine and theirs) or mine == theirs:
+        return None, None
+    return before, after
 
 # How many remembered websites to offer at once. A list this long is already
 # a sign the name is ambiguous; a longer one is a wall of text to read.
@@ -123,6 +151,122 @@ def _identity_from(recalled: dict) -> CompanyIdentity:
         confident_match=True,
         ambiguity_note=None,
     )
+
+
+def _domain_of(entry) -> str:
+    """A stored competitor's derived domain, or "" for an older record."""
+    return (entry.get("competitor_domain") or "").strip().casefold()
+
+
+def since_last_run(
+    key: str,
+    key_is_strong: bool,
+    competitors,
+    excluded_names=(),
+    current_model_resolved=(),
+    current_retrieval_provider: str = "",
+    path: str | None = None,
+    now=None,
+) -> dict | None:
+    """Compare this run's competitors with the previous run's, or None.
+
+    Returns None, meaning no section is written at all, when memory is off,
+    when there is no prior record for this key, or when the key is weak. A
+    weak key is a guess from a name, and comparing two runs that may be
+    about two different companies would invent a trend out of an ambiguity.
+
+    The newest prior record is used. The current run's own record has not
+    been written yet at the point a report is built, so "newest" is already
+    the previous run; nothing has to be excluded by hand.
+
+    Entirely deterministic. No model is asked to summarise anything here:
+    the whole value of this section is that it is arithmetic over two
+    stored lists, so it cannot invent a change that did not happen.
+    """
+    if not key or not key_is_strong:
+        return None
+
+    try:
+        records = memory.read_runs(key, path)
+    except OSError:
+        return None
+
+    if not records:
+        return None
+
+    previous = records[0]
+    prior = previous.get("competitors") or []
+
+    prior_by_domain = {}
+    prior_by_name = {}
+    for entry in prior:
+        domain = _domain_of(entry)
+        if domain:
+            prior_by_domain.setdefault(domain, entry)
+        prior_by_name.setdefault(_normalised(entry.get("name", "")), entry)
+
+    matched_entries = []
+    new_names = []
+    still_present = []
+
+    for competitor in competitors:
+        name = getattr(competitor, "name", "") or ""
+        domain = memory.competitor_domain(competitor)
+
+        entry = prior_by_domain.get(domain) if domain else None
+        matched_by_name = False
+
+        if entry is None:
+            candidate = prior_by_name.get(_normalised(name))
+            # Name is a fallback only when one side has no domain. Two
+            # different domains mean two different companies, whatever the
+            # names say, so no name match can override that.
+            if candidate is not None and not (domain and _domain_of(candidate)):
+                entry, matched_by_name = candidate, True
+
+        if entry is None:
+            new_names.append(name)
+            continue
+
+        matched_entries.append(id(entry))
+        before, after = _pricing_change(
+            entry.get("pricing"), getattr(competitor, "pricing", None))
+        still_present.append({
+            "name": name,
+            "matched_by_name": matched_by_name,
+            "pricing_before": before,
+            "pricing_after": after,
+        })
+
+    excluded = {_normalised(name) for name in excluded_names}
+    not_found = [
+        entry.get("name", "") for entry in prior
+        if id(entry) not in matched_entries
+        and _normalised(entry.get("name", "")) not in excluded
+    ]
+
+    previous_model = list(previous.get("model_resolved") or [])
+    previous_provider = previous.get("retrieval_provider") or ""
+    current_model = list(current_model_resolved or [])
+    provenance = None
+    if (previous_model and current_model and previous_model != current_model) or (
+            previous_provider and current_retrieval_provider
+            and previous_provider != current_retrieval_provider):
+        provenance = {
+            "previous_model": previous_model,
+            "current_model": current_model,
+            "previous_provider": previous_provider,
+            "current_provider": current_retrieval_provider,
+        }
+
+    return {
+        "previous_run_at": previous.get("run_at", ""),
+        "age_days": memory.record_age_days(previous, now),
+        "provenance_changed": provenance,
+        "new": new_names,
+        "not_found": not_found,
+        "still_present": still_present,
+    }
 
 
 def establish_identity(

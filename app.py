@@ -363,6 +363,20 @@ elif st.session_state["stage"] == "review":
             if not final:
                 st.error("Every competitor was removed — nothing to report.")
             else:
+                # Same comparison the CLI writes: None unless memory is on
+                # and a prior run exists under a strong key.
+                comparison_key, comparison_strong = memory.canonical_key(
+                    identity.website or st.session_state["company_url"],
+                    st.session_state["company_name"])
+                comparison = recall.since_last_run(
+                    comparison_key, comparison_strong, final,
+                    excluded_names=[name for name, _ in final_excluded],
+                    current_model_resolved=(
+                        st.session_state["run"].model_versions()),
+                    current_retrieval_provider=getattr(
+                        st.session_state["run"].provider, "name", ""),
+                )
+
                 st.session_state["report_text"] = report_module.build_report(
                     company_name=st.session_state["company_name"],
                     company_url=st.session_state["company_url"],
@@ -373,6 +387,7 @@ elif st.session_state["stage"] == "review":
                     sources=st.session_state["run"].sources_consulted(),
                     identity_recalled=st.session_state["identity_recalled"],
                     url_remembered=st.session_state["url_remembered"],
+                    since_last_run=comparison,
                 )
 
                 # One ledger entry per run. Streamlit leaves this review UI

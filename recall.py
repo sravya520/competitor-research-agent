@@ -158,6 +158,26 @@ def _domain_of(entry) -> str:
     return (entry.get("competitor_domain") or "").strip().casefold()
 
 
+# A trailing parenthetical is how the model names a parent company, and it
+# comes and goes between runs: two live runs produced "Jira (Atlassian)" and
+# "Jira" for the same product, which then read as one company leaving and
+# another arriving. Only a TRAILING parenthetical is removed, so a name that
+# is nothing but a parenthetical still compares as itself.
+_TRAILING_PARENTHETICAL = re.compile(r"\s*\([^()]*\)\s*$")
+
+
+def _match_name(name: str) -> str:
+    """The name used for comparing two runs. Display keeps the full name.
+
+    Separate from _normalised, which find_candidates uses to match the
+    company the user typed. That one must stay strict: it decides which
+    history to offer, where a wrong match means researching the wrong
+    company.
+    """
+    stripped = _TRAILING_PARENTHETICAL.sub("", name or "")
+    return _normalised(stripped or name)
+
+
 def since_last_run(
     key: str,
     key_is_strong: bool,
@@ -203,7 +223,7 @@ def since_last_run(
         domain = _domain_of(entry)
         if domain:
             prior_by_domain.setdefault(domain, entry)
-        prior_by_name.setdefault(_normalised(entry.get("name", "")), entry)
+        prior_by_name.setdefault(_match_name(entry.get("name", "")), entry)
 
     matched_entries = []
     new_names = []
@@ -217,7 +237,7 @@ def since_last_run(
         matched_by_name = False
 
         if entry is None:
-            candidate = prior_by_name.get(_normalised(name))
+            candidate = prior_by_name.get(_match_name(name))
             # Name is a fallback only when one side has no domain. Two
             # different domains mean two different companies, whatever the
             # names say, so no name match can override that.
@@ -238,11 +258,11 @@ def since_last_run(
             "pricing_after": after,
         })
 
-    excluded = {_normalised(name) for name in excluded_names}
+    excluded = {_match_name(name) for name in excluded_names}
     not_found = [
         entry.get("name", "") for entry in prior
         if id(entry) not in matched_entries
-        and _normalised(entry.get("name", "")) not in excluded
+        and _match_name(entry.get("name", "")) not in excluded
     ]
 
     previous_model = list(previous.get("model_resolved") or [])

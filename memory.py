@@ -262,10 +262,13 @@ def competitor_domain(competitor) -> str:
     """The competitor's own domain, read off its cited sources, or "".
 
     A cited host counts as the company's own site only when its registrable
-    name EQUALS a whole token of the company's name: "atlassian" matches
-    "Jira (Atlassian)", and "planet" does not match "Plane". Equality
-    rather than containment, because a substring rule would confidently
-    attach planet.com to Plane.
+    name EQUALS either a whole token of the company's name or the whole
+    name with its spaces closed up: "atlassian" matches "Jira (Atlassian)",
+    and "sproutdesign" matches "Sprout Design" through sprout-design.co.uk,
+    since a hyphenated domain is how a two-word name is usually registered.
+    Equality in both cases, never containment, so "planet" still does not
+    match "Plane": a substring rule would confidently attach planet.com to
+    a company that has nothing to do with it.
 
     Deliberately derived rather than asked for. The research step already
     fetches competitors' own pages, so the evidence is in the record
@@ -283,14 +286,22 @@ def competitor_domain(competitor) -> str:
     ambiguous answer is worse than none, and the caller falls back to
     matching by name.
     """
-    tokens = _name_tokens(getattr(competitor, "name", ""))
+    name = getattr(competitor, "name", "")
+    tokens = _name_tokens(name)
     if not tokens:
         return ""
+
+    # The whole name with spaces closed up, which is what a hyphenated
+    # domain reduces to once registrable_name strips the hyphen.
+    whole = "".join(ch for ch in name if ch.isalnum()).casefold()
 
     matches = set()
     for source in getattr(competitor, "sources", None) or []:
         host = _host(source)
-        if host and registrable_name(host) in tokens:
+        if not host:
+            continue
+        label = registrable_name(host)
+        if label and (label in tokens or label == whole):
             matches.add(registrable_domain(host))
 
     return matches.pop() if len(matches) == 1 else ""

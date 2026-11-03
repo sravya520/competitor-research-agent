@@ -81,10 +81,27 @@ class DerivedDomain(unittest.TestCase):
                                  expected)
 
     def test_a_substring_is_not_a_match(self):
-        """planet.com is not Plane's site. Containment would claim it is."""
+        """planet.com is not Plane's site. Containment would claim it is,
+        and neither the token rule nor the whole-name rule admits it."""
         self.assertEqual(
             memory.competitor_domain(rival("Plane", ["https://planet.com/x"])),
             "")
+
+    def test_a_hyphenated_domain_matches_the_whole_name(self):
+        """How a two-word name is usually registered. The hyphen is gone by
+        the time the label is read, so it compares against the name with
+        its spaces closed up."""
+        self.assertEqual(
+            memory.competitor_domain(
+                rival("Sprout Design", ["https://sprout-design.co.uk/work"])),
+            "sprout-design.co.uk")
+
+    def test_the_whole_name_rule_is_still_equality(self):
+        """"sproutdesigns" and "sproutdesignstudio" are other companies."""
+        for host in ("https://sproutdesigns.com", "https://sproutdesignstudio.com"):
+            with self.subTest(host=host):
+                self.assertEqual(
+                    memory.competitor_domain(rival("Sprout Design", [host])), "")
 
     def test_two_matching_hosts_give_no_domain(self):
         """Ambiguous is worse than empty: the caller falls back to the name."""
@@ -231,6 +248,33 @@ class Comparison(unittest.TestCase):
 
         self.assertEqual(result["new"], [])
         self.assertTrue(result["still_present"][0]["matched_by_name"])
+
+    def test_a_trailing_parenthetical_does_not_split_one_company(self):
+        """The real pair from two live Linear runs: the model wrote "Jira
+        (Atlassian)" once and "Jira" the next time, and the comparison read
+        that as one company leaving and another arriving."""
+        self.previous([rival(
+            "Jira (Atlassian)",
+            ["https://www.cbinsights.com/company/linear-1/alternatives-competitors",
+             "https://www.atlassian.com/software/jira/product-discovery/enterprise"])])
+
+        result = self.compare([rival(
+            "Jira",
+            ["https://en.wikipedia.org/wiki/Jira_(software)",
+             "https://www.atlassian.com/software/jira/guides/getting-started",
+             "https://clickup.com/blog/linear-alternatives"])])
+
+        self.assertEqual(result["new"], [])
+        self.assertEqual(result["not_found"], [])
+        self.assertEqual([e["name"] for e in result["still_present"]], ["Jira"],
+                         "display keeps the name this run used")
+        self.assertTrue(result["still_present"][0]["matched_by_name"])
+
+    def test_a_parenthetical_is_only_stripped_from_the_end(self):
+        """A name that is only a parenthetical still compares as itself."""
+        self.previous([rival("(Stealth)", ["https://example.com"])])
+        result = self.compare([rival("(Stealth)", ["https://example.com"])])
+        self.assertEqual(result["not_found"], [])
 
     def test_two_different_domains_are_two_different_companies(self):
         """A name match must not override conflicting domains."""

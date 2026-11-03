@@ -133,6 +133,44 @@ def _since_last_run_section(lines: list[str], comparison: dict) -> None:
                   "competitors.", ""]
 
 
+NO_COMPARABLE_COMPETITORS = "No competitors of comparable scale were found."
+
+
+def _considered_section(lines: list[str], considered: list) -> None:
+    """What was found and then refused as not comparable.
+
+    A run that verifies nothing used to write no report at all, which is
+    the worst possible output for a tool aimed at startups: the founder
+    learns nothing, not even that the search ran. These candidates are NOT
+    competitors and are never counted as any, but showing them with the
+    verifier's own reason turns an empty result into an auditable one.
+
+    Only candidates the verification step refused. Anything the reviewer
+    removed by hand stays out: they already know, and listing their own
+    decision back to them as a finding would be noise.
+    """
+    lines += [
+        "## Candidates considered but not comparable",
+        "",
+        "These companies were found by the search and then refused by the "
+        "independent verification step, with its reason given below. They "
+        "are not competitors of this company and are not counted as any. "
+        "They are listed so the search itself can be checked.",
+        "",
+    ]
+
+    for competitor, reason in considered:
+        lines += [
+            f"### {competitor.name}",
+            "",
+            f"**Why it was not comparable:** {reason}",
+            "",
+        ]
+        if competitor.scale_and_stage:
+            lines += [f"**Scale and stage:** {competitor.scale_and_stage}", ""]
+        _sources_section(lines, competitor)
+
+
 def build_report(
     company_name: str,
     company_url: str,
@@ -144,12 +182,20 @@ def build_report(
     identity_recalled: dict | None = None,
     url_remembered: dict | None = None,
     since_last_run: dict | None = None,
+    considered: list | None = None,
 ) -> str:
     lines: list[str] = [
         f"# Competitor Research: {company_name}",
         "",
         f"*Generated {date.today().isoformat()}*",
         "",
+    ]
+
+    # Said first, because it is the answer to the question that was asked.
+    if not competitors:
+        lines += [f"**{NO_COMPARABLE_COMPETITORS}**", ""]
+
+    lines += [
         "## The company",
         "",
         identity.description,
@@ -193,6 +239,19 @@ def build_report(
         _since_last_run_section(lines, since_last_run)
 
     lines += [f"## Competitors ({len(competitors)})", ""]
+
+    if not competitors:
+        lines += [
+            f"{NO_COMPARABLE_COMPETITORS} Verification refused every "
+            f"candidate the search proposed"
+            + (", each for the reason given below." if considered else ".")
+            + " A smaller company is harder to find peers for: search "
+            "surfaces the large names in a category, and those are not "
+            "comparable.",
+            "",
+        ]
+        if considered:
+            _considered_section(lines, considered)
 
     for competitor in competitors:
         lines += [

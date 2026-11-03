@@ -47,7 +47,8 @@ st.caption(
 # --- one-time state so a rerun (checkbox click, etc.) doesn't lose results ---
 for key in ("stage", "identity", "research", "verified", "excluded", "problems",
             "company_name", "company_url", "report_text", "run_logged",
-            "identity_recalled", "candidates", "url_remembered", "run"):
+            "identity_recalled", "candidates", "url_remembered", "run",
+            "considered"):
     st.session_state.setdefault(key, None)
 
 # Not in the loop above: None is falsy, and this one defaults to on.
@@ -60,7 +61,7 @@ def reset() -> None:
     """Clear everything so a new company starts from a clean slate."""
     for key in ("identity", "research", "verified", "excluded", "problems",
                 "report_text", "run_logged", "identity_recalled",
-                "candidates", "url_remembered", "run"):
+                "candidates", "url_remembered", "run", "considered"):
         st.session_state[key] = None
     st.session_state["allow_recall"] = True
     st.session_state["stage"] = "input"
@@ -167,6 +168,12 @@ def research_company() -> None:
                         research.competitors, verifications
                     )
 
+                    # The candidates verification refused. Kept so a run
+                    # that verifies nothing still has something to show,
+                    # which for a small company is the usual outcome.
+                    considered = pipeline.rejected_competitors(
+                        research.competitors, verifications)
+
                     problems = evaluate.run_checks(verified, st.session_state["run"].sources_consulted())
                     removed = evaluate.drop_fabricated_sources(
                         verified, st.session_state["run"].sources_consulted())
@@ -177,11 +184,24 @@ def research_company() -> None:
                     problems += evaluate.check_source_corroboration(verified)
                     problems += evaluate.check_precise_claims_are_corroborated(verified)
 
+                    # The same citation check, on the refused candidates.
+                    # They appear in the report, so their sources clear the
+                    # same bar as everything else.
+                    removed_considered = evaluate.drop_fabricated_sources(
+                        [competitor for competitor, _ in considered],
+                        st.session_state["run"].sources_consulted())
+                    if removed_considered:
+                        problems.append(
+                            f"Removed {removed_considered} fabricated source "
+                            f"URL(s) from the candidates considered but not "
+                            f"comparable.")
+
                     status.update(label=f"Found {len(verified)} verified competitor(s)",
                                   state="complete")
 
                     st.session_state["research"] = research
                     st.session_state["verified"] = verified
+                    st.session_state["considered"] = considered
                     st.session_state["excluded"] = excluded
                     st.session_state["problems"] = problems
                     st.session_state["stage"] = "review"
@@ -208,6 +228,86 @@ def research_company() -> None:
         print(failures.unexpected_error_log_line(exc), flush=True)
         st.session_state["stage"] = "input"
         st.error(failures.unexpected_error_message())
+
+
+def write_report(final, removed_now) -> None:
+    """Build the report, then file the run. Shared by both review paths.
+
+    Called with an empty `final` when verification refused every candidate:
+    the report then opens by saying so and lists what was considered, which
+    is more use to a founder than no file at all. Everything else it needs
+    is in session_state, including the run, because the report is written on
+    a later rerun than the research.
+    """
+    identity = st.session_state["identity"]
+    run = st.session_state["run"]
+    excluded = st.session_state["excluded"] or []
+    final_excluded = excluded + [(name, "Removed by human reviewer.")
+                                 for name in removed_now]
+
+    # Same comparison the CLI writes: None unless memory is on and a prior
+    # run exists under a strong key.
+    comparison_key, comparison_strong = memory.canonical_key(
+        identity.website or st.session_state["company_url"],
+        st.session_state["company_name"])
+    comparison = recall.since_last_run(
+        comparison_key, comparison_strong, final,
+        excluded_names=[name for name, _ in final_excluded],
+        current_model_resolved=run.model_versions(),
+        current_retrieval_provider=getattr(run.provider, "name", ""),
+    )
+
+    st.session_state["report_text"] = report_module.build_report(
+        company_name=st.session_state["company_name"],
+        company_url=st.session_state["company_url"],
+        identity=identity,
+        research=st.session_state["research"],
+        competitors=final,
+        excluded=final_excluded,
+        sources=run.sources_consulted(),
+        identity_recalled=st.session_state["identity_recalled"],
+        url_remembered=st.session_state["url_remembered"],
+        since_last_run=comparison,
+        considered=st.session_state["considered"],
+    )
+
+    # One ledger entry per run. Streamlit leaves this review UI on screen
+    # after the report appears, so the button can be pressed again, and
+    # without the flag that would append a second record for the same
+    # research. Best-effort, like the CLI: the report is already built, so a
+    # write failure is logged and swallowed.
+    if st.session_state["run_logged"]:
+        return
+
+    try:
+        memory.record_run(
+            company_name=st.session_state["company_name"],
+            company_url=st.session_state["company_url"],
+            identity=identity,
+            competitors=final,
+            considered=st.session_state["considered"] or (),
+            excluded_auto=excluded,
+            removed_by_human=removed_now,
+            problems=st.session_state["problems"] or [],
+            sources=run.sources_consulted(),
+            model=MODEL,
+            model_resolved=run.model_versions(),
+            retrieval_provider=getattr(run.provider, "name", ""),
+            url_source=("remembered" if st.session_state["url_remembered"]
+                        else "typed" if st.session_state["company_url"]
+                        else "none"),
+            url_remembered_from=(
+                st.session_state["url_remembered"]["run_at"]
+                if st.session_state["url_remembered"] else ""),
+            # Carried forward, not restamped: an identity must not become
+            # immortal by being reused.
+            identity_established_at=(
+                st.session_state["identity_recalled"]["established_at"]
+                if st.session_state["identity_recalled"] else ""),
+        )
+        st.session_state["run_logged"] = True
+    except OSError as exc:
+        print(f"[memory] run not recorded ({exc})", flush=True)
 
 
 with st.form("company_form"):
@@ -336,7 +436,24 @@ elif st.session_state["stage"] == "review":
                 st.write(f"**{name}**: {reason}")
 
     if not verified:
-        st.error("No competitors passed verification. Try a more specific name or URL.")
+        st.warning("No competitors of comparable scale were found: "
+                   "verification refused every candidate the search "
+                   "proposed. A smaller company is harder to find peers "
+                   "for, because search surfaces the large names in a "
+                   "category and those are not comparable.")
+
+        if st.session_state["considered"]:
+            st.caption(
+                f"The report will list the "
+                f"{len(st.session_state['considered'])} candidate(s) that "
+                f"were considered, with the reason each was refused, so the "
+                f"search itself can be checked. They are not counted as "
+                f"competitors.")
+            if st.button("Generate report", type="primary"):
+                write_report([], [])
+        else:
+            st.caption("There are no candidates to report either. Try a more "
+                       "specific name, or paste the company's URL.")
     else:
         st.subheader(f"Review {len(verified)} competitor(s)")
         st.caption("Uncheck any you want removed before the report is generated.")
@@ -357,79 +474,16 @@ elif st.session_state["stage"] == "review":
 
         if st.button("Generate report", type="primary"):
             final = [c for c, keep in zip(verified, keep_flags) if keep]
-            removed_now = [c.name for c, keep in zip(verified, keep_flags) if not keep]
-            final_excluded = excluded + [(name, "Removed by human reviewer.") for name in removed_now]
+            removed_now = [c.name for c, keep in zip(verified, keep_flags)
+                           if not keep]
 
-            if not final:
-                st.error("Every competitor was removed — nothing to report.")
+            # Removing every verified competitor by hand is still a report
+            # when candidates were refused: those are what is left to show.
+            if not final and not st.session_state["considered"]:
+                st.error("Every competitor was removed and no candidates "
+                         "were refused, so there is nothing to report.")
             else:
-                # Same comparison the CLI writes: None unless memory is on
-                # and a prior run exists under a strong key.
-                comparison_key, comparison_strong = memory.canonical_key(
-                    identity.website or st.session_state["company_url"],
-                    st.session_state["company_name"])
-                comparison = recall.since_last_run(
-                    comparison_key, comparison_strong, final,
-                    excluded_names=[name for name, _ in final_excluded],
-                    current_model_resolved=(
-                        st.session_state["run"].model_versions()),
-                    current_retrieval_provider=getattr(
-                        st.session_state["run"].provider, "name", ""),
-                )
-
-                st.session_state["report_text"] = report_module.build_report(
-                    company_name=st.session_state["company_name"],
-                    company_url=st.session_state["company_url"],
-                    identity=identity,
-                    research=st.session_state["research"],
-                    competitors=final,
-                    excluded=final_excluded,
-                    sources=st.session_state["run"].sources_consulted(),
-                    identity_recalled=st.session_state["identity_recalled"],
-                    url_remembered=st.session_state["url_remembered"],
-                    since_last_run=comparison,
-                )
-
-                # One ledger entry per run. Streamlit leaves this review UI
-                # on screen after the report appears, so the button can be
-                # pressed again -- without the flag that would append a
-                # second record for the same research. Best-effort, like the
-                # CLI: the report is already built, and nothing reads the
-                # ledger yet, so a write failure is logged and swallowed.
-                if not st.session_state["run_logged"]:
-                    try:
-                        memory.record_run(
-                            company_name=st.session_state["company_name"],
-                            company_url=st.session_state["company_url"],
-                            identity=identity,
-                            competitors=final,
-                            excluded_auto=excluded,
-                            removed_by_human=removed_now,
-                            problems=problems,
-                            sources=st.session_state["run"].sources_consulted(),
-                            model=MODEL,
-                            model_resolved=st.session_state["run"].model_versions(),
-                            retrieval_provider=getattr(
-                                st.session_state["run"].provider, "name", ""),
-                            url_source=(
-                                "remembered"
-                                if st.session_state["url_remembered"]
-                                else "typed" if st.session_state["company_url"]
-                                else "none"),
-                            url_remembered_from=(
-                                st.session_state["url_remembered"]["run_at"]
-                                if st.session_state["url_remembered"] else ""),
-                            # Carried forward, not restamped: an identity
-                            # must not become immortal by being reused.
-                            identity_established_at=(
-                                st.session_state["identity_recalled"]
-                                ["established_at"]
-                                if st.session_state["identity_recalled"]
-                                else ""),
-                        )
-                        st.session_state["run_logged"] = True
-                    except OSError as exc:
-                        print(f"[memory] run not recorded ({exc})", flush=True)
+                write_report(final, removed_now)
 
 # --- Step 4: show and download the report ---
 if st.session_state["report_text"]:

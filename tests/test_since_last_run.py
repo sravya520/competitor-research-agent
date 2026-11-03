@@ -136,7 +136,8 @@ class DerivedDomain(unittest.TestCase):
             record = memory.record_run(
                 path=path, company_name="Linear", identity=identity(),
                 competitors=[rival("Plane", ["https://plane.so"])])
-        self.assertEqual(record["schema_version"], 5)
+        self.assertGreaterEqual(record["schema_version"], 5,
+                                "competitor_domain arrived in schema 5")
         self.assertEqual(record["competitors"][0]["competitor_domain"],
                          "plane.so")
 

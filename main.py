@@ -196,6 +196,12 @@ def main() -> None:
         company_name, identity, research.competitors, run)
     verified, excluded = pipeline.apply_verifications(research.competitors, verifications)
 
+    # The candidates verification refused, with their reasons and sources.
+    # A run that verifies nothing still writes a report showing these: an
+    # empty file is the worst outcome for a tool aimed at startups, which
+    # are exactly the companies whose peers are hardest to find.
+    considered = pipeline.rejected_competitors(research.competitors, verifications)
+
     # Automatic consistency checks. Detecting a fabricated citation isn't
     # enough — a link that 404s still looks like evidence, so it is removed.
     problems = evaluate.run_checks(verified, run.sources_consulted())
@@ -209,14 +215,26 @@ def main() -> None:
     problems += evaluate.check_source_corroboration(verified)
     problems += evaluate.check_precise_claims_are_corroborated(verified)
 
+    # The same citation check, on the candidates that did not make it. They
+    # appear in the report, so their sources clear the same bar.
+    removed_from_considered = evaluate.drop_fabricated_sources(
+        [competitor for competitor, _ in considered], run.sources_consulted())
+    if removed_from_considered:
+        problems.append(
+            f"Removed {removed_from_considered} fabricated source URL(s) from "
+            f"the candidates considered but not comparable.")
+
     # Step 3 — human review. Snapshot the automatic exclusions first: review
     # appends the reviewer's own removals to the same list, and the ledger
     # needs to tell the two apart.
     excluded_auto = list(excluded)
     final, removed_by_human = review_competitors(verified, excluded, problems)
 
-    if not final:
-        sys.exit("\nNo competitors remain, so there is no report to write.")
+    # Verifying nothing is still a result worth writing, as long as there is
+    # something to show: what was considered, and why it was refused. With
+    # neither competitors nor candidates there is genuinely nothing to say.
+    if not final and not considered:
+        sys.exit("\nNo competitors and no candidates to report.")
 
     # Step 4 — write it out.
     # How this run differs from the last one for the same company. Returns
@@ -242,6 +260,7 @@ def main() -> None:
         identity_recalled=identity_recalled,
         url_remembered=url_remembered,
         since_last_run=comparison,
+        considered=considered,
     )
     filename = report_module.save_report(company_name, content)
 
@@ -254,6 +273,7 @@ def main() -> None:
             company_url=company_url,
             identity=identity,
             competitors=final,
+            considered=considered,
             excluded_auto=excluded_auto,
             removed_by_human=removed_by_human,
             problems=problems,

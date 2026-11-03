@@ -256,6 +256,44 @@ class MemoryFlow(unittest.TestCase):
         self.assertTrue(any("Enter a company name" in error.value
                             for error in app.error))
 
+    def refuse_everything(self):
+        """A verifier that rejects the only candidate, as the Strider run did."""
+        return [CompetitorVerification(
+            index=0, name="Studio Nine", verified=False,
+            reason="Studio Nine has over 200 staff and raised $70M; the "
+                   "target is pre-revenue. Not comparable in scale.")]
+
+    def test_nothing_verified_still_offers_a_report(self):
+        """The web UI used to say "no competitors passed" and stop, which
+        left a founder with nothing at all."""
+        with patch.object(pipeline, "verify_competitors",
+                          return_value=self.refuse_everything()):
+            app = self.submit(self.started(), "Sprout Design",
+                              url="https://sproutdesign.in")
+
+        self.assertEqual(app.session_state["verified"], [])
+        self.assertEqual(len(app.session_state["considered"]), 1)
+        self.assertTrue(any("No competitors of comparable scale" in warning.value
+                            for warning in app.warning))
+        self.assertIn("Generate report", [button.label for button in app.button])
+
+    def test_that_report_lists_what_was_considered(self):
+        with patch.object(pipeline, "verify_competitors",
+                          return_value=self.refuse_everything()):
+            app = self.submit(self.started(), "Sprout Design",
+                              url="https://sproutdesign.in")
+
+            index = next(i for i, button in enumerate(app.button)
+                         if button.label == "Generate report")
+            app.button[index].click()
+            app.run()
+
+        report = app.session_state["report_text"]
+        self.assertIn("No competitors of comparable scale were found.", report)
+        self.assertIn("## Competitors (0)", report)
+        self.assertIn("Candidates considered but not comparable", report)
+        self.assertIn("Not comparable in scale.", report)
+
     def test_the_daily_limit_shows_the_example_report(self):
         """A visitor arriving after the shared key is spent should still see
         what the tool produces, not just an apology."""

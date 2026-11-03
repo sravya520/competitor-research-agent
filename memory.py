@@ -44,9 +44,10 @@ from urllib.parse import urlparse
 
 # 2 added url_source and url_remembered_from. 3 added identity_established_at.
 # 4 added model_resolved. 5 added competitor_domain inside each competitor.
-# Older lines simply lack those fields, and every read here uses .get with a
-# fallback, so an older ledger stays readable without a migration.
-SCHEMA_VERSION = 5
+# 6 added considered_not_comparable. Older lines simply lack those fields, and
+# every read here uses .get with a fallback, so an older ledger stays readable
+# without a migration.
+SCHEMA_VERSION = 6
 
 LEDGER_PATH_ENV = "MEMORY_PATH"
 
@@ -326,12 +327,27 @@ def _competitor_record(competitor) -> dict:
     }
 
 
+def _considered_record(candidate) -> dict:
+    """A candidate verification refused, stored apart from the competitors.
+
+    Its own field rather than the competitor list, because these are not
+    competitors. Keeping them separate is what stops the "since your last
+    run" comparison ever reporting one as new or as not found: that
+    comparison reads only the competitors.
+    """
+    competitor, reason = candidate
+    record = _competitor_record(competitor)
+    record["reason_not_comparable"] = reason
+    return record
+
+
 def build_record(
     *,
     company_name: str,
     company_url: str = "",
     identity=None,
     competitors=(),
+    considered=(),
     excluded_auto=(),
     removed_by_human=(),
     problems=(),
@@ -387,6 +403,10 @@ def build_record(
             "scale_and_stage": getattr(identity, "scale_and_stage", None),
         },
         "competitors": [_competitor_record(c) for c in competitors],
+        # Found, then refused as not comparable. Deliberately not in the
+        # list above: they are not competitors, and a later comparison must
+        # not read them as competitors arriving or leaving.
+        "considered_not_comparable": [_considered_record(c) for c in considered],
         "excluded_auto": [[name, reason] for name, reason in excluded_auto],
         "excluded_by_human": list(removed_by_human),
         "problems": list(problems),

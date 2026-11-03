@@ -129,25 +129,46 @@ def verify_competitors(
     return response.parsed or []
 
 
+def rejected_competitors(
+    competitors: list[Competitor],
+    verifications: list[CompetitorVerification],
+) -> list[tuple[Competitor, str]]:
+    """The competitors verification refused, each with its reason.
+
+    Pairs by index, not by name — model-generated names drift between calls.
+    A competitor with no matching verdict is refused rather than kept: an
+    unchecked claim should not reach the report by default.
+
+    Returns the objects, not just their names, because a run where every
+    candidate is refused still writes a report that shows what was
+    considered, and that needs each candidate's sources.
+    """
+    rejected: list[tuple[Competitor, str]] = []
+
+    for i, competitor in enumerate(competitors):
+        verdict = next((v for v in verifications if v.index == i), None)
+        if not (verdict and verdict.verified):
+            reason = (verdict.reason if verdict
+                      else "No verification returned for this competitor.")
+            rejected.append((competitor, reason))
+
+    return rejected
+
+
 def apply_verifications(
     competitors: list[Competitor],
     verifications: list[CompetitorVerification],
 ) -> tuple[list[Competitor], list[tuple[str, str]]]:
     """Split competitors into (kept, [(name, rejection_reason), ...]).
 
-    Pairs by index, not by name — model-generated names drift between calls.
-    A competitor with no matching verdict is dropped rather than kept: an
-    unchecked claim should not reach the report by default.
+    The pairing rule lives in rejected_competitors, so the two views of the
+    same decision cannot disagree.
     """
-    kept: list[Competitor] = []
-    excluded: list[tuple[str, str]] = []
+    rejected = rejected_competitors(competitors, verifications)
+    refused = {id(competitor) for competitor, _ in rejected}
 
-    for i, competitor in enumerate(competitors):
-        verdict = next((v for v in verifications if v.index == i), None)
-        if verdict and verdict.verified:
-            kept.append(competitor)
-        else:
-            reason = verdict.reason if verdict else "No verification returned for this competitor."
-            excluded.append((competitor.name, reason))
+    kept = [competitor for competitor in competitors
+            if id(competitor) not in refused]
+    excluded = [(competitor.name, reason) for competitor, reason in rejected]
 
     return kept, excluded

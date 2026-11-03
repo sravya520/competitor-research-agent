@@ -66,6 +66,8 @@ source venv/bin/activate     # macOS / Linux
 pip install -r requirements.txt
 ```
 
+Dependencies are pinned with `==`, so a fresh install and the deployed container get the versions this project was tested against rather than whatever is newest that day. To upgrade one: change its pin, run the suite, and push only if it passes.
+
 Create a `.env` file in the project root:
 
 ```

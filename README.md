@@ -299,6 +299,10 @@ app.py         Streamlit UI for the same pipeline: the only file that
                framework-agnostic so this and main.py can share them
 pipeline.py    The three LLM steps: identify, research, verify
 prompts.py     All prompt text, with comments on why each constraint exists
+retrieval.py   The provider protocol and its backends: Tavily, Firecrawl,
+               hybrid, plus the credit meter and the disk response cache
+failures.py    Secret bridging and the user-facing failure messages, with
+               no heavy imports so it can run before the clients exist
 tools.py       make_tools(run): the two functions the agent can call,
                built per run, plus the roundup-content rule
 runstate.py    one run's own state: its source ledger, progress sink,
@@ -312,8 +316,9 @@ report.py      Markdown generation, with corroboration labels inline
 config.py      Clients, model choice, retry policy
 memory.py      The run ledger: a stable key per company, and one appended
                JSON line per finished run
-recall.py      Where memory meets the pipeline: when a stored identity may
-               replace the identify step, and when it may not
+recall.py      Where memory meets the pipeline: which remembered websites
+               to offer, when a stored identity may replace the identify
+               step, and how this run compares with the previous one
 ```
 
 Prompts live in their own file deliberately: in an LLM application, most iteration happens in prompt text rather than code, so it should be easy to read and compare.
@@ -328,7 +333,9 @@ Memory is **off unless you switch it on**, and it is off in the hosted demo. Set
 MEMORY_PATH=memory.jsonl python main.py
 ```
 
-**What is stored.** One JSON object per finished run, appended as a single line: the company name, the URL that was typed or accepted, the canonical key, the resolved identity and the date it was established, the competitors that made the report with their positioning and sources, what was excluded automatically and what the reviewer removed, the automatic check results, the retrieval backend, and both the configured model alias and the model versions the API reported actually answering. The alias ends in `-latest` and moves, so storing only it would let a model rollout read as a change in the market.
+**What is stored.** One JSON object per finished run, appended as a single line: the company name, the URL that was typed or accepted and which of those it was, the canonical key, the resolved identity and the date it was established, the competitors that made the report with their positioning, sources and derived domain, what was excluded automatically and what the reviewer removed, the automatic check results, the retrieval backend, and both the configured model alias and the model versions the API reported actually answering. The alias ends in `-latest` and moves, so storing only it would let a model rollout read as a change in the market.
+
+Candidates the verifier refused are stored too, in a field of their own rather than among the competitors. That separation is load-bearing: it is what stops the comparison below ever reporting a refused candidate as a competitor that arrived or went away.
 
 **Where.** Wherever `MEMORY_PATH` points. There is no default location, so an unconfigured checkout has no memory at all. The pattern is in `.gitignore` and in `.dockerignore`, because the file records which companies someone researched and Docker does not read `.gitignore`.
 
@@ -350,7 +357,7 @@ Anything taken from an earlier run is disclosed with that run's date, in the ter
 
 When memory is on and this company was researched before under a strong key, the report opens with a short comparison against the previous run: which competitors are new, which the search did not surface this time, and which are still present, with a price change noted only when both runs quote a figure and the figures differ.
 
-It is arithmetic over two stored lists. No model is asked to summarise anything, because a delta a model invented would be worse than no delta: a founder reading "Miro is new this month" will act on it. Companies are matched by a domain derived from their own cited sources, falling back to the name only when one side has no domain, and saying "matched by name" when it does.
+It is arithmetic over two stored lists. No model is asked to summarise anything, because a delta a model invented would be worse than no delta: a founder reading "Miro is new this month" will act on it. Companies are matched by a domain derived from their own cited sources. Where one side has no domain it falls back to the name, and where the same company was named with and without a qualifier, as in "Atlassian Jira" and "Jira", it falls back once more to a variant match: every word of the shorter name must appear in the longer one, the shorter name must not be only a category word such as "projects", and exactly one candidate on the other side may fit. Each rung is weaker than the one above it, so the report labels which was used, "matched by name" or "matched by name variant", and never hides that a match rested on inference.
 
 What it does not claim. A competitor under **Not found this time** has not necessarily stopped competing: live search varies between runs, and the section says so every time rather than reporting a disappearance. A missing domain on either side means the match rests on a name, which is weaker, so it is labelled. Rewording is not a price change, and a price quoted in one run but not the other is treated as missing data rather than a cut. If the model version or the retrieval backend differed between the two runs, that is stated before any of the lists, because a difference may come from the change in setup rather than from the market. The section is skipped entirely for a weak key, since two runs under a name-based key may be about two different companies.
 

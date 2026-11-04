@@ -118,7 +118,12 @@ def _since_last_run_section(lines: list[str], comparison: dict) -> None:
         lines += ["**Still present:**", ""]
         for entry in comparison["still_present"]:
             notes = []
-            if entry["matched_by_name"]:
+            if entry.get("matched_by_variant"):
+                # Said differently from a plain name match, because it rests
+                # on more inference: one name is the other with a qualifier
+                # dropped.
+                notes.append("matched by name variant")
+            elif entry["matched_by_name"]:
                 notes.append("matched by name")
             if entry["pricing_before"]:
                 notes.append(f"pricing changed: {entry['pricing_before']} "

@@ -166,6 +166,48 @@ def _domain_of(entry) -> str:
 _TRAILING_PARENTHETICAL = re.compile(r"\s*\([^()]*\)\s*$")
 
 
+# Words that identify a product category rather than a company. A name made
+# only of these carries no identity, so it must never be the thing two runs
+# are matched on: "GitHub Projects" and "Projects" are not evidence of one
+# company, while "Atlassian Jira" and "Jira" are.
+GENERIC_NAME_TOKENS = frozenset({
+    "app", "apps", "projects", "project", "software", "cloud", "ai", "labs",
+    "platform", "issues", "tracker",
+})
+
+
+def _name_tokens(name: str) -> frozenset:
+    """The words of a name, trailing parenthetical removed, case folded."""
+    stripped = _TRAILING_PARENTHETICAL.sub("", name or "")
+    cleaned = "".join(ch if ch.isalnum() else " " for ch in (stripped or name or ""))
+    return frozenset(token.casefold() for token in cleaned.split() if token)
+
+
+def _is_name_variant(one: frozenset, other: frozenset) -> bool:
+    """True when the shorter name is the longer one with a qualifier dropped.
+
+    Every token of the shorter name must appear in the longer one, so this
+    is subset containment on whole words and never a substring test: "Plane"
+    does not match "Planet", because the token "plane" is not the token
+    "planet".
+
+    The shorter name must also carry some identity of its own. A name made
+    only of category words is rejected, which is what separates "Atlassian
+    Jira" and "Jira" from "GitHub Projects" and "Projects".
+
+    Equal names are not variants; those are handled by the exact match
+    before this is reached.
+    """
+    if not one or not other or one == other:
+        return False
+
+    shorter, longer = (one, other) if len(one) <= len(other) else (other, one)
+    if shorter <= GENERIC_NAME_TOKENS:
+        return False
+
+    return shorter < longer
+
+
 def _match_name(name: str) -> str:
     """The name used for comparing two runs. Display keeps the full name.
 
@@ -235,6 +277,7 @@ def since_last_run(
 
         entry = prior_by_domain.get(domain) if domain else None
         matched_by_name = False
+        matched_by_variant = False
 
         if entry is None:
             candidate = prior_by_name.get(_match_name(name))
@@ -243,6 +286,23 @@ def since_last_run(
             # names say, so no name match can override that.
             if candidate is not None and not (domain and _domain_of(candidate)):
                 entry, matched_by_name = candidate, True
+
+        if entry is None:
+            # Last resort: the same company named with and without a
+            # qualifier. A live run produced "Atlassian Jira" and "Jira" for
+            # one product, which read as one competitor arriving and another
+            # going away. Only ever applied when EXACTLY ONE candidate on
+            # the other side fits: two would mean guessing, and guessing
+            # here invents a change in the market.
+            tokens = _name_tokens(name)
+            variants = [
+                candidate for candidate in prior
+                if _is_name_variant(tokens, _name_tokens(candidate.get("name", "")))
+                and not (domain and _domain_of(candidate))
+            ]
+            if len(variants) == 1:
+                entry = variants[0]
+                matched_by_name = matched_by_variant = True
 
         if entry is None:
             new_names.append(name)
@@ -254,6 +314,7 @@ def since_last_run(
         still_present.append({
             "name": name,
             "matched_by_name": matched_by_name,
+            "matched_by_variant": matched_by_variant,
             "pricing_before": before,
             "pricing_after": after,
         })

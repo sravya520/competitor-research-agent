@@ -271,6 +271,72 @@ class Comparison(unittest.TestCase):
                          "display keeps the name this run used")
         self.assertTrue(result["still_present"][0]["matched_by_name"])
 
+    def test_a_qualifier_dropped_between_runs_is_one_company(self):
+        """The real pair from a live run: Atlassian Jira, then Jira."""
+        self.previous([rival("Atlassian Jira",
+                             ["https://en.wikipedia.org/wiki/Jira"])])
+
+        result = self.compare([rival("Jira",
+                                     ["https://clickup.com/blog/alternatives"])])
+
+        self.assertEqual(result["new"], [])
+        self.assertEqual(result["not_found"], [])
+        self.assertEqual([e["name"] for e in result["still_present"]], ["Jira"])
+        self.assertTrue(result["still_present"][0]["matched_by_variant"])
+
+    def test_a_category_word_is_not_an_identity(self):
+        """"GitHub Projects" and "Projects" are not evidence of one company:
+        the shorter name is only a category."""
+        self.previous([rival("GitHub Projects",
+                             ["https://en.wikipedia.org/wiki/GitHub"])])
+
+        result = self.compare([rival("Projects",
+                                     ["https://example.com/roundup"])])
+
+        self.assertEqual(result["new"], ["Projects"])
+        self.assertEqual(result["not_found"], ["GitHub Projects"])
+
+    def test_a_variant_match_is_whole_words_not_a_substring(self):
+        """Plane and Planet share letters, not tokens."""
+        self.previous([rival("Planet", ["https://example.com/planet"])])
+
+        result = self.compare([rival("Plane", ["https://example.com/plane"])])
+
+        self.assertEqual(result["new"], ["Plane"])
+        self.assertEqual(result["not_found"], ["Planet"])
+
+    def test_two_possible_variants_match_neither(self):
+        """Ambiguity is not resolved by guessing: two candidates fit, so the
+        comparison declines to pick one."""
+        self.previous([rival("Atlassian Jira", ["https://example.com/a"]),
+                       rival("Jira Service Management",
+                             ["https://example.com/b"])])
+
+        result = self.compare([rival("Jira", ["https://example.com/c"])])
+
+        self.assertEqual(result["new"], ["Jira"])
+        self.assertEqual(sorted(result["not_found"]),
+                         ["Atlassian Jira", "Jira Service Management"])
+
+    def test_a_variant_cannot_override_two_different_domains(self):
+        """The domain rule still wins: different domains are different
+        companies however the names read."""
+        self.previous([rival("Atlassian Jira", ["https://atlassian.com/jira"])])
+
+        result = self.compare([rival("Jira", ["https://jira.io"])])
+
+        self.assertEqual(result["new"], ["Jira"])
+        self.assertEqual(result["not_found"], ["Atlassian Jira"])
+
+    def test_the_variant_rule_is_reported_distinctly(self):
+        """A reader should be able to tell the weaker inference apart."""
+        self.previous([rival("Atlassian Jira", ["https://example.com/a"])])
+        result = self.compare([rival("Jira", ["https://example.com/b"])])
+
+        entry = result["still_present"][0]
+        self.assertTrue(entry["matched_by_name"])
+        self.assertTrue(entry["matched_by_variant"])
+
     def test_a_parenthetical_is_only_stripped_from_the_end(self):
         """A name that is only a parenthetical still compares as itself."""
         self.previous([rival("(Stealth)", ["https://example.com"])])
@@ -446,8 +512,17 @@ class RenderedSection(unittest.TestCase):
     def test_a_name_match_is_visible_to_the_reader(self):
         content = self.report(self.base(still_present=[
             {"name": "ClickUp", "matched_by_name": True,
+             "matched_by_variant": False,
              "pricing_before": None, "pricing_after": None}]))
         self.assertIn("ClickUp _(matched by name)_", content)
+
+    def test_a_variant_match_says_so(self):
+        content = self.report(self.base(still_present=[
+            {"name": "Jira", "matched_by_name": True,
+             "matched_by_variant": True,
+             "pricing_before": None, "pricing_after": None}]))
+        self.assertIn("Jira _(matched by name variant)_", content)
+        self.assertNotIn("_(matched by name)_", content)
 
     def test_a_price_change_is_shown_with_both_values(self):
         content = self.report(self.base(still_present=[

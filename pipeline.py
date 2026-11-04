@@ -123,6 +123,15 @@ def verify_competitors(
     config = types.GenerateContentConfig(
         response_mime_type="application/json",
         response_schema=list[CompetitorVerification],
+        # Verification gets no tools: it judges what is in front of it and
+        # does not go looking. That was already true by omission, and the
+        # SDK treats an unmentioned setting as automatic function calling
+        # being ENABLED, so it warned on every run that direct use of AFC
+        # in Models.generate_content is not recommended. Saying it outright
+        # states the intent and silences a warning about something this
+        # call never does.
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(
+            disable=True),
     )
     response = _generate(
         prompts.verification_prompt(company_name, identity, competitors), config, run)

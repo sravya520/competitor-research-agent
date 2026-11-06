@@ -27,5 +27,16 @@ class GeneratedBundle(unittest.TestCase):
             self.assertIn(text, bundle.replace("\r\n", "\n"), f"app.css is stale: run node design-system/build-ui.js ({source})")
 
 
+class LandingPageNames(unittest.TestCase):
+    def test_competitors_are_plain_text_and_no_logo_files_ship(self):
+        html = (ROOT / "ui" / "landing.html").read_text(encoding="utf-8")
+
+        self.assertNotIn("lp-logo", html)
+        self.assertNotIn("/logos/", html)
+        self.assertFalse((ROOT / "static" / "logos").exists())
+        for name in ("Coda", "ClickUp", "Confluence", "Obsidian", "Airtable"):
+            self.assertIn(f'<span class="lp-co">{name}</span>', html)
+
+
 if __name__ == "__main__":
     unittest.main()

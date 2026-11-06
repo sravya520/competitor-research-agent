@@ -71,6 +71,20 @@ class SignedInCase(unittest.TestCase):
         return users.get_info(user.id)
 
 
+class TeammateEmailsAreGone(SignedInCase):
+    def test_a_bigger_team_is_not_asked_for_anyones_email(self):
+        self.signed_in_as("sub-team", use_case="x")
+        app = open_page("app").run()
+        app.radio[0].set_value("2 to 5").run()
+
+        self.assertEqual([t.label for t in app.text_input], [])
+        self.assertEqual([b.label for b in app.button], ["Continue"])
+
+    def test_the_privacy_policy_no_longer_mentions_them(self):
+        policy = (ROOT / "legal" / "privacy.md").read_text(encoding="utf-8").lower()
+        self.assertNotIn("teammate", policy)
+
+
 class OwnKeysAreHidden(SignedInCase):
     """Saving keys used to make every research fail, while the page said they were being used."""
 

@@ -51,7 +51,7 @@ UNLIMITED_EMAILS = frozenset(
 KEY_VAULT_SECRET = os.environ.get("KEY_VAULT_SECRET", "").strip()
 
 # Bump when Terms or Privacy change in a way users must re-accept.
-LEGAL_VERSION = "2026-11-06.1"
+LEGAL_VERSION = "2026-11-06.2"
 
 # Shown in the legal pages. Unset => the legal pages show a "fill these in" warning.
 OPERATOR_NAME = os.environ.get("OPERATOR_NAME", "").strip()

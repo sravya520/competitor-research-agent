@@ -1,4 +1,3 @@
-import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -91,17 +90,6 @@ def finish_onboarding(user_id: int) -> None:
         u = s.get(User, user_id)
         if u.onboarded_at is None:
             u.onboarded_at = datetime.now(timezone.utc)
-
-
-def save_team_invites(user_id: int, emails: list[str]) -> None:
-    """Remember the teammates the user wants to invite. We do not email anyone yet."""
-    clean = []
-    for e in emails:
-        e = e.strip().lower()
-        if "@" in e and "." in e.split("@")[-1] and e not in clean:
-            clean.append(e[:320])
-    with session() as s:
-        s.get(User, user_id).team_invites = json.dumps(clean[:10]) if clean else None
 
 
 # ---- Own API keys. Parked: the feature is hidden and no page or job reaches these (tests/test_moat_app.py). ----

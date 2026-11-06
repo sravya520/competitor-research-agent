@@ -34,8 +34,6 @@ class User(Base):
     tavily_key_enc: Mapped[str | None] = mapped_column(Text)
     # Runs spent on OUR keys, for life. Compared with config.FREE_RUNS.
     free_runs_used: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    # Teammate emails the user typed in onboarding (JSON list). Saved for when sharing exists; nothing is sent.
-    team_invites: Mapped[str | None] = mapped_column(Text)
 
 
 class ResearchJob(Base):

@@ -10,6 +10,7 @@ import sys
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 HERE = Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE.parent), str(HERE)]
@@ -176,16 +177,51 @@ class BackendTests(unittest.TestCase):
         assert len(kept) == jobs.KEEP_LAST == 10 and ids[-1] in kept and ids[0] not in kept and ids[1] not in kept
 
 
-    def test_team_invites_are_cleaned_and_saved(self):
-        u = users.upsert_login("sub-inv", "inv@example.com", None)
-        users.save_team_invites(u.id, [" Ada@Example.com ", "not-an-email", "ada@example.com", "", "bo@x.io"])
-        with session() as s:
-            import json
-            assert json.loads(s.get(User, u.id).team_invites) == ["ada@example.com", "bo@x.io"]
-        users.save_team_invites(u.id, ["nope"])
-        with session() as s:
-            assert s.get(User, u.id).team_invites is None
+    def _database_with_teammate_emails(self, name):
+        from sqlalchemy import create_engine, text
+        url = f"sqlite:///{Path(web_setup.TMP, name).as_posix()}"
+        eng = create_engine(url)
+        with eng.begin() as c:
+            c.execute(text("CREATE TABLE users (id INTEGER PRIMARY KEY, google_sub VARCHAR(255), email VARCHAR(320), "
+                           "team_size VARCHAR(32), team_invites TEXT)"))
+            c.execute(text("INSERT INTO users (id, google_sub, email, team_size, team_invites) "
+                           "VALUES (1, 's', 'e@x.y', '2 to 5', '[\"ada@example.com\"]')"))
+        return url, eng
 
+    def test_saved_teammate_emails_are_erased_and_the_rest_of_the_user_is_kept(self):
+        from sqlalchemy import inspect, text
+
+        from backend.db import _drop_retired_columns
+
+        _, eng = self._database_with_teammate_emails("invites.db")
+        _drop_retired_columns(eng)
+        assert "team_invites" not in {c["name"] for c in inspect(eng).get_columns("users")}
+        with eng.connect() as c:
+            assert c.execute(text("SELECT email, team_size FROM users WHERE id = 1")).one() == ("e@x.y", "2 to 5")
+        _drop_retired_columns(eng)  # every later start runs it again and must not fail
+
+    def test_connecting_to_an_old_database_is_what_erases_them(self):
+        from sqlalchemy import inspect
+
+        from backend import db
+
+        url, _ = self._database_with_teammate_emails("invites-start.db")
+        with patch.object(db, "_engine", None), patch.object(config, "DATABASE_URL", url):
+            engine = db.get_engine()
+            assert "team_invites" not in {c["name"] for c in inspect(engine).get_columns("users")}
+
+    def test_postgres_drop_tolerates_two_instances_starting_at_once(self):
+        from backend.db import RETIRED_COLUMNS, _drop_retired_columns
+
+        conn = MagicMock()
+        engine = MagicMock()
+        engine.dialect.name = "postgresql"
+        engine.begin.return_value.__enter__.return_value = conn
+        inspector = MagicMock()
+        inspector.get_columns.return_value = [{"name": RETIRED_COLUMNS[0][1]}]
+        with patch("backend.db.inspect", return_value=inspector):
+            _drop_retired_columns(engine)
+        assert str(conn.execute.call_args[0][0]) == "ALTER TABLE users DROP COLUMN IF EXISTS team_invites"
 
     def test_delete_user_removes_their_job(self):
         u = users.upsert_login("sub-dj", "dj@example.com", None)
@@ -210,7 +246,7 @@ class BackendTests(unittest.TestCase):
                            "heartbeat_at DATETIME, created_at DATETIME)"))
         _add_missing_columns(eng)
         cols = {c["name"] for c in inspect(eng).get_columns("users")}
-        assert {"use_case", "team_size", "onboarded_at", "gemini_key_enc", "tavily_key_enc", "free_runs_used", "team_invites"} <= cols
+        assert {"use_case", "team_size", "onboarded_at", "gemini_key_enc", "tavily_key_enc", "free_runs_used"} <= cols
         with eng.connect() as c:
             assert c.execute(text("SELECT free_runs_used FROM users WHERE id = 1")).scalar() == 0  # old rows start at 0
             c.execute(text("INSERT INTO research_jobs (id, user_id) VALUES ('old', 1)"))

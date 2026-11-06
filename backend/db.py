@@ -8,6 +8,10 @@ from backend.models import Base
 
 _engine = None
 
+# Columns that held data we must no longer keep. Dropping one erases what it held, for good, the first
+# time a new deployment connects. team_invites: email addresses of people who never signed up or agreed.
+RETIRED_COLUMNS = (("users", "team_invites"),)
+
 
 def get_engine():
     global _engine
@@ -22,6 +26,7 @@ def get_engine():
 
         Base.metadata.create_all(_engine)
         _add_missing_columns(_engine)
+        _drop_retired_columns(_engine)
     return _engine
 
 
@@ -44,6 +49,18 @@ def _add_missing_columns(engine) -> None:
                     # (SQLite forgives the bare form, which is why a SQLite-only test would not catch it).
                     ddl += f" DEFAULT {arg if arg.lstrip('-').isdigit() else repr(arg)}"
                 conn.execute(text(ddl))
+
+
+def _drop_retired_columns(engine) -> None:
+    """Erase retired columns. Safe to run on every start: a column that is already gone is skipped."""
+    insp = inspect(engine)
+    # Two instances can start at once. Postgres can say IF EXISTS, so the loser of that race isn't an
+    # error; SQLite can't, and a local SQLite file has only one process starting up.
+    guard = "IF EXISTS " if engine.dialect.name == "postgresql" else ""
+    with engine.begin() as conn:
+        for table, column in RETIRED_COLUMNS:
+            if column in {c["name"] for c in insp.get_columns(table)}:
+                conn.execute(text(f"ALTER TABLE {table} DROP COLUMN {guard}{column}"))
 
 
 @contextmanager

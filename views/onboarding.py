@@ -1,4 +1,4 @@
-"""Onboarding: what Moat is for, team size (and teammates to invite).
+"""Onboarding: what Moat is for, then team size.
 
 Which step to show comes from what is already saved, not from session state, because on Vercel the
 session resets about once a minute and a half-finished onboarding must pick up where it was.
@@ -19,27 +19,11 @@ USE_CASES = [
 ]
 TEAM_SIZES = ["Just me", "2 to 5", "6 to 20", "21 to 100", "More than 100"]
 SKIPPED = "(skipped)"  # old rows from when these steps could be skipped
-MAX_INVITES = 5
 
 
 def _heading(step: int, title: str, body: str = "") -> None:
     sub = f"<p>{body}</p>" if body else ""
     st.html(f'<div class="si-copy"><p class="si-step">Step {step} of 2</p><h1>{title}</h1>{sub}</div>')
-
-
-def _invites() -> list[str]:
-    """Email boxes for teammates, shown when the team is bigger than one. Returns what was typed."""
-    n = st.session_state.setdefault("ob_invite_n", 1)
-    st.html('<p class="si-fine si-guide">Add your teammates\' emails. We\'ll keep them until sharing opens.</p>')
-    typed = [
-        st.text_input("Teammate email", key=f"ob_invite_{i}", placeholder="name@company.com",
-                      label_visibility="collapsed")
-        for i in range(n)
-    ]
-    if n < MAX_INVITES and st.button("Add collaborator", type="tertiary", key="ob_add_collab"):
-        st.session_state["ob_invite_n"] = n + 1
-        st.rerun()
-    return typed
 
 
 def render(user: UserInfo) -> None:
@@ -58,10 +42,8 @@ def render(user: UserInfo) -> None:
             _heading(2, "How big is your team?")
             choice = st.radio("How big is your team?", TEAM_SIZES, index=None,
                               label_visibility="collapsed", key="ob_team")
-            typed = _invites() if choice and choice != TEAM_SIZES[0] else []
             if st.button("Continue", type="primary", key="ob_next2", disabled=choice is None):
                 users.save_team_size(user.id, choice)
-                users.save_team_invites(user.id, typed)
                 users.finish_onboarding(user.id)
                 session.refresh()
                 st.rerun()

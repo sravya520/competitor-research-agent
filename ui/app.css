@@ -1535,14 +1535,6 @@
   font-family: var(--l-font);
   font-size: 1.0625rem;
 }
-.si-guide {
-  margin-block: var(--space-4) var(--space-1);
-}
-.st-key-si .st-key-ob_add_collab [data-testid="stBaseButton-tertiary"] {
-  inline-size: auto;
-  padding-inline: 0;
-  justify-content: flex-start; /* small, left-aligned text button under the email box */
-}
 [data-testid="stApp"]:has(.st-key-si) [data-testid="stHeader"] {
   display: none;
 }

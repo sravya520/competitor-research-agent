@@ -9,7 +9,7 @@ dependencies = [
   "python-dotenv",
   "tavily-python",
   "tenacity",
-  "streamlit>=1.64",
+  "streamlit==1.66.1",
   "uvicorn[standard]",
   "pydantic",
   "httpx",

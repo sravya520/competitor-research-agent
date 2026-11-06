@@ -23,7 +23,7 @@ Source of values: `design-system/` (Ant Design v6 tokens + `spacing.css`). Never
 | Honesty | UI never shows more certainty than the evidence supports (P1). |
 | Ethics | No dark patterns (X1). |
 | Grouping | Space before lines. No borders or dividers to separate content; use whitespace and, rarely, a surface tint (R2). Borders only where they carry meaning (form controls, focus). |
-| Marketing | Landing follows §15: one grotesk (Instrument Sans), near-black CTA, real photos + real product fragments, no borders, big jumps in type scale. |
+| Marketing | Landing follows §15: one grotesk (Instrument Sans), near-black CTA, real product fragments on a quiet tint, no borders, big jumps in type scale. |
 
 Before finishing any UI change run the **checklist (§11)**.
 
@@ -265,8 +265,8 @@ Direction: **plain proof**. A calm, near-monochrome page where the only "decorat
 
 - **V1 One voice.** Instrument Sans only (T6). Display at 500, never bold 700 for headlines. Left-aligned hero and section heads; center only the final CTA.
 - **V2 Restraint in color.** C8. The primary CTA is near-black with white text (48px tall, radius 12); secondary actions are text links with an arrow. One primary per view (L9) still holds.
-- **V3 Real images, honestly used.** Only licensed photos (Unsplash License or owned) or public-domain artwork (the hero is Friedrich's *The Monk by the Sea*, a minimal landscape painting), self-hosted in `static/img/` with `width`/`height` set, `loading="lazy"` below the fold, and real alt text. Photos set context (records, checking, deciding); they never show people presented as customers, and never sit next to a quote (P7). No photo credits on the page (the Unsplash License does not require them); sources are recorded in `static/img/CREDITS.md`. Never use Unsplash+ or other paid images.
-- **V4 Product on a photo.** The hero is a photograph with real product fragments floating on it (white cards, `--ant-box-shadow-secondary`). Fragments use real sample data from `example-report.md` (P7), so the visual *is* the proof.
+- **V3 Real images, honestly used.** Only photos whose licence is confirmed and recorded in `static/img/CREDITS.md`. The landing page currently uses none. Never present people as customers.
+- **V4 Product as the picture.** The hero shows real product fragments (white cards, `--ant-box-shadow-secondary`) side by side on a `--surface-card` tint, with no photograph. Fragments use real sample data from `example-report.md`.
 - **V5 Show the pipeline as a flow.** "How it works" is a numbered sequence of real UI fragments joined by a connector, not a card grid. The connector may draw in on scroll (M4).
 - **V6 Copy is short.** Headline at most 8 words, subhead at most 25, item text at most 15. Say what happens, never "AI-powered", "seamless", "unlock".
 - **V7 Space is the structure.** Section padding `--space-16` on phones, `--space-32` from 992px. Within a section: heading to body `--space-4`, body to content `--space-12`. No borders (R2); a section may sit on the `--surface-card` surface instead.

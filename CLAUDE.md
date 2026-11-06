@@ -38,7 +38,7 @@ Tests: `tests/web_setup.py` must be imported before `backend/` (throwaway databa
 | Verification/checks | `evaluate.py`, `schemas.py` |
 | Report format | `report.py`, `example-report.md` (sample output only) |
 | Login / accounts / limits | `views/auth.py`, `index.py`, `backend/*.py`, `tests/test_backend.py`, `tests/test_vercel_entry.py` |
-| Landing page | `ui/landing.html`, `ui/landing.css`, `static/landing.js`, `views/landing.py`, `.impeccable.md` (design context), DESIGN.md section 15. Icons: edit `design-system/gen-icons.js` (generates `ui/icons.css`). Photos/fonts: `static/img/` (CREDITS.md), `static/fonts/` |
+| Landing page | `ui/landing.html`, `ui/landing.css`, `static/landing.js`, `views/landing.py`, `.impeccable.md` (design context), DESIGN.md section 15. Icons: edit `design-system/gen-icons.js` (generates `ui/icons.css`). Fonts: `static/fonts/`. Images: `static/img/` (no photos in use; CREDITS.md before adding one) |
 | Legal copy | `legal/*.md` |
 | **Skip** | `venv/`, `design-system/node_modules/`, `design-system/tokens/*.json` (use `tokens.css`, or grep one name), `assets/` (demo.gif is 6 MB), `static/vendor/` (vendored GSAP), `benchmarks/cache/`, `.git/` |
 

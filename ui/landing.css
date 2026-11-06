@@ -231,36 +231,28 @@
   margin-block-start: calc(var(--space-3) * -1); /* fine print belongs to the buttons (S4) */
 }
 
-/* Stage: photograph with real product fragments on it (V4) */
+/* Stage: real product fragments on a quiet tint, no photograph (V4). The output is the picture. */
 .lp-stage {
-  position: relative;
+  display: grid;
+  gap: var(--space-3);
   margin-block-start: var(--space-12);
-}
-.lp-stage__photo {
-  display: block;
-  inline-size: 100%;
-  block-size: auto;
-  aspect-ratio: 1 / 1; /* phones: tall enough that the card does not hide the horizon */
-  object-fit: cover;
-  object-position: 60% 62%; /* keep the smoke plume and the hill in the crop */
+  padding: var(--space-3);
+  background: var(--l-surface);
   border-radius: var(--l-r-panel);
 }
 .lp-frag {
-  position: relative;
   background: var(--l-canvas);
   border-radius: var(--l-r-btn);
-  box-shadow: var(--ant-box-shadow-secondary); /* floats over the photo (R2) */
+  box-shadow: var(--ant-box-shadow-secondary); /* lifts the card off the tint (R2) */
   font-size: var(--ant-font-size);
 }
 .lp-frag--report {
-  margin: calc(var(--space-12) * -1) var(--space-3) 0;
   padding: var(--space-4) var(--space-4) var(--space-2);
 }
 .lp-frag--note {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  margin: var(--space-3) var(--space-3) 0;
   padding: var(--space-4);
   line-height: 1.45;
 }
@@ -850,24 +842,11 @@
     padding-block-start: var(--space-20);
   }
   .lp-stage {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+    gap: var(--space-8);
     margin-block-start: var(--space-16);
-  }
-  .lp-stage__photo {
-    aspect-ratio: 16 / 9; /* shows the whole plume of the watercolour */
-  }
-  .lp-frag {
-    position: absolute;
-    margin: 0;
-  }
-  .lp-frag--report {
-    inset-block-start: var(--space-8);
-    inset-inline-end: var(--space-8);
-    inline-size: 19rem; /* tablet: clear of the note card */
-  }
-  .lp-frag--note {
-    inset-block-end: var(--space-16);
-    inset-inline-start: var(--space-8);
-    inline-size: 19rem;
+    padding: var(--space-8);
   }
   .lp-flow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -926,9 +905,6 @@
 }
 
 @media (min-width: 992px) {
-  .lp-frag--report {
-    inline-size: 22rem;
-  }
   .lp-flow {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

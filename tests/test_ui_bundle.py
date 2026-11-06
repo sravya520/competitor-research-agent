@@ -38,6 +38,17 @@ class GeneratedConfig(unittest.TestCase):
                       "set it in the generator, or the next build removes it")
 
 
+class LandingHero(unittest.TestCase):
+    def test_no_photograph_of_unconfirmed_licence_ships_or_is_referenced(self):
+        html = (ROOT / "ui" / "landing.html").read_text(encoding="utf-8")
+        css = (ROOT / "ui" / "landing.css").read_text(encoding="utf-8")
+
+        self.assertFalse((ROOT / "static" / "img" / "hero.webp").exists())
+        self.assertNotIn("hero.webp", html)
+        self.assertNotIn("lp-stage__photo", html + css)
+        self.assertIn('class="lp-frag lp-frag--report"', html, "the product excerpt stays in the hero")
+
+
 class LandingPageNames(unittest.TestCase):
     def test_competitors_are_plain_text_and_no_logo_files_ship(self):
         html = (ROOT / "ui" / "landing.html").read_text(encoding="utf-8")

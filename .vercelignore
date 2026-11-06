@@ -1,0 +1,23 @@
+# Secrets and local state: never upload
+.env
+.streamlit/secrets.toml
+data/
+*.log
+
+# Not needed at runtime (the design system is built locally; its outputs ui/app.css and
+# .streamlit/config.toml are committed)
+design-system/
+venv/
+.venv/
+node_modules/
+
+# Heavy or dev-only
+assets/
+tests/
+example-report.md
+report-*.md
+.git/
+.devcontainer/
+.code-review-graph/
+Dockerfile
+.dockerignore

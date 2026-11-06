@@ -1,0 +1,9 @@
+# Extra packages for the Moat web layer (moat_app.py, views/, backend/, index.py).
+# Install AFTER requirements.txt: the web layer needs Streamlit 1.64+ (st.login, horizontal containers,
+# the ASGI App for Vercel), which is newer than the version pinned there.
+streamlit>=1.64
+sqlalchemy>=2.0
+Authlib>=1.3.2
+psycopg[binary]>=3.2
+cryptography>=42
+uvicorn[standard]

@@ -1,0 +1,311 @@
+<div class="lp">
+
+  <!-- Nav -->
+  <header class="lp-nav">
+    <a class="lp-nav__brand" href="/"><img class="lp-mark-img" src="/app/static/brand/mark.svg" width="32" height="32" alt="">Moat</a>
+    <div class="lp-nav__end">
+      <nav class="lp-nav__links" aria-label="Main">
+        <a href="#how">How it works</a>
+        <a href="#sample">Sample report</a>
+      </nav>
+      {{NAV_END}}
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero: copy, then the product laid over a real photograph (V4) -->
+    <section class="lp-hero" aria-labelledby="hero-title">
+      <div class="lp-hero__copy" data-hero>
+        <p class="lp-eyebrow">Competitor research for founders</p>
+        <h1 id="hero-title">Competitor research<br> you can check.</h1>
+        <p class="lp-lead">Name a company. Get its real competitors, each with sources you can open, and a record of what was left out.</p>
+        <div class="lp-actions">
+          <a class="lp-btn" href="/app">{{CTA}}</a>
+          <a class="lp-link" href="#sample">See a real report <span class="i i-arrow" aria-hidden="true"></span></a>
+        </div>
+        <p class="lp-fine">{{SIGNIN}}{{RUNS}} reports a day.</p>
+      </div>
+
+      <figure class="lp-stage" data-hero>
+        <img class="lp-stage__photo" src="/app/static/img/hero.webp" width="1086" height="802"
+             alt="Watercolour landscape: a plume of pale smoke rises from a hillside into a blue sky" fetchpriority="high" decoding="async">
+
+        <div class="lp-frag lp-frag--report" aria-label="Excerpt of a real report on Notion">
+          <div class="lp-frag__head">
+            <span class="lp-frag__title"><span class="i i-file" aria-hidden="true"></span>Notion, 5 competitors</span>
+            <span class="lp-frag__meta">36 pages read</span>
+          </div>
+          <ul class="lp-rows">
+            <li><span class="lp-co"><img class="lp-logo" src="/app/static/logos/coda.png" width="24" height="24" alt="" loading="lazy" decoding="async">Coda</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>3 sources</span></li>
+            <li><span class="lp-co"><img class="lp-logo" src="/app/static/logos/clickup.png" width="24" height="24" alt="" loading="lazy" decoding="async">ClickUp</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>3 sources</span></li>
+            <li><span class="lp-co"><img class="lp-logo" src="/app/static/logos/confluence.svg" width="24" height="24" alt="" loading="lazy" decoding="async">Confluence</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>2 sources</span></li>
+            <li><span class="lp-co"><img class="lp-logo" src="/app/static/logos/obsidian.svg" width="24" height="24" alt="" loading="lazy" decoding="async">Obsidian</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>2 sources</span></li>
+            <li><span class="lp-co"><img class="lp-logo" src="/app/static/logos/airtable.png" width="24" height="24" alt="" loading="lazy" decoding="async">Airtable</span><span class="lp-tag lp-tag--warn"><span class="i i-alert" aria-hidden="true"></span>1 source</span></li>
+          </ul>
+        </div>
+
+        <p class="lp-frag lp-frag--note">
+          <span class="lp-tile lp-tile--warn"><span class="i i-alert" aria-hidden="true"></span></span>
+          <span><strong>Airtable's $20 price</strong> comes from one source, so the report marks it unverified.</span>
+        </p>
+      </figure>
+    </section>
+
+    <!-- How it works: a numbered flow of real fragments (V5) -->
+    <section class="lp-section" id="how" aria-labelledby="how-title">
+      <div class="lp-head">
+        <p class="lp-eyebrow">How it works</p>
+        <h2 id="how-title">Six steps.<br> Each one leaves a trace.</h2>
+      </div>
+      <ol class="lp-flow" data-flow>
+        <li class="lp-step">
+          <div class="lp-step__top"><span class="lp-step__n">1</span><span class="lp-step__link" aria-hidden="true"></span></div>
+          <h3>Identify</h3>
+          <p>Confirms which company you mean. A URL beats a guess.</p>
+          <div class="lp-mini"><span class="i i-building" aria-hidden="true"></span>Notion<span class="lp-tag lp-tag--ok">Confirmed</span></div>
+        </li>
+        <li class="lp-step">
+          <div class="lp-step__top"><span class="lp-step__n">2</span><span class="lp-step__link" aria-hidden="true"></span></div>
+          <h3>Research</h3>
+          <p>Runs its own searches until it has enough.</p>
+          <div class="lp-mini"><span class="i i-search" aria-hidden="true"></span>36 pages, 24 sites</div>
+        </li>
+        <li class="lp-step">
+          <div class="lp-step__top"><span class="lp-step__n">3</span><span class="lp-step__link" aria-hidden="true"></span></div>
+          <h3>Verify</h3>
+          <p>A separate pass asks: real company? Comparable size?</p>
+          <div class="lp-mini"><span class="i i-shield" aria-hidden="true"></span>Second opinion, no shared notes</div>
+        </li>
+        <li class="lp-step">
+          <div class="lp-step__top"><span class="lp-step__n">4</span><span class="lp-step__link" aria-hidden="true"></span></div>
+          <h3>Check</h3>
+          <p>Code confirms every cited link was really read.</p>
+          <div class="lp-mini lp-mini--bad"><span class="i i-link" aria-hidden="true"></span><s>…/best-mvp-design-agencies…</s></div>
+        </li>
+        <li class="lp-step">
+          <div class="lp-step__top"><span class="lp-step__n">5</span><span class="lp-step__link" aria-hidden="true"></span></div>
+          <h3>Review</h3>
+          <p>You remove anyone you disagree with.</p>
+          <div class="lp-mini"><span class="lp-box" aria-hidden="true"><span class="i i-check"></span></span>Coda<span class="lp-box" aria-hidden="true"><span class="i i-check"></span></span>ClickUp</div>
+        </li>
+        <li class="lp-step">
+          <div class="lp-step__top"><span class="lp-step__n">6</span></div>
+          <h3>Report</h3>
+          <p>Markdown with sources, rejections and limits.</p>
+          <div class="lp-mini"><span class="i i-download" aria-hidden="true"></span>report-notion.md</div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- What it checks: icon list on a quiet surface, no borders (V7, V8) -->
+    <section class="lp-section lp-section--surface" aria-labelledby="checks-title">
+      <div class="lp-head">
+        <p class="lp-eyebrow">Before you see anything</p>
+        <h2 id="checks-title">What gets checked.</h2>
+      </div>
+      <ul class="lp-checks">
+        <li><span class="lp-tile"><span class="i i-building" aria-hidden="true"></span></span><h3>The right company</h3><p>Same-name companies are the most common failure. It confirms identity first.</p></li>
+        <li><span class="lp-tile"><span class="i i-link" aria-hidden="true"></span></span><h3>Links that exist</h3><p>Any cited link the agent never fetched is treated as invented and removed.</p></li>
+        <li><span class="lp-tile"><span class="i i-layers" aria-hidden="true"></span></span><h3>Independent sources</h3><p>Two pages on one site count once. Each competitor shows how many sites back it.</p></li>
+        <li><span class="lp-tile"><span class="i i-list" aria-hidden="true"></span></span><h3>Roundup lists</h3><p>"Best tools for X" pages are flagged and checked against each company's own site.</p></li>
+        <li><span class="lp-tile"><span class="i i-stop" aria-hidden="true"></span></span><h3>When to stop</h3><p>If it can't tell which company you mean, it says so instead of guessing.</p></li>
+      </ul>
+    </section>
+
+    <!-- You stay in charge: the four places a candidate can end up. Interactive with CSS only (checkbox + :has + counters). -->
+    <section class="lp-section" id="control" aria-labelledby="decide-title">
+      <div class="lp-head">
+        <p class="lp-eyebrow">You stay in charge</p>
+        <h2 id="decide-title">The list is yours to change.</h2>
+      </div>
+      <div class="lp-try">
+        <p class="lp-try__hint">Try it: click a competitor to remove it from the report. Every name ends up in one of four places, and you download the result as Markdown.</p>
+        <div class="lp-lanes">
+          <div class="lp-lane">
+            <span class="lp-tile lp-tile--ok"><span class="i i-check" aria-hidden="true"></span></span>
+            <h3>In your report</h3>
+            <p>Competitors the research could prove, with the pages to check.</p>
+            <ul>
+              <li class="k-coda"><label class="lp-pick"><input id="c-coda" class="lp-pick__in lp-visually-hidden" type="checkbox" checked><span class="lp-box" aria-hidden="true"><span class="i i-check"></span></span><span class="lp-co"><img class="lp-logo" src="/app/static/logos/coda.png" width="24" height="24" alt="" loading="lazy" decoding="async">Coda</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>3 sources</span></label></li>
+              <li class="k-clickup"><label class="lp-pick"><input id="c-clickup" class="lp-pick__in lp-visually-hidden" type="checkbox" checked><span class="lp-box" aria-hidden="true"><span class="i i-check"></span></span><span class="lp-co"><img class="lp-logo" src="/app/static/logos/clickup.png" width="24" height="24" alt="" loading="lazy" decoding="async">ClickUp</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>3 sources</span></label></li>
+              <li class="k-confluence"><label class="lp-pick"><input id="c-confluence" class="lp-pick__in lp-visually-hidden" type="checkbox" checked><span class="lp-box" aria-hidden="true"><span class="i i-check"></span></span><span class="lp-co"><img class="lp-logo" src="/app/static/logos/confluence.svg" width="24" height="24" alt="" loading="lazy" decoding="async">Confluence</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>2 sources</span></label></li>
+              <li class="k-obsidian"><label class="lp-pick"><input id="c-obsidian" class="lp-pick__in lp-visually-hidden" type="checkbox" checked><span class="lp-box" aria-hidden="true"><span class="i i-check"></span></span><span class="lp-co"><img class="lp-logo" src="/app/static/logos/obsidian.svg" width="24" height="24" alt="" loading="lazy" decoding="async">Obsidian</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>2 sources</span></label></li>
+            </ul>
+            <p class="lp-lane__none lp-lane__none--all">Empty. You removed all four.</p>
+          </div>
+
+          <div class="lp-lane">
+            <span class="lp-tile lp-tile--warn"><span class="i i-alert" aria-hidden="true"></span></span>
+            <h3>In your report, with a warning</h3>
+            <p>Thin evidence. Airtable's $20 price rests on one page, so it's marked unverified.</p>
+            <ul>
+              <li class="k-airtable"><label class="lp-pick"><input id="c-airtable" class="lp-pick__in lp-visually-hidden" type="checkbox" checked><span class="lp-box" aria-hidden="true"><span class="i i-check"></span></span><span class="lp-co"><img class="lp-logo" src="/app/static/logos/airtable.png" width="24" height="24" alt="" loading="lazy" decoding="async">Airtable</span><span class="lp-tag lp-tag--warn"><span class="i i-alert" aria-hidden="true"></span>1 source</span></label></li>
+            </ul>
+            <p class="lp-lane__none lp-lane__none--air">Empty. You removed Airtable.</p>
+          </div>
+
+          <div class="lp-lane">
+            <span class="lp-tile lp-tile--bad"><span class="i i-stop" aria-hidden="true"></span></span>
+            <h3>Thrown out by the checks</h3>
+            <p>Links the agent cited but never opened. They are deleted, and the reason is listed.</p>
+            <ul>
+              <li class="lp-mini lp-mini--bad"><span class="i i-link" aria-hidden="true"></span><s>…/best-mvp-design-agencies…</s><span class="lp-tag lp-tag--bad">Never opened</span></li>
+            </ul>
+          </div>
+
+          <div class="lp-lane">
+            <span class="lp-tile"><span class="i i-user" aria-hidden="true"></span></span>
+            <h3>Removed by you</h3>
+            <p>Names you take out. The report lists them too.</p>
+            <ul>
+              <li class="g g-coda"><label class="lp-pick lp-pick--gone" for="c-coda"><span class="lp-co"><img class="lp-logo" src="/app/static/logos/coda.png" width="24" height="24" alt="" loading="lazy" decoding="async">Coda</span><span class="lp-tag">Put back</span></label></li>
+              <li class="g g-clickup"><label class="lp-pick lp-pick--gone" for="c-clickup"><span class="lp-co"><img class="lp-logo" src="/app/static/logos/clickup.png" width="24" height="24" alt="" loading="lazy" decoding="async">ClickUp</span><span class="lp-tag">Put back</span></label></li>
+              <li class="g g-confluence"><label class="lp-pick lp-pick--gone" for="c-confluence"><span class="lp-co"><img class="lp-logo" src="/app/static/logos/confluence.svg" width="24" height="24" alt="" loading="lazy" decoding="async">Confluence</span><span class="lp-tag">Put back</span></label></li>
+              <li class="g g-obsidian"><label class="lp-pick lp-pick--gone" for="c-obsidian"><span class="lp-co"><img class="lp-logo" src="/app/static/logos/obsidian.svg" width="24" height="24" alt="" loading="lazy" decoding="async">Obsidian</span><span class="lp-tag">Put back</span></label></li>
+              <li class="g g-airtable"><label class="lp-pick lp-pick--gone" for="c-airtable"><span class="lp-co"><img class="lp-logo" src="/app/static/logos/airtable.png" width="24" height="24" alt="" loading="lazy" decoding="async">Airtable</span><span class="lp-tag">Put back</span></label></li>
+            </ul>
+            <p class="lp-lane__empty">Nobody removed yet.</p>
+          </div>
+
+          <p class="lp-lanes__sum" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sample report: real excerpt. Each row opens to the evidence behind it (native details, no JS). -->
+    <section class="lp-section" id="sample" aria-labelledby="sample-title">
+      <div class="lp-head">
+        <p class="lp-eyebrow">Sample report</p>
+        <h2 id="sample-title">Notion, researched on 24 August 2026.</h2>
+      </div>
+      <div class="lp-doc">
+        <div class="lp-sample__head" aria-hidden="true"><span>Competitor</span><span>How it positions itself</span><span>Evidence</span><span></span></div>
+        <div class="lp-sample">
+          <details class="lp-row">
+            <summary><span class="lp-co"><img class="lp-logo" src="/app/static/logos/coda.png" width="24" height="24" alt="" loading="lazy" decoding="async">Coda</span><span class="lp-row__pos">A doc that grows like an app.</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>3 sources</span></summary>
+            <div class="lp-row__body">
+              <dl>
+                <div><dt>Why it competes</dt><dd>Notion's closest direct competitor in the all-in-one document-and-database workspace category.</dd></div>
+                <div><dt>Who it's for</dt><dd>Cross-functional teams, product managers, startups and enterprises that want customizable document-centric workflows.</dd></div>
+                <div><dt>Pricing</dt><dd>Free tier available. The paid Team tier starts at $10 per maker per month.</dd></div>
+              </dl>
+              <div class="lp-row__src">
+                <p class="lp-row__srch">Backed by 3 independent sources</p>
+                <ul>
+                  <li><a href="https://www.airtable.com/articles/notion-alternatives" target="_blank" rel="noopener noreferrer">airtable.com/articles/notion-alternatives<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                  <li><a href="https://coda.io/blog/productivity/why-teams-use-productivity-apps" target="_blank" rel="noopener noreferrer">coda.io/blog/productivity/why-teams-use-productivity-apps<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                  <li><a href="https://help.coda.io/hc/en-us/articles/39555725230989-Billing-and-pricing-basics" target="_blank" rel="noopener noreferrer">help.coda.io/…/Billing-and-pricing-basics<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                </ul>
+              </div>
+            </div>
+          </details>
+
+          <details class="lp-row">
+            <summary><span class="lp-co"><img class="lp-logo" src="/app/static/logos/clickup.png" width="24" height="24" alt="" loading="lazy" decoding="async">ClickUp</span><span class="lp-row__pos">One app to replace them all.</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>3 sources</span></summary>
+            <div class="lp-row__body">
+              <dl>
+                <div><dt>Why it competes</dt><dd>Goes after the same teams that want one productivity hub, with a stronger focus on project and task tracking.</dd></div>
+                <div><dt>Who it's for</dt><dd>Project managers, operations teams, digital agencies and growing companies that need detailed task tracking.</dd></div>
+                <div><dt>Pricing</dt><dd>A free forever plan is available. Paid plans start around $7 to $10 per user per month.</dd></div>
+              </dl>
+              <div class="lp-row__src">
+                <p class="lp-row__srch">Backed by 3 independent sources</p>
+                <ul>
+                  <li><a href="https://www.airtable.com/articles/notion-alternatives" target="_blank" rel="noopener noreferrer">airtable.com/articles/notion-alternatives<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                  <li><a href="https://clickup.com/pricing" target="_blank" rel="noopener noreferrer">clickup.com/pricing<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                  <li><a href="https://help.clickup.com/hc/en-us/articles/10129535087383-Intro-to-pricing" target="_blank" rel="noopener noreferrer">help.clickup.com/…/Intro-to-pricing<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                </ul>
+              </div>
+            </div>
+          </details>
+
+          <details class="lp-row">
+            <summary><span class="lp-co"><img class="lp-logo" src="/app/static/logos/confluence.svg" width="24" height="24" alt="" loading="lazy" decoding="async">Confluence</span><span class="lp-row__pos">The secure enterprise wiki.</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>2 sources</span></summary>
+            <div class="lp-row__body">
+              <dl>
+                <div><dt>Why it competes</dt><dd>The entrenched enterprise standard for team documentation and wikis, competing for Notion's corporate knowledge-management deals.</dd></div>
+                <div><dt>Who it's for</dt><dd>Engineering organizations, IT departments and large companies that already use Jira and other Atlassian tools.</dd></div>
+                <div><dt>Pricing</dt><dd>Free for up to 10 users. The Standard plan starts at $5.42 per user per month.</dd></div>
+              </dl>
+              <div class="lp-row__src">
+                <p class="lp-row__srch">Backed by 2 independent sources</p>
+                <ul>
+                  <li><a href="https://monday.com/blog/project-management/notion-alternatives" target="_blank" rel="noopener noreferrer">monday.com/blog/project-management/notion-alternatives<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                  <li><a href="https://www.atlassian.com/software/confluence/pricing" target="_blank" rel="noopener noreferrer">atlassian.com/software/confluence/pricing<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                </ul>
+              </div>
+            </div>
+          </details>
+
+          <details class="lp-row">
+            <summary><span class="lp-co"><img class="lp-logo" src="/app/static/logos/obsidian.svg" width="24" height="24" alt="" loading="lazy" decoding="async">Obsidian</span><span class="lp-row__pos">A private, local-first second brain.</span><span class="lp-tag lp-tag--ok"><span class="i i-check" aria-hidden="true"></span>2 sources</span></summary>
+            <div class="lp-row__body">
+              <dl>
+                <div><dt>Why it competes</dt><dd>The main alternative for power users and researchers who want personal notes with strict data ownership and local-first privacy.</dd></div>
+                <div><dt>Who it's for</dt><dd>Researchers, developers, writers and individuals who care about privacy and working offline.</dd></div>
+                <div><dt>Pricing</dt><dd>Free for personal use. A commercial license is available, with optional paid add-ons for sync and publishing.</dd></div>
+              </dl>
+              <div class="lp-row__src">
+                <p class="lp-row__srch">Backed by 2 independent sources</p>
+                <ul>
+                  <li><a href="https://www.airtable.com/articles/notion-alternatives" target="_blank" rel="noopener noreferrer">airtable.com/articles/notion-alternatives<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                  <li><a href="https://obsidian.md/license" target="_blank" rel="noopener noreferrer">obsidian.md/license<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                  <li><a href="https://obsidian.md/pricing" target="_blank" rel="noopener noreferrer">obsidian.md/pricing<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                </ul>
+              </div>
+            </div>
+          </details>
+
+          <details class="lp-row" open>
+            <summary><span class="lp-co"><img class="lp-logo" src="/app/static/logos/airtable.png" width="24" height="24" alt="" loading="lazy" decoding="async">Airtable</span><span class="lp-row__pos">Custom business apps without code.</span><span class="lp-tag lp-tag--warn"><span class="i i-alert" aria-hidden="true"></span><span>1 source<span class="lp-tag__x">, price unverified</span></span></span></summary>
+            <div class="lp-row__body">
+              <dl>
+                <div><dt>Why it competes</dt><dd>Competes with Notion's database features and wins data-heavy workflows that outgrow Notion's databases.</dd></div>
+                <div><dt>Who it's for</dt><dd>Operations teams, data analysts, marketing departments and enterprises managing complex relational data.</dd></div>
+                <div><dt>Pricing</dt><dd>Free plan available. Team is $20 per user per month and Business is $45, billed annually.</dd></div>
+              </dl>
+              <div class="lp-row__src">
+                <p class="lp-row__srch">Backed by 1 source</p>
+                <p class="lp-row__warn"><span class="i i-alert" aria-hidden="true"></span>The $20 figure comes from one source, so the report marks it unverified instead of presenting it as fact.</p>
+                <ul>
+                  <li><a href="https://airtable.com/pricing" target="_blank" rel="noopener noreferrer">airtable.com/pricing<span class="lp-visually-hidden"> (opens in a new tab)</span></a></li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+        <p class="lp-doc__foot">Open a row to see why it was picked and where each claim comes from. The full report also lists all 36 pages read and its own limitations.</p>
+      </div>
+    </section>
+
+    <!-- FAQ: spacing only (R2) -->
+    <section class="lp-section lp-split lp-split--even" id="faq" aria-labelledby="faq-title">
+      <div class="lp-head">
+        <p class="lp-eyebrow">Questions</p>
+        <h2 id="faq-title">Before you try it.</h2>
+      </div>
+      <div class="lp-faq">
+        <details><summary>Is it free?</summary><p>Yes, during this demo. Each account gets {{RUNS}} runs a day.</p></details>
+        <details><summary>Why sign in?</summary><p>To protect the shared quota. Google sign-in means we never handle a password.</p></details>
+        <details><summary>Where do my searches go?</summary><p>To Google's Gemini API and Tavily search, to do the research. We don't keep them.</p></details>
+        <details><summary>How accurate is it?</summary><p>It can be wrong. That's why every claim shows its source and how well it's backed.</p></details>
+      </div>
+    </section>
+
+    <!-- The one dark moment (V9) -->
+    <section class="lp-cta" aria-labelledby="cta-title">
+      <h2 id="cta-title">Pick a company you know.</h2>
+      <p>See if the report holds up.</p>
+      <a class="lp-btn lp-btn--light" href="/app">{{CTA}}</a>
+    </section>
+  </main>
+
+  <footer class="lp-foot">
+    <nav aria-label="Legal">
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Use</a>
+      <a href="mailto:{{CONTACT}}">Contact</a>
+    </nav>
+    <p>&copy; {{YEAR}} {{OPERATOR}}. Reports are AI-assisted and can be wrong. Check the sources before relying on them. Company names and logos shown are trademarks of their owners, used only to identify them; no endorsement is implied.</p>
+  </footer>
+</div>

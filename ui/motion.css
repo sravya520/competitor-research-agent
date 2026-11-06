@@ -1,0 +1,166 @@
+/* Motion layer (DESIGN.md section 17). Bundled last. Every rule below passed the audit in section 17:
+   it has a named purpose (feedback, state change, spatial continuity, preventing a jarring change) and
+   is not on a path used hundreds of times a day. Only transform and opacity move (plus the height of an
+   accordion, where no transform exists). Curve: strong ease-out; no ease-in. Entrances 180-240ms,
+   presses 120ms. Reduced motion is handled globally in components.css (durations collapse, end states stay).
+   Tokens only: no hex, no inline styles, no angle brackets (the st.html sanitizer drops the whole block). */
+
+:root {
+  --m-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --m-fast: 120ms;
+  --m-base: 180ms;
+  --m-enter: 240ms;
+}
+
+@keyframes m-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes m-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m-ring {
+  from { box-shadow: inset 0 0 0 1px var(--l-hair); }
+  to { box-shadow: inset 0 0 0 2px var(--l-ink); }
+}
+
+/* ---- Streamlit dims every element that is "stale" during a rerun (about 1 s fade). Our reruns are
+   fast, so the dim is a flicker that makes clicks feel slow. Off. ---- */
+[data-stale="true"] {
+  opacity: 1;
+  transition: none;
+}
+
+/* ---- Feedback: buttons answer a press at once, and state changes (enabled, hover) ease ---- */
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-secondary"],
+[data-testid="stBaseButton-tertiary"],
+.rp-dl {
+  transition:
+    transform var(--m-fast) var(--m-out),
+    background-color var(--m-base) var(--m-out),
+    color var(--m-base) var(--m-out),
+    box-shadow var(--m-base) var(--m-out);
+}
+[data-testid="stBaseButton-primary"]:active:not(:disabled),
+[data-testid="stBaseButton-secondary"]:active:not(:disabled),
+.rp-dl:active {
+  transform: scale(0.97);
+}
+[data-testid="stBaseButton-tertiary"]:active:not(:disabled) {
+  transform: scale(0.985);
+}
+[class*="st-key-mcard_"] button:active {
+  transform: none; /* the card below animates instead of this invisible button */
+}
+.rp-dl__t,
+.rp-dl__ok {
+  transition: opacity var(--m-base) var(--m-out);
+}
+
+/* ---- Method cards: the press, the chosen ring, the check ---- */
+.ws-card {
+  transition: background-color 160ms var(--m-out), transform var(--m-fast) var(--m-out);
+}
+[class*="st-key-mcard_"]:active .ws-card:not(.is-soon) {
+  transform: scale(0.985);
+}
+.ws-card.is-selected {
+  animation: m-ring var(--m-base) var(--m-out) both;
+}
+.ws-card__check {
+  animation: m-pop var(--m-base) var(--m-out) both;
+}
+
+/* ---- Spatial continuity: the chosen method appears at the composer, where the card sent it ---- */
+.st-key-chip {
+  transform-origin: left center;
+  animation: m-pop var(--m-base) var(--m-out) both;
+}
+.ws-hint {
+  animation: m-fade var(--m-base) var(--m-out) both;
+}
+
+/* ---- Screens arrive instead of teleporting (rare enough to deserve it, short enough not to cost) ---- */
+.st-key-si > * {
+  animation: m-rise var(--m-enter) var(--m-out) both;
+}
+.st-key-si > :nth-child(2) { animation-delay: 40ms; }
+.st-key-si > :nth-child(3) { animation-delay: 80ms; }
+.st-key-si > :nth-child(4) { animation-delay: 120ms; }
+.st-key-si > :nth-child(5) { animation-delay: 160ms; }
+.st-key-si > :nth-child(n + 6) { animation-delay: 200ms; }
+
+.ws-hero {
+  animation: m-rise var(--m-enter) var(--m-out) both;
+}
+.st-key-composer {
+  animation: m-rise var(--m-enter) var(--m-out) 40ms both;
+}
+.ws-label--methods,
+[data-testid="stHorizontalBlock"]:has([class*="st-key-mcard_"]) {
+  animation: m-fade var(--m-enter) var(--m-out) 100ms both;
+}
+
+.ws-jobhead {
+  animation: m-rise var(--m-base) var(--m-out) both;
+}
+.st-key-ld {
+  animation: m-rise var(--m-enter) var(--m-out) 40ms both;
+}
+[data-testid="stMainBlockContainer"]:has(.ws-jobhead) > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"] {
+  animation: m-rise var(--m-enter) var(--m-out) both;
+}
+[data-testid="stMainBlockContainer"]:has(.ws-jobhead) > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:nth-child(n + 3) { animation-delay: 30ms; }
+[data-testid="stMainBlockContainer"]:has(.ws-jobhead) > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:nth-child(n + 4) { animation-delay: 60ms; }
+[data-testid="stMainBlockContainer"]:has(.ws-jobhead) > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:nth-child(n + 5) { animation-delay: 90ms; }
+[data-testid="stMainBlockContainer"]:has(.ws-jobhead) > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:nth-child(n + 6) { animation-delay: 120ms; }
+
+/* ---- State changes the eye should not miss ---- */
+[data-testid="stAlert"] {
+  animation: m-rise var(--m-base) var(--m-out) both;
+}
+.ld-now {
+  animation: m-fade var(--m-base) var(--m-out) both;
+}
+.ld-done {
+  animation: m-pop var(--m-base) var(--m-out) both;
+}
+.lp-lane .g {
+  transform-origin: left center;
+  animation: m-pop var(--m-base) var(--m-out) both; /* a name moving into "Removed by you" arrives, it does not blink in */
+}
+
+/* ---- Accordions (landing FAQ and sample report): open and close with the height, where the browser supports it ---- */
+@supports (interpolate-size: allow-keywords) {
+  :root {
+    interpolate-size: allow-keywords;
+  }
+  .lp details::details-content {
+    block-size: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition:
+      block-size var(--m-enter) var(--m-out),
+      opacity var(--m-base) var(--m-out),
+      content-visibility var(--m-enter) allow-discrete;
+  }
+  .lp details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+}
+
+/* Report tabs: the opened panel fades in (opacity only) */
+@keyframes tab-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.st-key-report [data-testid="stTabPanel"]:not([inert]) {
+  animation: tab-in 160ms var(--l-ease-out);
+}

@@ -1,0 +1,24 @@
+# Used by Vercel (ASGI entrypoint in index.py). Local dev and Docker still use requirements.txt.
+# ponytail: dependency list is duplicated here; keep it in sync with requirements.txt.
+[project]
+name = "competitor-research-agent"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "google-genai",
+  "python-dotenv",
+  "tavily-python",
+  "tenacity",
+  "streamlit>=1.64",
+  "uvicorn[standard]",
+  "pydantic",
+  "httpx",
+  "sqlalchemy>=2.0",
+  "Authlib>=1.3.2",
+  "psycopg[binary]>=3.2",
+  "cryptography>=42",
+  "firecrawl-py",
+]
+
+[tool.vercel]
+entrypoint = "index:app"

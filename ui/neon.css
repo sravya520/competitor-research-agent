@@ -1,0 +1,214 @@
+/* Sharp, hairline, Inter + mono: the product look (DESIGN.md section 16).
+   Direction taken from Neon's site and the Spectr DesignMD: zero radius everywhere, 1px hairlines
+   define structure, Inter with tight tracking for text, JetBrains Mono uppercase for labels.
+   Our colors stay exactly as they were (near-black ink on white, Ant status hues); only shape,
+   type and structure change. This file is bundled LAST so it overrides the earlier files, which keep
+   their layout rules. Tokens only: no hex, no inline styles, no angle brackets (the st.html
+   sanitizer drops the whole style block). Bundled into ui/app.css by design-system/build-ui.js. */
+
+@font-face {
+  font-family: "Inter";
+  src: url("/app/static/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/app/static/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---- Tokens ---- */
+:root {
+  --l-font: "Inter", var(--ant-font-family);
+  --l-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* One shape rule: nothing is rounded. --radius-pill stays as a token so a round tag can come back in one line. */
+  --l-r-btn: 0;
+  --l-r-panel: 0;
+  --radius-pill: 0;
+  --ant-border-radius: 0;
+  --ant-border-radius-sm: 0;
+  --ant-border-radius-lg: 0;
+  --ant-border-radius-xs: 0;
+  --l-hair: color-mix(in srgb, var(--ant-color-text) 14%, transparent);
+  --l-hair-strong: color-mix(in srgb, var(--ant-color-text) 28%, transparent);
+}
+
+/* ---- Type: Inter everywhere, never lighter than 500 for text (Spectr), tight tracking on display ---- */
+[data-testid="stApp"] {
+  font-family: var(--l-font);
+}
+[data-testid="stAppViewContainer"] {
+  font-weight: 500;
+}
+.lp,
+.si-copy,
+.si-fine,
+.ws-card,
+.ws-hero,
+.ws-jobhead {
+  font-weight: 500;
+}
+.lp h1,
+.lp h2,
+.ws-hero h1,
+.ws-jobhead h1,
+.si-copy h1 {
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+.lp h3,
+.lp-lane h3,
+.ws-card__t {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ---- Labels: JetBrains Mono, small, uppercase, tracked ---- */
+.lp-eyebrow,
+.ws-label,
+.si-step,
+.ws-tag,
+.ws-chip,
+.lp-tag,
+.lp-frag__meta,
+.lp-sample__head,
+.ld-label,
+.ld-log {
+  font-family: var(--l-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ld-log {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+/* ---- Structure: hairlines, flat surfaces ---- */
+.lp-lane,
+.lp-doc,
+.lp-pick,
+.lp-mini,
+.lp-section--surface {
+  box-shadow: inset 0 0 0 1px var(--l-hair);
+}
+.lp-lane,
+.ws-card {
+  background: var(--l-canvas);
+}
+.ws-card:not(.is-selected) {
+  box-shadow: inset 0 0 0 1px var(--l-hair);
+}
+.ws-card.is-selected {
+  box-shadow: inset 0 0 0 2px var(--l-ink);
+}
+.lp-lane .lp-tile {
+  background: var(--l-surface);
+}
+.st-key-composer {
+  background: var(--l-canvas);
+  box-shadow: inset 0 0 0 1px var(--l-hair-strong);
+}
+.lp-step__n {
+  border-radius: 0;
+}
+
+/* ---- Rail ---- */
+[data-testid="stSidebar"] {
+  background: var(--l-canvas);
+  box-shadow: inset -1px 0 0 var(--l-hair);
+}
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] {
+  background: var(--l-surface);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-testid="stSidebar"] [data-testid="stBaseButton-tertiary"]:hover {
+    background: var(--l-surface);
+  }
+}
+
+/* ---- Buttons: tight type, no lift ---- */
+.lp-btn,
+.st-key-run button,
+.st-key-si [data-testid="stBaseButton-primary"],
+.st-key-si_google button {
+  letter-spacing: -0.01em;
+}
+
+/* ---- Placeholders: 14px so they read as hints, not content ---- */
+.st-key-composer input::placeholder,
+.st-key-si input::placeholder {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--l-muted);
+  opacity: 1;
+}
+
+/* Field text matches the rest of the text weight */
+.st-key-composer input,
+.st-key-si input {
+  font-weight: 500;
+}
+
+/* ---- Disabled buttons: unmistakably off (DESIGN 16.x) ----
+   A tertiary button is plain text and a quiet one is a pale block, so "pale" cannot mean disabled.
+   Disabled = hatched surface + hairline + faded ink + not-allowed cursor, on every filled button. */
+[data-testid="stApp"] [data-testid="stBaseButton-primary"]:disabled,
+[data-testid="stApp"] [data-testid="stBaseButton-secondary"]:disabled {
+  background: repeating-linear-gradient(135deg, var(--l-surface) 0 5px, color-mix(in srgb, var(--l-ink) 9%, var(--l-surface)) 5px 6px);
+  box-shadow: inset 0 0 0 1px var(--l-hair);
+  color: color-mix(in srgb, var(--l-ink) 42%, var(--l-surface));
+  cursor: not-allowed;
+  opacity: 1;
+}
+[data-testid="stApp"] [data-testid="stBaseButton-tertiary"]:disabled {
+  color: color-mix(in srgb, var(--l-ink) 38%, var(--l-canvas));
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+/* ---- Report tabs: mono labels, a 2px ink bar under the open one (Streamlit 1.64 tabs are react-aria:
+   role=tablist / data-testid=stTab, the bar is the tab's own second child) ---- */
+.st-key-report [role="tablist"] {
+  gap: var(--space-6);
+  overflow-x: auto;
+  scrollbar-width: none;
+  box-shadow: inset 0 -1px 0 var(--l-hair);
+}
+.st-key-report [role="tablist"]::-webkit-scrollbar {
+  display: none;
+}
+.st-key-report [data-testid="stTab"] {
+  flex: none;
+  padding-inline: 0;
+  min-block-size: var(--space-12);
+  background: transparent;
+  color: var(--l-muted);
+  transition: color 160ms var(--l-ease-out);
+}
+.st-key-report [data-testid="stTab"] p {
+  color: inherit;
+  font-family: var(--l-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.st-key-report [data-testid="stTab"][aria-selected="true"] {
+  color: var(--l-ink);
+}
+.st-key-report [data-testid="stTabPanel"] {
+  padding-block-start: var(--space-4);
+}
+@media (hover: hover) and (pointer: fine) {
+  .st-key-report [data-testid="stTab"]:hover {
+    color: var(--l-ink);
+  }
+}

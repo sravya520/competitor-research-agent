@@ -32,3 +32,7 @@ prep/
 # Cached provider responses and raw benchmark output. Summaries under
 # benchmarks/results/ ARE committed; the raw cache is not.
 benchmarks/cache/
+
+# Moat web layer: local account/job database and build tooling
+data/
+node_modules/

@@ -235,6 +235,19 @@ That split exists because this system does live web searches. The same input can
 
 Each run also reports three metrics, so a change can be judged by a number instead of a guess: `primary_source_ratio` (share of citations that aren't roundup/listicle content), `corroboration_rate` (share of competitors backed by 2+ independent source domains), and a count of precise-claim warnings (oddly specific stats resting on a single source).
 
+## Running the tests
+
+Run from the repository root. The exact install command for the full suite, including the web layer:
+
+```bash
+pip install -r requirements.txt -r requirements-web.txt
+python -m unittest discover -s tests
+```
+
+The suite needs no API keys and makes no network calls. With only `requirements.txt` installed, which is all the demo needs, the web tests skip and print this install command. The regression cases above are separate: `run_eval.py` calls the live APIs and spends quota.
+
+---
+
 ## Retrieval is pluggable, and both backends are benchmarked
 
 Retrieval sits behind a provider protocol (`retrieval.py`), so the fetcher is a

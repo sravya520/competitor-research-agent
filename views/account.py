@@ -17,7 +17,10 @@ st.markdown(
     f"- **Team size:** {user.team_size if user.team_size and user.team_size != onboarding.SKIPPED else 'Not answered'}\n"
     f"- **Accepted terms version:** {config.LEGAL_VERSION}"
 )
-st.caption("We don't keep your finished reports. See the Privacy Policy for the full list.")
+st.caption(
+    "We also keep your 10 most recent researches, including any report you generate, and delete each one when you "
+    "delete it, or after 24 hours at the latest. See the Privacy Policy for the full list."
+)
 
 st.subheader("Delete your account")
 st.write(

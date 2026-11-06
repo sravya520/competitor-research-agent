@@ -138,7 +138,7 @@ def consume_free_run(user_id: int) -> bool:
 
 
 def refund_free_run(user_id: int) -> None:
-    """Give the run back when the job could not even start (e.g. our quota was exhausted)."""
+    """Give one free run back. Only runner._fail calls this: once per job, after a service problem."""
     with session() as s:
         s.execute(update(User).where(User.id == user_id, User.free_runs_used > 0).values(free_runs_used=User.free_runs_used - 1))
 

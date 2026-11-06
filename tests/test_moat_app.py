@@ -51,6 +51,14 @@ class LandingPage(unittest.TestCase):
         self.assertIn('class="lp-', html, "the landing markup should be on the page")
         self.assertIn("Try it free", html)
 
+    def test_the_landing_page_states_the_real_limit(self):
+        html = page_html(open_page().run())
+
+        self.assertIn("1 free research", html)
+        for wrong in ("reports a day", "runs a day"):
+            self.assertNotIn(wrong, html, "the limit is one free run for life, not a daily allowance")
+        self.assertNotIn("{{", html, "no placeholder should reach the page")
+
 
 class SignedInCase(unittest.TestCase):
     """Stands in a real database user behind the sign-in gate, so these test the pages, not Google."""
@@ -173,6 +181,15 @@ class TeammateEmailsAreGone(SignedInCase):
     def test_the_privacy_policy_no_longer_mentions_them(self):
         policy = (ROOT / "legal" / "privacy.md").read_text(encoding="utf-8").lower()
         self.assertNotIn("teammate", policy)
+
+
+class PromisesMatchTheCode(SignedInCase):
+    def test_the_account_page_says_researches_are_kept_up_to_24_hours(self):
+        self.signed_in_as("sub-words", use_case="x", team_size="Just me", onboarded=True)
+        said = " ".join(c.value for c in open_page("account").run().caption)
+
+        self.assertIn("24 hours", said)
+        self.assertNotIn("We don't keep your finished reports", said)
 
 
 class OwnKeysAreHidden(SignedInCase):

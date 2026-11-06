@@ -41,6 +41,15 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _cutoff() -> datetime:
+    return _now() - KEEP_FOR
+
+
+def _is_expired(r: ResearchJob) -> bool:
+    created = r.created_at if r.created_at.tzinfo else r.created_at.replace(tzinfo=timezone.utc)
+    return created < _cutoff()
+
+
 def _job(r: ResearchJob) -> Job:
     return Job(
         r.id, r.user_id, r.company_name, r.company_url or "", r.status, r.stage, r.fail_reason,
@@ -63,9 +72,15 @@ def create(user_id: int, company_name: str, company_url: str, key_mode: str, met
 
 
 def get(job_id: str) -> Job | None:
+    """The job, unless it is past its 24 hours: then it is deleted here and never shown (privacy policy)."""
     with session() as s:
         r = s.get(ResearchJob, job_id)
-        return _job(r) if r else None
+        if r is None:
+            return None
+        if _is_expired(r):
+            s.delete(r)
+            return None
+        return _job(r)
 
 
 def get_for_user(user_id: int, job_id: str | None) -> Job | None:
@@ -82,7 +97,8 @@ class JobRow:
 
 
 def list_for(user_id: int) -> list[JobRow]:
-    """Newest first, light rows for the sidebar."""
+    """Newest first, light rows for the sidebar. Also the cleanup: every signed-in page load runs it."""
+    purge_old()
     with session() as s:
         rows = s.execute(
             select(ResearchJob.id, ResearchJob.company_name, ResearchJob.status)
@@ -93,7 +109,8 @@ def list_for(user_id: int) -> list[JobRow]:
 
 def latest_for(user_id: int) -> Job | None:
     with session() as s:
-        r = s.scalar(select(ResearchJob).where(ResearchJob.user_id == user_id).order_by(ResearchJob.created_at.desc()))
+        r = s.scalar(select(ResearchJob).where(ResearchJob.user_id == user_id, ResearchJob.created_at >= _cutoff())
+                     .order_by(ResearchJob.created_at.desc()))
         return _job(r) if r else None
 
 
@@ -129,6 +146,16 @@ def touch(job_id: str) -> None:
     update_job(job_id)
 
 
+def fail_once(job_id: str, reason: str) -> bool:
+    """Mark a running job failed. True for exactly one caller, so one job can only ever be refunded once."""
+    with session() as s:
+        res = s.execute(
+            update(ResearchJob).where(ResearchJob.id == job_id, ResearchJob.status == "running")
+            .values(status="failed", fail_reason=reason, heartbeat_at=_now())
+        )
+        return res.rowcount == 1
+
+
 def claim_stale(job_id: str) -> bool:
     """True for exactly one caller when a running job has lost its worker; that caller restarts it."""
     cutoff = _now() - timedelta(seconds=STALE_AFTER_S)
@@ -160,5 +187,6 @@ def delete_for_user(user_id: int) -> None:
 
 
 def purge_old() -> None:
+    """Delete every user's expired jobs. There is no scheduler: this runs when anyone starts a job or loads a page."""
     with session() as s:
-        s.execute(delete(ResearchJob).where(ResearchJob.created_at < _now() - KEEP_FOR))
+        s.execute(delete(ResearchJob).where(ResearchJob.created_at < _cutoff()))

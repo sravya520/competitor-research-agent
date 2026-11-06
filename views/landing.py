@@ -13,6 +13,11 @@ from backend import config
 from views import auth
 
 
+def _free_runs() -> str:
+    """The real limit (DESIGN P7): a number of free runs for the life of the account, not a daily allowance."""
+    return f"{config.FREE_RUNS} free research" if config.FREE_RUNS == 1 else f"{config.FREE_RUNS} free researches"
+
+
 def _nav_end(profile: tuple[str, str | None] | None) -> str:
     """Top-right of the nav: "Try it free" for visitors, the account (first name + Google photo) once signed in."""
     if profile is None:
@@ -32,7 +37,8 @@ for key, value in {
     "{{NAV_END}}": _nav_end(profile),
     "{{CTA}}": "Try it free" if profile is None else "Open Moat",
     "{{SIGNIN}}": "Sign in with Google. " if profile is None else "",
-    "{{RUNS}}": str(config.DAILY_RUNS_PER_USER),
+    "{{LIMIT}}": _free_runs().capitalize(),
+    "{{LIMIT_LOWER}}": _free_runs(),
     "{{YEAR}}": str(date.today().year),
     "{{OPERATOR}}": config.OPERATOR_NAME or "Moat",
     "{{CONTACT}}": config.CONTACT_EMAIL or "",

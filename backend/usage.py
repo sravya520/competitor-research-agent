@@ -31,7 +31,8 @@ def remaining(user_id: int, day: date | None = None) -> int:
 
 
 def try_consume(user_id: int, day: date | None = None) -> Quota:
-    """Reserve one research run. Call BEFORE starting the pipeline; runs are not refunded."""
+    """Reserve one research run. Call BEFORE starting the pipeline. The daily count is never refunded, even
+    when a service problem gives the free run back (runner._fail), because a failed run still cost quota."""
     day = day or _today()
     with session() as s:
         # ponytail: the global cap is a read-then-write soft limit and can overshoot by a few under

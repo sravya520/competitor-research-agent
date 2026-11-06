@@ -31,7 +31,7 @@ You agree not to:
 
 ## 5. Usage limits and availability
 
-The Service is offered as a demo. Each account gets a limited number of free research runs, and there is an overall daily limit across all users. We may change the limits, change or remove features, or suspend or stop the Service at any time. We don't promise it will be available, error-free, or that your results will be the same twice.
+The Service is offered as a demo. Each account gets a limited number of free research runs, and there is an overall daily limit across all users. If a run fails because of a problem on our side or with our providers, its free run is given back once. A run that fails because a company could not be identified or researched is not given back. We may change the limits, change or remove features, or suspend or stop the Service at any time. We don't promise it will be available, error-free, or that your results will be the same twice.
 
 ## 6. Your content and the reports
 

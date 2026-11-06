@@ -57,9 +57,17 @@ def _run(job_id: str) -> None:
 
 
 def _fail(job: jobs.Job, reason: str) -> None:
-    """Mark the job failed. A free run that died on a service problem (not on the company itself) is given back."""
-    jobs.update_job(job.id, status="failed", fail_reason=reason)
-    if job.key_mode == "house":
+    """Mark the job failed after a service problem, and give back its free run, at most once per job.
+
+    Only the caller that actually moves the job to failed refunds, so a second worker on the same job (a
+    paused instance waking up) cannot refund again. A run that fails on the company itself (identity or
+    research came up empty) is not refunded, and the daily count is never refunded (backend/usage.py).
+    An allow-listed account never spent a free run, so it has nothing to give back.
+    """
+    if not jobs.fail_once(job.id, reason) or job.key_mode != "house":
+        return
+    owner = users.get_info(job.user_id)
+    if owner is not None and not owner.unlimited:
         users.refund_free_run(job.user_id)
 
 

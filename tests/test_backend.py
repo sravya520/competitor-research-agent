@@ -170,6 +170,45 @@ class BackendTests(unittest.TestCase):
         assert jobs.get(second) is None and jobs.get(first) is not None
 
 
+    def test_an_expired_job_is_never_served_even_before_any_cleanup_runs(self):
+        u = users.upsert_login("sub-exp", "exp@example.com", None)
+        jid = jobs.create(u.id, "Old Co", "", "house")
+        with session() as s:
+            s.get(ResearchJob, jid).created_at = jobs._now() - timedelta(hours=25)
+        assert jobs.latest_for(u.id) is None
+        assert jobs.get_for_user(u.id, jid) is None
+        with session() as s:
+            assert s.get(ResearchJob, jid) is None  # reading it was enough to erase it
+
+    def test_just_under_a_day_old_is_still_served(self):
+        u = users.upsert_login("sub-young", "young@example.com", None)
+        jid = jobs.create(u.id, "Young Co", "", "house")
+        with session() as s:
+            s.get(ResearchJob, jid).created_at = jobs._now() - timedelta(hours=23)
+        assert jobs.get_for_user(u.id, jid) is not None and jobs.latest_for(u.id).id == jid
+
+    def test_loading_the_rail_cleans_up_everyones_expired_jobs(self):
+        u = users.upsert_login("sub-rail", "rail@example.com", None)
+        other = users.upsert_login("sub-rail2", "rail2@example.com", None)
+        expired = jobs.create(other.id, "Old Co", "", "house")
+        with session() as s:
+            s.get(ResearchJob, expired).created_at = jobs._now() - timedelta(hours=25)
+        assert jobs.list_for(u.id) == []
+        with session() as s:
+            assert s.get(ResearchJob, expired) is None
+
+    def test_only_one_caller_can_fail_a_job(self):
+        u = users.upsert_login("sub-once", "once@example.com", None)
+        jid = jobs.create(u.id, "Co", "", "house")
+        assert jobs.fail_once(jid, "error") is True and jobs.fail_once(jid, "quota") is False
+        assert jobs.get(jid).fail_reason == "error"  # the first reason stands
+
+    def test_a_job_that_reached_review_cannot_be_failed(self):
+        u = users.upsert_login("sub-rev", "rev@example.com", None)
+        jid = jobs.create(u.id, "Co", "", "house")
+        jobs.update_job(jid, status="review")
+        assert jobs.fail_once(jid, "error") is False and jobs.get(jid).status == "review"
+
     def test_only_the_ten_newest_jobs_are_kept(self):
         u = users.upsert_login("sub-cap", "cap@example.com", None)
         ids = [jobs.create(u.id, f"Co{i}", "", "house") for i in range(12)]

@@ -22,7 +22,7 @@ We do **not** receive your Google password. We do not request access to your Gma
 
 ## 2. What we do not store
 
-We do not keep a permanent history of your searches or your finished reports. For your 10 most recent researches we keep their working data (the company name and URL, the interim findings and, once you generate it, the report text) in our database so a run survives a dropped connection and you can reopen it from the left rail. We delete each one when you delete it, when you delete your account, and in any case after 24 hours. The report you download is yours; we keep no copy beyond that period. (If we add saved reports in the future, we will update this policy and ask you again before using it.)
+We do not keep a permanent history of your searches or your finished reports. For your 10 most recent researches we keep their working data (the company name and URL, the interim findings and, once you generate it, the report text) in our database so a run survives a dropped connection and you can reopen it from the left rail. We delete each one when you delete it and when you delete your account. After 24 hours it can no longer be opened, and it is erased the next time anyone uses the Service, because the erasing happens when the Service is in use rather than on a timer. The report you download is yours; we keep no copy beyond that. (If we add saved reports in the future, we will update this policy and ask you again before using it.)
 
 ## 3. Who else receives data
 

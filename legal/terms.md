@@ -31,7 +31,7 @@ You agree not to:
 
 ## 5. Usage limits and availability
 
-The Service is offered as a demo. Each account gets a limited number of free research runs on our own API keys, and there is an overall daily limit across all users. To run more research you add your own API keys. If you do, those runs are made on your accounts with the AI and search providers, you are responsible for any charges and for keeping your keys secure, and we may stop a run or remove a key that fails or is misused. We may change the limits, change or remove features, or suspend or stop the Service at any time. We don't promise it will be available, error-free, or that your results will be the same twice.
+The Service is offered as a demo. Each account gets a limited number of free research runs, and there is an overall daily limit across all users. We may change the limits, change or remove features, or suspend or stop the Service at any time. We don't promise it will be available, error-free, or that your results will be the same twice.
 
 ## 6. Your content and the reports
 

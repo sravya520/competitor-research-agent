@@ -1,9 +1,9 @@
-"""Account page: shows exactly what we store about the user, manages their own API keys, and lets them delete it all."""
+"""Account page: shows what we store about the user and lets them delete it all."""
 
 import streamlit as st
 
 from backend import config, users
-from views import auth, chrome, onboarding, session
+from views import auth, chrome, onboarding
 
 user = auth.require_user()
 chrome.sidebar(user)
@@ -19,30 +19,10 @@ st.markdown(
 )
 st.caption("We don't keep your finished reports. See the Privacy Policy for the full list.")
 
-st.subheader("Your API keys")
-hints = users.key_hints(user.id)
-if hints:
-    st.write(f"Research uses your own keys: AI key ending {hints[0][1:]}, search key ending {hints[1][1:]}. They are stored encrypted.")
-    if st.button("Remove my keys", key="remove_keys"):
-        users.clear_keys(user.id)
-        session.refresh()
-        st.rerun()
-    with st.expander("Replace my keys"):
-        if onboarding.keys_form(user.id, prefix="acct_replace", submit_label="Save new keys"):
-            session.refresh()
-            st.rerun()
-else:
-    st.write(
-        "Research needs an AI key and a search key. Add yours so reports use your own credits, "
-        "with no limit from us."
-    )
-    if onboarding.keys_form(user.id, prefix="acct_keys", submit_label="Save keys"):
-        session.refresh()
-        st.rerun()
-
 st.subheader("Delete your account")
 st.write(
-    "This permanently deletes your account, saved keys and any research in progress. You can sign up again later, "
+    "This permanently deletes your account, your saved researches and anything else we hold about you, including "
+    "any API key you saved with an earlier version. You can sign up again later, "
     "but you will start fresh. It can't be undone."
 )
 with st.expander("Delete my account"):

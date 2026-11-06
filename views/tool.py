@@ -55,34 +55,26 @@ METHODS = [
 METHOD_NAMES = {m[0]: m[1] for m in METHODS}
 
 
+NO_RUNS_LEFT = "You've used your free run. More runs aren't available yet."
+
+
 def _start(name: str, url: str, method: str) -> None:
-    """Pick whose keys pay for this run, reserve it, and start the job. Reruns the page on success."""
-    if user.has_own_keys:
-        mode = "own"
-    elif user.unlimited:
-        if not (os.environ.get("GEMINI_API_KEY") and os.environ.get("TAVILY_API_KEY")):
-            st.error("Our research keys aren't set on this server right now.")
-            return
-        mode = "house"  # allow-listed: no free-run count, no daily or global cap
-    elif user.free_runs_left > 0:
-        if not (os.environ.get("GEMINI_API_KEY") and os.environ.get("TAVILY_API_KEY")):
-            st.error("The free run isn't available on this server right now. You can add your own API keys on the Account page.")
+    """Reserve this run and start the job. Every refusal says why. Reruns the page on success."""
+    if not (os.environ.get("GEMINI_API_KEY") and os.environ.get("TAVILY_API_KEY")):
+        st.error("Research isn't available on this server right now.")
+        return
+    if not user.unlimited:  # allow-listed accounts have no free-run count and no daily or global cap
+        if user.free_runs_left <= 0:
+            st.warning(NO_RUNS_LEFT)
             return
         quota = usage.try_consume(user.id)
         if not quota.ok:
-            st.warning(
-                "Our shared credits are used up for today. Please try again after 00:00 UTC, "
-                "or add your own API keys on the Account page to continue now."
-            )
+            st.warning("Our shared credits are used up for today. Please try again after 00:00 UTC.")
             return
         if not users.consume_free_run(user.id):
-            st.warning("You've used your free run. Add your own API keys to run more research.")
+            st.warning(NO_RUNS_LEFT)
             return
-        mode = "house"
-    else:
-        st.warning("You've used your free run. Add your own API keys to run more research.")
-        return
-    job_id = jobs.create(user.id, name, url, mode, method)
+    job_id = jobs.create(user.id, name, url, "house", method)
     runner.start(job_id)
     session.refresh()  # free runs left changed
     chrome.forget_recent()
@@ -133,9 +125,8 @@ def _composer() -> None:
     if run:
         _start(name.strip(), url.strip(), method)
 
-    if not (user.has_own_keys or user.unlimited) and user.free_runs_left <= 0:
-        st.warning("You've used your free run. Add your own API keys to run more research.")
-        st.page_link("views/account.py", label="Add your API keys")
+    if not user.unlimited and user.free_runs_left <= 0:
+        st.warning(NO_RUNS_LEFT)
 
     st.html('<p class="ws-label ws-label--methods">Methods</p>')
     for i in range(0, len(METHODS), 3):
@@ -147,10 +138,9 @@ def _composer() -> None:
 _FAILURES = {
     "identity_failed": "Could not confirm the company's identity within the allowed tool calls.",
     "research_failed": "The agent didn't finish researching within its allowed tool calls.",
-    "quota": "The research API has hit its usage limit. Please try again in a while, or check the plan on your own API keys.",
-    "api_error": "Something went wrong talking to the research API (a temporary issue, not a bug in the report). Please try again in a moment. If you use your own keys, check them on the Account page.",
-    "own_keys_unsupported": "Running on your own API keys is not available in this build yet. It needs the research pipeline to accept per-run keys.",
-    "keys_unreadable": "We couldn't read your saved API keys. Please enter them again on the Account page.",
+    "quota": "The research API has hit its usage limit. Please try again in a while.",
+    "api_error": "Something went wrong talking to the research API (a temporary issue, not a bug in the report). Please try again in a moment.",
+    "own_keys_unsupported": "This research was started under an older setting that Moat no longer uses. Please start a new research.",
     "error": "Something went wrong on our side. Please try again.",
 }
 

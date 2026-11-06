@@ -42,8 +42,8 @@ def _run(job_id: str) -> None:
     threading.Thread(target=beat, daemon=True, name=f"beat-{job_id[:8]}").start()
     try:
         if job.key_mode == "own":
-            # The pipeline builds one Gemini and one Tavily client at import (config.py), so a run cannot
-            # use a user's own keys until those become per-run. Say so instead of spending the house keys.
+            # Moat no longer creates these, but a row from before own keys were hidden can still be open
+            # (kept up to 24 h). Say so instead of spending the house keys on a run nobody asked them to pay for.
             jobs.update_job(job_id, status="failed", fail_reason="own_keys_unsupported")
             return
         _stages(job_id, job)

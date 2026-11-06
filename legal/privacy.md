@@ -16,7 +16,7 @@ This policy explains what personal data Moat ("the Service") collects, why, who 
 | How many research runs you started each day, and how many free runs you have used | To enforce limits and protect the shared service quota | Our systems |
 | Your answers to the two onboarding questions (what you use Moat for, team size) | To understand who uses the Service and what to build next | You |
 | Email addresses of teammates you type in during onboarding | To invite them when sharing is available. **We do not email them now.** Only enter people who would expect it | You |
-| Your own Google Gemini and Tavily API keys, if you add them | To run your research on your own accounts. Stored **encrypted**, used only for your research, removable on the Account page | You |
+| Google Gemini and Tavily API keys, only if you saved them with an earlier version of the Service | We do not use them. They stay **encrypted** until you delete your account or ask us to delete them | You |
 | The company name and URL you enter, and the working data of your recent researches (interim findings, and the report text once you generate it) | So a run survives a dropped connection and you can reopen your last researches (see section 2) | You, and the research providers |
 
 We do **not** receive your Google password. We do not request access to your Gmail, Drive, contacts or any other Google service.
@@ -31,8 +31,6 @@ To produce a report, the Service sends what you type (company name and optional 
 
 - **Google (Gemini API)**, to run the language model that identifies, researches and verifies competitors.
 - **Tavily**, to run web searches and read public web pages.
-
-If you added your own API keys, these requests are made with your keys, so they are billed to your accounts and also governed by your own agreements with those providers.
 
 Other providers process data for us:
 
@@ -54,13 +52,13 @@ We use only what sign-in needs: a session cookie set by the Service to keep you 
 
 ## 6. How long we keep it
 
-Account data, onboarding answers and saved API keys are kept until you delete your account or remove the keys. Daily usage counts are deleted with the account. Research working data is deleted as described in section 2. Teammate emails are kept until you delete your account. Technical logs are kept by our providers for a limited period under their own policies.
+Account data, onboarding answers and any API keys saved with an earlier version are kept until you delete your account or ask us to delete them. Daily usage counts are deleted with the account. Research working data is deleted as described in section 2. Teammate emails are kept until you delete your account. Technical logs are kept by our providers for a limited period under their own policies.
 
 ## 7. Your rights and choices
 
 You can:
 
-- **Delete your account** yourself at any time on the Account page. This removes your account record, saved API keys, teammate emails, usage history and your saved researches.
+- **Delete your account** yourself at any time on the Account page. This removes your account record, any API keys saved with an earlier version, teammate emails, usage history and your saved researches.
 - **Ask for a copy, a correction, or deletion** of your data, or withdraw your consent, by emailing {{EMAIL}}. We will reply within a reasonable time and in any case within the period your local law requires.
 - **Nominate another person** to exercise these rights for you if you die or become unable to (a right under India's Digital Personal Data Protection Act, 2023), by emailing {{EMAIL}}.
 - **Complain** to us first at {{EMAIL}} and, if we don't resolve it, to the Data Protection Board of India or your local data protection authority.

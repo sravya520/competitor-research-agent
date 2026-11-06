@@ -1,5 +1,8 @@
 """Encrypts users' own API keys before they reach the database.
 
+Parked: the own-keys feature is hidden for now, so no page or job reaches this. It stays for the day
+research can run on per-run keys, and because keys saved by an earlier version are encrypted with it.
+
 Fernet (AES-128-CBC + HMAC) from the `cryptography` package, keyed from KEY_VAULT_SECRET. If that
 secret is missing we refuse to store keys at all, rather than fall back to plain text.
 """

@@ -35,8 +35,7 @@ DATABASE_URL = _database_url()
 DAILY_RUNS_PER_USER = int(os.environ.get("DAILY_RUNS_PER_USER", "3"))
 DAILY_RUNS_GLOBAL = int(os.environ.get("DAILY_RUNS_GLOBAL", "150"))
 
-# Research runs on OUR keys that a user gets for free, once in their lifetime. After that they
-# bring their own keys (onboarding / Account page). Their own-key runs are not limited by us.
+# Research runs on OUR keys that a user gets for free, once in their lifetime.
 FREE_RUNS = int(os.environ.get("FREE_RUNS", "1"))
 
 # Accounts that run on OUR keys without limit (no free-run cap, no daily cap). Matched on the
@@ -47,12 +46,12 @@ UNLIMITED_EMAILS = frozenset(
     if e.strip()
 )
 
-# Secret that encrypts users' own API keys at rest. Rotating it makes stored keys unreadable
-# (users re-enter them). Unset => saving keys is refused rather than stored in the clear.
+# Parked with backend/vault.py: own API keys are hidden for now, and nothing in the UI saves or reads them.
+# It still protects any key saved by an earlier version. Rotating it makes those unreadable.
 KEY_VAULT_SECRET = os.environ.get("KEY_VAULT_SECRET", "").strip()
 
 # Bump when Terms or Privacy change in a way users must re-accept.
-LEGAL_VERSION = "2026-10-31.1"
+LEGAL_VERSION = "2026-11-06.1"
 
 # Shown in the legal pages. Unset => the legal pages show a "fill these in" warning.
 OPERATOR_NAME = os.environ.get("OPERATOR_NAME", "").strip()

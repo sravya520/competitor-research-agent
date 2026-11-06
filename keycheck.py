@@ -1,5 +1,7 @@
 """Checks that a user's own API keys work, before we save them. Returns a plain-language problem or None.
 
+Parked with backend/vault.py: the own-keys feature is hidden, so no page calls this.
+
 Knows nothing about Streamlit. The Gemini check lists models (free, no quota used); Tavily has no
 free "who am I" call, so it runs one tiny search (one credit).
 """

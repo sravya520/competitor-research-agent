@@ -104,7 +104,7 @@ def save_team_invites(user_id: int, emails: list[str]) -> None:
         s.get(User, user_id).team_invites = json.dumps(clean[:10]) if clean else None
 
 
-# ---- Own API keys ----
+# ---- Own API keys. Parked: the feature is hidden and no page or job reaches these (tests/test_moat_app.py). ----
 
 def save_keys(user_id: int, gemini: str, tavily: str) -> None:
     """Encrypt and store the user's keys. Raises vault.VaultUnavailable if encryption isn't set up."""

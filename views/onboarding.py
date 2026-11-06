@@ -1,14 +1,12 @@
-"""Onboarding: what Moat is for, team size (and teammates to invite), then the user's own API keys.
+"""Onboarding: what Moat is for, team size (and teammates to invite).
 
 Which step to show comes from what is already saved, not from session state, because on Vercel the
-session resets about once a minute and a half-finished onboarding must pick up where it was. The key
-form is reused on the Account page.
+session resets about once a minute and a half-finished onboarding must pick up where it was.
 """
 
 import streamlit as st
 
-import keycheck
-from backend import config, users, vault
+from backend import users
 from backend.users import UserInfo
 from views import session
 
@@ -23,43 +21,10 @@ TEAM_SIZES = ["Just me", "2 to 5", "6 to 20", "21 to 100", "More than 100"]
 SKIPPED = "(skipped)"  # old rows from when these steps could be skipped
 MAX_INVITES = 5
 
-AI_KEY_HELP = (
-    'Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">'
-    "aistudio.google.com/apikey</a>. Gemini only for now."
-)
-SEARCH_KEY_HELP = (
-    'Get a free key at <a href="https://app.tavily.com" target="_blank" rel="noopener noreferrer">'
-    "app.tavily.com</a>."
-)
-
 
 def _heading(step: int, title: str, body: str = "") -> None:
     sub = f"<p>{body}</p>" if body else ""
-    st.html(f'<div class="si-copy"><p class="si-step">Step {step} of 3</p><h1>{title}</h1>{sub}</div>')
-
-
-def keys_form(user_id: int, *, prefix: str, submit_label: str) -> bool:
-    """AI key + search key inputs. The button stays disabled until BOTH are filled. True when saved."""
-    if not vault.available():
-        st.info("Saving your own keys isn't switched on for this server yet.")
-        return False
-    gemini = st.text_input("AI key (Google Gemini)", type="password", key=f"{prefix}_gemini",
-                           placeholder="Paste your AI key", autocomplete="off").strip()
-    st.html(f'<p class="si-fine">{AI_KEY_HELP}</p>')
-    tavily = st.text_input("Search key (Tavily)", type="password", key=f"{prefix}_tavily",
-                           placeholder="Paste your search key", autocomplete="off").strip()
-    st.html(f'<p class="si-fine">{SEARCH_KEY_HELP}</p>')
-    if not st.button(submit_label, type="primary", key=f"{prefix}_save", disabled=not (gemini and tavily)):
-        return False
-    with st.spinner("Checking your keys..."):
-        problem = keycheck.check_gemini(gemini) or keycheck.check_tavily(tavily)
-    if problem:
-        st.error(problem)
-        return False
-    users.save_keys(user_id, gemini, tavily)
-    st.session_state.pop(f"{prefix}_gemini", None)
-    st.session_state.pop(f"{prefix}_tavily", None)
-    return True
+    st.html(f'<div class="si-copy"><p class="si-step">Step {step} of 2</p><h1>{title}</h1>{sub}</div>')
 
 
 def _invites() -> list[str]:
@@ -97,17 +62,12 @@ def render(user: UserInfo) -> None:
             if st.button("Continue", type="primary", key="ob_next2", disabled=choice is None):
                 users.save_team_size(user.id, choice)
                 users.save_team_invites(user.id, typed)
+                users.finish_onboarding(user.id)
                 session.refresh()
                 st.rerun()
 
         else:
-            _heading(3, "Add your API keys", "Moat runs on your own AI and search keys.")
-            if keys_form(user.id, prefix="ob", submit_label="Save keys and start"):
-                users.finish_onboarding(user.id)
-                session.refresh()
-                st.rerun()
-            label = "Skip, use my one free run" if config.FREE_RUNS == 1 else "Skip, use my free runs"
-            if st.button(label, type="secondary", key="ob_skip3"):
-                users.finish_onboarding(user.id)
-                session.refresh()
-                st.rerun()
+            # Both questions answered but never finished: someone who stopped at the old API-key step.
+            users.finish_onboarding(user.id)
+            session.refresh()
+            st.rerun()

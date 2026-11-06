@@ -14,7 +14,9 @@ GEMINI_API_KEY, TAVILY_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AUTH_COO
 
 import os
 
-from streamlit.starlette import App
+from backend import config  # noqa: F401  (stops the boot here, with a clear error, if the database isn't set)
+
+from streamlit.starlette import App  # noqa: E402
 
 
 def _auth_secrets() -> dict | None:

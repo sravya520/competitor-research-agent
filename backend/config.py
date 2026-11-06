@@ -19,12 +19,15 @@ ROOT = Path(__file__).resolve().parent.parent
 def _database_url() -> str:
     url = os.environ.get("DATABASE_URL", "").strip()
     if not url:
-        # Local default. Free hosts wipe local disk on redeploy, so production sets DATABASE_URL.
+        # A throwaway database in production looks like it works: each instance gets its own copy, so
+        # accounts, consent and free runs reset without a word. Stopping is the only honest answer.
+        if os.environ.get("VERCEL"):
+            raise RuntimeError("DATABASE_URL is not set. Moat will not start on Vercel without a database (see README).")
         try:
-            (ROOT / "data").mkdir(exist_ok=True)
-            return f"sqlite:///{(ROOT / 'data' / 'cra.db').as_posix()}"
-        except OSError:  # read-only filesystem (Vercel): /tmp is per-instance and ephemeral, so
-            return "sqlite:////tmp/cra.db"  # real deployments MUST set DATABASE_URL
+            (ROOT / "data").mkdir(exist_ok=True)  # local development only
+        except OSError as exc:
+            raise RuntimeError("DATABASE_URL is not set and data/ can't be created here. Set DATABASE_URL.") from exc
+        return f"sqlite:///{(ROOT / 'data' / 'cra.db').as_posix()}"
     # Neon/Supabase/Heroku hand out postgres:// or postgresql://; SQLAlchemy needs the driver named.
     for prefix in ("postgres://", "postgresql://"):
         if url.startswith(prefix):

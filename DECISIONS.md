@@ -92,6 +92,7 @@
 - D50 (2026-11-06): The landing page names competitors in plain text. The real company logos are deleted: we had no permission to use them, and text says the same thing.
 - D51 (2026-11-06): Promises now match the code. The landing page states the free-run limit instead of "3 a day". An expired research is never served, and reading it erases it; expired rows are also cleared whenever anyone starts a job or loads a signed-in page. There is no scheduler, so the Privacy Policy says that instead of promising erasure at exactly 24 hours. A service failure gives the free run back at most once per job (only the caller that moves the job to failed may refund); the daily count is never refunded. Corrects D24's "never refunded" for free runs.
 - D52 (2026-11-06): `UNLIMITED_EMAILS` has no default; the allow list comes only from the environment. Addresses in the code were published with the repo, and were a standing grant of unlimited use of our keys. Replaces the default in D41.
+- D53 (2026-11-06): No SQLite fallback on Vercel. Without `DATABASE_URL` the boot stops with an error naming it, because each instance silently getting its own throwaway database resets accounts, consent and free runs. Replaces the `/tmp` fallback in D30.
 
 ## Open questions
 - Wire tokens into Streamlit via `.streamlit/config.toml` + one stylesheet, or move to a React front end to use Ant components?

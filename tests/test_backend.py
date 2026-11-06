@@ -302,6 +302,22 @@ class BackendTests(unittest.TestCase):
             assert c.execute(text("SELECT method FROM research_jobs WHERE id = 'old'")).scalar() == "general"  # quoted text default
 
 
+    def test_no_sqlite_fallback_on_vercel(self):
+        with patch.dict(os.environ, {"VERCEL": "1", "DATABASE_URL": ""}):
+            with self.assertRaisesRegex(RuntimeError, "DATABASE_URL is not set"):
+                config._database_url()
+
+    def test_no_silent_fallback_on_a_read_only_disk_anywhere(self):
+        with patch.dict(os.environ, {"DATABASE_URL": ""}), patch.object(Path, "mkdir", side_effect=OSError(30, "Read-only")):
+            os.environ.pop("VERCEL", None)
+            with self.assertRaisesRegex(RuntimeError, "Set DATABASE_URL"):
+                config._database_url()
+
+    def test_local_development_still_gets_its_sqlite_file(self):
+        with patch.dict(os.environ, {"DATABASE_URL": ""}), patch.object(Path, "mkdir"):
+            os.environ.pop("VERCEL", None)
+            assert config._database_url().endswith("/data/cra.db")
+
     def test_postgres_url_gets_driver_prefix(self):
         os.environ["DATABASE_URL"] = "postgres://u:p@host/db"
         try:

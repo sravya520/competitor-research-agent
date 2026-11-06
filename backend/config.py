@@ -42,10 +42,11 @@ DAILY_RUNS_GLOBAL = int(os.environ.get("DAILY_RUNS_GLOBAL", "150"))
 FREE_RUNS = int(os.environ.get("FREE_RUNS", "1"))
 
 # Accounts that run on OUR keys without limit (no free-run cap, no daily cap). Matched on the
-# Google-verified email. Override with UNLIMITED_EMAILS (comma separated); empty string = nobody.
+# Google-verified email. Set with UNLIMITED_EMAILS (comma separated); unset = nobody. No address belongs
+# in this file: it would be published with the code and would hand out unlimited use of our keys.
 UNLIMITED_EMAILS = frozenset(
     e.strip().lower()
-    for e in os.environ.get("UNLIMITED_EMAILS", "smit.uxdesign@gmail.com,sravyadangeti520@gmail.com").split(",")
+    for e in os.environ.get("UNLIMITED_EMAILS", "").split(",")
     if e.strip()
 )
 

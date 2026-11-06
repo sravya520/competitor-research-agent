@@ -25,6 +25,7 @@ os.environ["DAILY_RUNS_GLOBAL"] = "5"
 os.environ["FREE_RUNS"] = "1"
 os.environ["KEY_VAULT_SECRET"] = "test-secret-not-for-production"
 os.environ["CRA_DEV_AUTH"] = "0"
+os.environ["UNLIMITED_EMAILS"] = "owner@example.com, Friend@Example.com"
 os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
 os.environ.setdefault("TAVILY_API_KEY", "test-tavily-key")
 

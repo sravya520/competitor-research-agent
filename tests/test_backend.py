@@ -5,6 +5,7 @@ Runs with the rest of the suite (python -m unittest discover -s tests) or alone
 Uses a throwaway SQLite file and tiny limits (tests/web_setup.py); never touches data/cra.db.
 """
 
+import importlib
 import os
 import sys
 import unittest
@@ -127,12 +128,21 @@ class BackendTests(unittest.TestCase):
 
 
     def test_allow_listed_emails_are_unlimited_everyone_else_is_not(self):
-        owner = users.upsert_login("sub-al1", "Smit.UXDesign@Gmail.com", None)
-        friend = users.upsert_login("sub-al2", "sravyadangeti520@gmail.com", None)
+        owner = users.upsert_login("sub-al1", "Owner@Example.COM", None)
+        friend = users.upsert_login("sub-al2", "friend@example.com", None)
         other = users.upsert_login("sub-al3", "someone@example.com", None)
         assert owner.unlimited and friend.unlimited and not other.unlimited
         assert users.get_info(owner.id).unlimited is True
 
+
+    def test_with_nothing_set_nobody_is_on_the_allow_list(self):
+        try:
+            with patch("dotenv.load_dotenv"), patch.dict(os.environ):  # dotenv: a developer's .env must not count
+                del os.environ["UNLIMITED_EMAILS"]
+                assert importlib.reload(config).UNLIMITED_EMAILS == frozenset()
+        finally:
+            importlib.reload(config)  # back to this suite's values for every other test
+        assert "owner@example.com" in config.UNLIMITED_EMAILS
 
     def test_onboarding_steps_and_skip(self):
         u = users.upsert_login("sub-o", "o@example.com", None)
@@ -293,8 +303,6 @@ class BackendTests(unittest.TestCase):
 
 
     def test_postgres_url_gets_driver_prefix(self):
-        import importlib
-
         os.environ["DATABASE_URL"] = "postgres://u:p@host/db"
         try:
             assert importlib.reload(config).DATABASE_URL == "postgresql+psycopg://u:p@host/db"

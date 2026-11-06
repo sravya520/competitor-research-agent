@@ -11,8 +11,9 @@ venv/
 .venv/
 node_modules/
 
-# Heavy or dev-only
+# Heavy or dev-only. benchmarks/ holds cached provider responses that must never reach production.
 assets/
+benchmarks/
 tests/
 example-report.md
 report-*.md

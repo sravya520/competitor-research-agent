@@ -186,7 +186,7 @@ This started as a CLI, where one run per process made module-level state correct
 
 The closures are not `contextvars`: the state travels with the function rather than with the thread, which holds even if the SDK invokes a tool from a worker thread. Each closure keeps its name, parameters, type hints and docstring, because all four are part of the schema sent to Gemini (the docstring is prompt text), and a test pins each declared schema so a refactor cannot quietly reword the prompt. There are no compatibility shims: the old module-level accessors are gone, so a missed call site fails loudly rather than silently sharing state again.
 
-What stays process-wide is what should be shared: the HTTP clients, the disk response cache and the credit meter, built lazily under a lock, since a warm cache is why a rerun costs no credits. A cache hit still records the URL in that run's ledger, because whether the bytes came from the network or from disk is a billing detail, not an evidence one.
+What stays process-wide is what should be shared: the HTTP clients and the credit meter, built lazily under a lock. The disk response cache is off everywhere except benchmarks, which turn it on explicitly, so a real research run always reads the live web. A cache hit still records the URL in that run's ledger, because whether the bytes came from the network or from disk is a billing detail, not an evidence one.
 
 **Verification is a separate call with no shared history.**
 A model asked to re-check its own reasoning tends to agree with itself. The verifier sees the proposed competitors and the target company, but not the reasoning that produced them.

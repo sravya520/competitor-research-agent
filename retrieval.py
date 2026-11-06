@@ -156,9 +156,14 @@ class ResponseCache:
     would report a fake latency and hide run-to-run variance. The cache exists
     so metrics can be recomputed afterwards, and so development iteration does
     not burn the free tier.
+
+    Off unless a benchmark asks for it. It used to be on for every provider,
+    which meant a real research run could answer from old files instead of the
+    live web, and creating the directory crashed every run on a read-only disk
+    (Vercel), with the failure reaching the user as a generic error.
     """
 
-    def __init__(self, directory: Path = CACHE_DIR, enabled: bool = True) -> None:
+    def __init__(self, directory: Path = CACHE_DIR, enabled: bool = False) -> None:
         self.dir = directory
         self.enabled = enabled
         self.hits = 0

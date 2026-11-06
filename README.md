@@ -164,6 +164,43 @@ GEMINI_API_KEY = "your-key-here"
 TAVILY_API_KEY = "your-key-here"
 ```
 
+### Vercel (production: moatcra.vercel.app)
+
+The Moat web app (`moat_app.py`, served through `index.py`) runs at **https://moatcra.vercel.app**. Deploy with `vercel deploy --prod --yes`. The Render and Streamlit Cloud deployments above run the separate `app.py` demo, not this.
+
+**Every variable it reads** goes in Vercel under **Settings → Environment Variables**, and takes effect on the next deploy:
+
+| Variable | Needed | What it is |
+|---|---|---|
+| `GEMINI_API_KEY` | Yes | Google Gemini, for every model call |
+| `TAVILY_API_KEY` | Yes | Tavily, for web search and page reading |
+| `DATABASE_URL` | Yes | Postgres connection string. Without it the app stops at boot with an error naming this variable |
+| `GOOGLE_CLIENT_ID` | Yes | From your Google OAuth client (type: Web application) |
+| `GOOGLE_CLIENT_SECRET` | Yes | From the same client |
+| `SITE_URL` | Yes | `https://moatcra.vercel.app`. The redirect URI is built from it (see below), so it must be the address people actually visit |
+| `AUTH_COOKIE_SECRET` | Yes | A long random string that signs the sign-in cookie. Generate one: `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `STREAMLIT_SERVER_COOKIE_SECRET` | Yes | **The same value as `AUTH_COOKIE_SECRET`.** Streamlit signs the login-state cookie with it. If instances disagree, a Google callback that reaches a different instance sends the user back to sign-in with no error |
+| `UNLIMITED_EMAILS` | Optional | Comma-separated Google emails that run with no limits on our keys. Unset means nobody |
+| `FREE_RUNS` | Optional | Free research runs per account, for life. Default `1` |
+| `DAILY_RUNS_PER_USER` | Optional | Daily cap per account. Default `3` |
+| `DAILY_RUNS_GLOBAL` | Optional | Daily cap across all accounts. Default `150` |
+| `OPERATOR_NAME` | Before launch | Shown in the legal pages, which carry a draft warning until all three of these are set |
+| `CONTACT_EMAIL` | Before launch | Same |
+| `JURISDICTION` | Before launch | Same |
+| `RETRIEVAL_PROVIDER` | Optional | `tavily` (default), `firecrawl`, `firecrawl_scrape` or `hybrid` |
+| `FIRECRAWL_API_KEY` | Only for Firecrawl | Needed when `RETRIEVAL_PROVIDER` uses Firecrawl |
+| `KEY_VAULT_SECRET` | No | Nothing reads it: own API keys are hidden, and keys saved earlier are erased on the first connection. Safe to remove |
+| `CRA_DEV_AUTH` | Never | The local sign-in bypass. It refuses to work unless host, origin and client are all local, but it has no business in production |
+
+**Redirect URI.** The app sends `SITE_URL` + `/oauth2callback` to Google. In Google Cloud, under the OAuth client's **Authorized redirect URIs**, add exactly:
+
+```
+https://moatcra.vercel.app/oauth2callback
+http://localhost:4000/oauth2callback
+```
+
+The second is for local sign-in, which also needs `.streamlit/secrets.toml` (template: `.streamlit/secrets.toml.example`) and the matching port: `streamlit run moat_app.py --server.port 4000`. Sign-in does not work on Vercel preview URLs: Google rejects any address not on that list, and the sign-in cookie is only valid on `SITE_URL`'s own address.
+
 ### Why the same code runs in three places
 
 Locally keys come from `.env`; on Streamlit Cloud from `st.secrets`; in a container from real environment variables. `app.py` bridges `st.secrets` into environment variables *before* importing the pipeline, so `config.py` (and the CLI, which has never heard of Streamlit) only ever reads `os.environ`. One code path, three sources.
@@ -186,7 +223,7 @@ This started as a CLI, where one run per process made module-level state correct
 
 The closures are not `contextvars`: the state travels with the function rather than with the thread, which holds even if the SDK invokes a tool from a worker thread. Each closure keeps its name, parameters, type hints and docstring, because all four are part of the schema sent to Gemini (the docstring is prompt text), and a test pins each declared schema so a refactor cannot quietly reword the prompt. There are no compatibility shims: the old module-level accessors are gone, so a missed call site fails loudly rather than silently sharing state again.
 
-What stays process-wide is what should be shared: the HTTP clients, the disk response cache and the credit meter, built lazily under a lock, since a warm cache is why a rerun costs no credits. A cache hit still records the URL in that run's ledger, because whether the bytes came from the network or from disk is a billing detail, not an evidence one.
+What stays process-wide is what should be shared: the HTTP clients and the credit meter, built lazily under a lock. The disk response cache is off everywhere except benchmarks, which turn it on explicitly, so a real research run always reads the live web. A cache hit still records the URL in that run's ledger, because whether the bytes came from the network or from disk is a billing detail, not an evidence one.
 
 **Verification is a separate call with no shared history.**
 A model asked to re-check its own reasoning tends to agree with itself. The verifier sees the proposed competitors and the target company, but not the reasoning that produced them.
@@ -234,6 +271,19 @@ The cases split into two tiers, and the distinction matters:
 That split exists because this system does live web searches. The same input can legitimately produce different results on different days. One run finds no single match for an ambiguous name and stops, another finds a registered entity and proceeds. Asserting on that would be testing what search indexed this morning, not testing this code. **A test that flakes for unrelated reasons teaches you to ignore it**, and then you ignore it when it catches something real.
 
 Each run also reports three metrics, so a change can be judged by a number instead of a guess: `primary_source_ratio` (share of citations that aren't roundup/listicle content), `corroboration_rate` (share of competitors backed by 2+ independent source domains), and a count of precise-claim warnings (oddly specific stats resting on a single source).
+
+## Running the tests
+
+Run from the repository root. The exact install command for the full suite, including the web layer:
+
+```bash
+pip install -r requirements.txt -r requirements-web.txt
+python -m unittest discover -s tests
+```
+
+The suite needs no API keys and makes no network calls. With only `requirements.txt` installed, which is all the demo needs, the web tests skip and print this install command. The regression cases above are separate: `run_eval.py` calls the live APIs and spends quota.
+
+---
 
 ## Retrieval is pluggable, and both backends are benchmarked
 

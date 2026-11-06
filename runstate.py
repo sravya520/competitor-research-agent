@@ -69,8 +69,8 @@ class RunState:
         self.progress = progress or _silent
 
         # The provider belongs to the run, because the benchmark harness
-        # switches it per case. Its underlying clients and disk cache do not:
-        # those stay process-wide, in tools.provider_for().
+        # switches it per case. Its underlying clients do not: those stay
+        # process-wide, in tools.provider_for().
         self.provider = provider
         self.provider_name = provider_name
 

@@ -32,10 +32,10 @@ import threading
 from retrieval import RetrievedDoc, get_provider
 
 # Providers are process-wide and the runs that use them are not. One provider
-# instance per name holds the HTTP clients, the disk response cache and the
-# credit meter, all of which SHOULD be shared: a warm cache is the reason a
-# rerun costs no credits. Built under a lock so two threads starting at once
-# cannot each pay to construct one, and so neither sees a half-built object.
+# instance per name holds the HTTP clients and the credit meter, which SHOULD
+# be shared. Its disk response cache is off here; only benchmarks turn it on.
+# Built under a lock so two threads starting at once cannot each pay to
+# construct one, and so neither sees a half-built object.
 _providers: dict[str, object] = {}
 _providers_lock = threading.Lock()
 

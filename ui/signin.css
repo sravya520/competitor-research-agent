@@ -1,0 +1,217 @@
+/* Sign-in, consent and the signed-out header (views/auth.py, views/chrome.py).
+   One quiet column: brand top left, a short heading, one button, fine print. Same tokens and type as
+   the landing page (landing.css defines the --l-* vars). No hex, no inline styles, no angle brackets
+   (the st.html sanitizer drops the whole style block). Bundled into ui/app.css by build-ui.js. */
+
+.si-top,
+.si-copy,
+.si-fine,
+.si-foot {
+  font-family: var(--l-font);
+  -webkit-font-smoothing: antialiased;
+}
+.si-top a {
+  color: var(--l-ink);
+  text-decoration: none;
+}
+/* Links in fine print and the footer are secondary text and turn primary on hover */
+.si-fine a,
+.si-foot a {
+  color: var(--l-muted);
+  text-decoration: none;
+  transition: color 160ms var(--l-ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .si-fine a:hover,
+  .si-foot a:hover {
+    color: var(--l-ink);
+  }
+}
+.si-top {
+  padding-block: var(--space-4);
+}
+
+/* The column: 24rem wide, centred, with room above it */
+.st-key-si {
+  inline-size: min(100%, 24rem);
+  margin: clamp(var(--space-8), 10vh, var(--space-24)) auto var(--space-12);
+  font-family: var(--l-font);
+}
+.si-logo {
+  display: block;
+  inline-size: var(--space-10);
+  block-size: var(--space-10);
+  margin-block-end: var(--space-8);
+}
+.si-step {
+  margin: 0 0 var(--space-3);
+  font-size: var(--ant-font-size-sm);
+  font-weight: 500;
+  color: var(--l-muted);
+}
+.si-copy + * {
+  margin-block-start: var(--space-2);
+}
+
+/* Buttons inside the column: ink primary, quiet secondary text button, full width */
+.st-key-si [data-testid="stElementContainer"]:has([data-testid="stButton"]) {
+  width: 100%;
+}
+.st-key-si [data-testid="stBaseButton-primary"] {
+  inline-size: 100%;
+  min-block-size: var(--space-12);
+  border: 0;
+  border-radius: var(--l-r-btn);
+  background: var(--l-ink);
+  color: var(--l-on-dark);
+  font-family: var(--l-font);
+  font-weight: 600;
+}
+/* Secondary (onboarding's Skip): outlined, ink text, so it reads as a real choice next to the primary */
+.st-key-si .st-key-ob_skip3 button {
+  inline-size: 100%;
+  min-block-size: var(--space-12);
+  border: 0;
+  border-radius: var(--l-r-btn);
+  background: var(--l-canvas);
+  box-shadow: inset 0 0 0 1px var(--l-hair-strong);
+  color: var(--l-ink);
+  font-family: var(--l-font);
+  font-weight: 600;
+  transition: background-color 160ms var(--l-ease-out);
+}
+.st-key-si [data-testid="stBaseButton-tertiary"] {
+  inline-size: 100%;
+  min-block-size: var(--tap-min);
+  color: var(--l-muted);
+  font-family: var(--l-font);
+  font-weight: 500;
+}
+@media (hover: hover) and (pointer: fine) {
+  .st-key-si [data-testid="stBaseButton-primary"]:not(:disabled):hover {
+    background: color-mix(in srgb, var(--l-ink) 82%, var(--l-canvas));
+    color: var(--l-on-dark);
+  }
+  .st-key-si [data-testid="stBaseButton-tertiary"]:hover {
+    color: var(--l-ink);
+  }
+  .st-key-si .st-key-ob_skip3 button:hover {
+    background: var(--l-surface);
+    color: var(--l-ink);
+  }
+}
+.si-copy h1 {
+  margin: 0;
+  font-size: var(--l-d-l);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  color: var(--l-ink);
+}
+.si-copy p {
+  margin: var(--space-3) 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--l-muted);
+}
+.si-fine {
+  margin: 0;
+  font-size: var(--ant-font-size-sm);
+  line-height: 1.6;
+  color: var(--l-muted);
+}
+.si-fine a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The one button. White with a visible outline (a control boundary needs 3:1), Google G at left. */
+.st-key-si .st-key-si_google,
+.st-key-si .st-key-si_google .stButton,
+.st-key-si .st-key-si_google [data-testid="stButton"] { /* Streamlit sizes these to fit-content */
+  inline-size: 100%;
+  width: 100%;
+}
+.st-key-si .st-key-si_google button {
+  inline-size: 100%;
+  width: 100%;
+  min-block-size: var(--space-12);
+  border: 0;
+  border-radius: var(--l-r-btn);
+  background: var(--l-canvas);
+  box-shadow: inset 0 0 0 1px var(--ant-color-text-tertiary);
+  color: var(--l-ink);
+  font-family: var(--l-font);
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  transition: background-color 160ms var(--l-ease-out);
+}
+.st-key-si_google button::before {
+  content: "";
+  flex: none;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  background: url("/app/static/img/google-g.svg") center / contain no-repeat;
+}
+.st-key-si .st-key-si_google button > div {
+  flex: none;
+  inline-size: auto;
+  width: auto; /* keep the G and the label together in the middle */
+}
+.st-key-si_google button p {
+  margin: 0;
+  font-weight: 600;
+}
+@media (hover: hover) and (pointer: fine) {
+  .st-key-si_google button:hover {
+    background: var(--l-surface);
+    color: var(--l-ink);
+  }
+}
+
+/* Legal footer under the column */
+.si-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-24);
+  font-size: var(--ant-font-size);
+  color: var(--l-muted);
+}
+.si-foot nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-6);
+}
+.si-foot nav a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-min);
+}
+.si-foot p {
+  margin: 0;
+  font-size: var(--ant-font-size-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-key-si_google button {
+    transition: none;
+  }
+}
+
+/* Onboarding options: roomy, readable, one per row */
+.st-key-si [data-testid="stRadio"] [role="radiogroup"] {
+  gap: var(--space-3);
+}
+.st-key-si [data-testid="stRadio"] label {
+  padding-block: var(--space-2);
+  font-family: var(--l-font);
+  font-size: 1.0625rem;
+}
+[data-testid="stApp"]:has(.st-key-si) [data-testid="stHeader"] {
+  display: none;
+}

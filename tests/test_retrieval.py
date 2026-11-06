@@ -15,8 +15,10 @@ Two things these tests exist to protect:
 """
 
 import os
+import tempfile
 import unittest
-from unittest.mock import MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 # config.py reads API keys from os.environ at import time, and importing
 # retrieval/tools pulls it in. Dummies keep the tests hermetic — no real keys,
@@ -38,6 +40,24 @@ from retrieval import (  # noqa: E402
 )
 
 NO_CACHE = lambda: ResponseCache(enabled=False)  # noqa: E731
+
+
+class CacheIsForBenchmarksOnly(unittest.TestCase):
+    """The cache used to default to on, so real runs could be answered from old
+    files, and creating its directory crashed every run on a read-only disk."""
+
+    def test_a_provider_built_the_normal_way_has_the_cache_off(self):
+        provider = TavilyProvider(client=make_tavily(), throttle=False)
+        self.assertFalse(provider.cache.enabled)
+
+    def test_the_default_cache_never_touches_the_disk(self):
+        with patch.object(Path, "mkdir", side_effect=OSError(30, "Read-only file system")) as mkdir:
+            TavilyProvider(client=make_tavily(), throttle=False)
+        mkdir.assert_not_called()
+
+    def test_a_benchmark_can_still_turn_it_on(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertTrue(ResponseCache(directory=Path(directory), enabled=True).enabled)
 
 
 class ProviderCase(unittest.TestCase):

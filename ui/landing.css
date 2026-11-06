@@ -1,0 +1,1008 @@
+/* Landing page (ui/landing.html). Direction: plain proof (DESIGN.md section 15).
+   Near-monochrome, one grotesk, space instead of borders, real photographs with real product
+   fragments on them. Ant tokens and spacing.css only, no hex, no inline styles, mobile-first.
+   Never put an angle bracket in this file: the st.html sanitizer drops the whole style block.
+   Bundled into ui/app.css by design-system/build-ui.js. */
+
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("/app/static/fonts/instrument-sans-wght.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --l-font: "Instrument Sans", var(--ant-font-family);
+  --l-d-xl: clamp(2rem, 1.2rem + 3.2vw, 3.5rem); /* hero tops out at 56px */
+  --l-d-l: clamp(1.4rem, 1.05rem + 1.35vw, 2.0625rem); /* section titles top out at 33px */
+  --l-ink: var(--ant-color-text);
+  --l-muted: var(--ant-color-text-secondary);
+  --l-canvas: var(--ant-color-bg-container);
+  --l-surface: var(--surface-card);
+  --l-hair: color-mix(in srgb, var(--ant-color-text) 16%, transparent);
+  --l-on-dark: var(--ant-color-text-light-solid);
+  --l-on-dark-soft: color-mix(in srgb, var(--ant-color-text-light-solid) 72%, var(--ant-color-text));
+  --l-r-btn: calc(var(--ant-border-radius-lg) * 1.5);
+  --l-r-panel: calc(var(--ant-border-radius-lg) * 2);
+  --l-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --l-section: var(--space-16);
+}
+@media (min-width: 992px) {
+  :root { --l-section: var(--space-32); }
+}
+
+/* ---- Page frame ---- */
+[data-testid="stApp"]:has(.lp) {
+  background: var(--l-canvas);
+}
+[data-testid="stApp"]:has(.lp) [data-testid="stHeader"] {
+  display: none;
+}
+[data-testid="stMainBlockContainer"]:has(.lp) {
+  max-width: calc(var(--content-wide) + 2 * var(--gutter));
+  padding-block: 0 var(--space-12);
+}
+
+.lp {
+  font-family: var(--l-font);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--l-ink);
+  -webkit-font-smoothing: antialiased;
+}
+.lp :where(h1, h2, h3, p, ul, ol, figure, table, details) {
+  margin: 0;
+  padding: 0;
+}
+.lp :is(ul, ol) { /* Streamlit pads lists 32px; a zero-specificity reset loses to it */
+  list-style: none;
+  padding-inline-start: 0;
+}
+.lp :where(a) { /* zero specificity: never overrides .lp-btn colors */
+  color: inherit;
+  text-decoration: none;
+}
+.lp :where(a, summary):focus-visible {
+  outline: 2px solid var(--ant-color-primary-active);
+  outline-offset: 3px;
+  border-radius: var(--ant-border-radius-sm);
+}
+.lp-visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- Type: big display, then a hard drop to item size (T9) ---- */
+.lp h1 {
+  max-width: none;
+  font-size: var(--l-d-xl);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.lp h2 {
+  max-width: 20ch;
+  font-size: var(--l-d-l);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.lp h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.lp-eyebrow {
+  font-size: var(--ant-font-size);
+  font-weight: 500;
+  color: var(--l-muted);
+}
+.lp-lead {
+  max-width: 34rem;
+  font-size: 1.1875rem;
+  line-height: 1.55;
+  color: var(--l-muted);
+}
+.lp-fine {
+  font-size: var(--ant-font-size-sm);
+  color: var(--l-muted);
+}
+
+/* ---- Actions ---- */
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--space-12);
+  padding-inline: var(--space-6);
+  border-radius: var(--l-r-btn);
+  background: var(--l-ink);
+  color: var(--l-on-dark);
+  font-size: 1rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 160ms var(--l-ease-out), transform 160ms var(--l-ease-out);
+}
+.lp-btn:active {
+  transform: scale(0.98);
+}
+.lp-btn--sm {
+  min-block-size: var(--space-10);
+  padding-inline: var(--space-4);
+  font-size: var(--ant-font-size);
+}
+.lp-btn--light {
+  background: var(--l-canvas);
+  color: var(--l-ink);
+}
+.lp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-min);
+  font-weight: 500;
+}
+.lp-link .i {
+  transition: transform 160ms var(--l-ease-out);
+}
+.lp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
+}
+
+/* ---- Nav ---- */
+.lp-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding-block: var(--space-4);
+}
+.lp-nav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-min);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.lp-mark-img {
+  display: block;
+  flex: none;
+  inline-size: var(--space-8);
+  block-size: var(--space-8);
+}
+.lp-mark {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  border-radius: var(--ant-border-radius);
+  background: var(--l-ink);
+  color: var(--l-on-dark);
+}
+.lp-mark .i {
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+}
+.lp-nav__links {
+  display: none;
+}
+.lp-nav__end {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+.lp-nav__links a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-min);
+  font-size: var(--ant-font-size);
+  font-weight: 600;
+  color: var(--l-ink);
+  transition: color 160ms var(--l-ease-out);
+}
+
+/* ---- Hero ---- */
+.lp-hero {
+  padding-block: var(--space-12) 0;
+}
+.lp-hero__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+.lp-hero__copy .lp-eyebrow {
+  margin-block-end: calc(var(--space-2) * -1); /* eyebrow belongs to the headline (S4) */
+}
+.lp-hero__copy .lp-fine {
+  margin-block-start: calc(var(--space-3) * -1); /* fine print belongs to the buttons (S4) */
+}
+
+/* Stage: real product fragments on a quiet tint, no photograph (V4). The output is the picture. */
+.lp-stage {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-12);
+  padding: var(--space-3);
+  background: var(--l-surface);
+  border-radius: var(--l-r-panel);
+}
+.lp-frag {
+  background: var(--l-canvas);
+  border-radius: var(--l-r-btn);
+  box-shadow: var(--ant-box-shadow-secondary); /* lifts the card off the tint (R2) */
+  font-size: var(--ant-font-size);
+}
+.lp-frag--report {
+  padding: var(--space-4) var(--space-4) var(--space-2);
+}
+.lp-frag--note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  line-height: 1.45;
+}
+.lp-frag__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block-end: var(--space-2);
+}
+.lp-frag__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+}
+.lp-frag__meta {
+  color: var(--l-muted);
+  font-size: var(--ant-font-size-sm);
+}
+.lp-co {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.lp-rows li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-block-size: var(--space-10);
+}
+
+/* ---- Tags and tiles ---- */
+.lp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--ant-font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lp-tag .i {
+  inline-size: 1.1em;
+  block-size: 1.1em;
+}
+.lp-tag--ok {
+  background: var(--ant-color-success-bg);
+  color: var(--ant-green-8);
+}
+.lp-tag--warn {
+  background: var(--ant-color-warning-bg);
+  color: var(--ant-gold-8);
+}
+.lp-tile {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--space-10);
+  block-size: var(--space-10);
+  border-radius: var(--l-r-btn);
+  background: var(--l-surface);
+  color: var(--l-ink);
+}
+.lp-section--surface .lp-tile {
+  background: var(--l-canvas);
+}
+.lp-tile--warn {
+  background: var(--ant-color-warning-bg);
+  color: var(--ant-gold-8);
+}
+
+/* ---- Sections: space is the structure (V7) ---- */
+.lp-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding-block: var(--l-section) 0;
+}
+.lp-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+.lp-section--surface {
+  margin-block-start: var(--l-section);
+  padding: var(--space-12) var(--inset-md);
+  border-radius: var(--l-r-panel);
+  background: var(--l-surface);
+}
+.lp-section--surface + .lp-section {
+  padding-block-start: var(--l-section);
+}
+
+/* How it works: numbered flow with connectors (V5) */
+.lp-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-10);
+}
+.lp-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.lp-step__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  align-self: stretch;
+  margin-block-end: var(--space-2);
+}
+.lp-step__n {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--space-8);
+  block-size: var(--space-8);
+  border-radius: 50%;
+  background: var(--l-ink);
+  color: var(--l-on-dark);
+  font-size: var(--ant-font-size);
+  font-weight: 600;
+}
+.lp-step__link {
+  display: none;
+  flex: 1;
+  block-size: 1px;
+  background: var(--l-hair);
+  transform-origin: left center;
+}
+.lp-step p {
+  color: var(--l-muted);
+}
+.lp-mini {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--l-r-btn);
+  background: var(--l-surface);
+  font-size: var(--ant-font-size);
+}
+.lp-mini--bad s {
+  color: var(--ant-red-7);
+  text-decoration-color: var(--ant-red-7);
+}
+.lp-box {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  border-radius: var(--ant-border-radius-sm);
+  background: var(--l-ink);
+  color: var(--l-on-dark);
+}
+.lp-box .i {
+  inline-size: var(--space-3);
+  block-size: var(--space-3);
+}
+
+/* What gets checked */
+.lp-checks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-10);
+}
+.lp-checks li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.lp-checks .lp-tile {
+  margin-block-end: var(--space-2);
+}
+.lp-checks p {
+  max-width: 30rem;
+  color: var(--l-muted);
+}
+
+/* Split layouts */
+.lp-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12);
+}
+.lp-split__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+.lp-points {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.lp-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.lp-points .i {
+  margin-block-start: var(--space-1);
+}
+.lp-points {
+  margin-block-start: var(--space-10);
+}
+
+/* ---- "You stay in charge": four places a candidate can end up. Click a name to move it (CSS only). ---- */
+.lp-try {
+  margin-block-start: var(--space-16);
+}
+.lp-try__hint {
+  max-width: 44rem;
+  margin-block-end: var(--space-6);
+  color: var(--l-muted);
+}
+.lp-lanes {
+  counter-reset: kept gone;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+.lp-lane {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border-radius: var(--l-r-panel);
+  background: var(--l-surface);
+}
+.lp-lane h3 {
+  font-size: 1.25rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.lp-lane > p {
+  max-width: 34rem;
+  color: var(--l-muted);
+}
+.lp-lane .lp-tile {
+  background: var(--l-canvas);
+}
+.lp-lane .lp-tile--ok {
+  background: var(--ant-color-success-bg);
+}
+.lp-lane .lp-tile--warn {
+  background: var(--ant-color-warning-bg);
+}
+.lp-tile--ok {
+  color: var(--ant-green-8);
+}
+.lp-tile--bad {
+  color: var(--ant-red-7);
+}
+.lp-lane ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  inline-size: 100%;
+}
+.lp-lane .lp-mini {
+  flex-wrap: wrap;
+  inline-size: 100%;
+  margin-block-start: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--l-canvas);
+}
+.lp-tag--bad {
+  background: var(--l-surface);
+  color: var(--ant-red-7);
+}
+.lp-pick {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-3);
+  min-block-size: var(--space-12);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--l-r-btn);
+  background: var(--l-canvas);
+  cursor: pointer;
+}
+.lp-pick--gone {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.lp-pick__in:focus-visible + .lp-box {
+  outline: 2px solid var(--ant-color-primary-active);
+  outline-offset: 3px;
+}
+.lp-pick--gone .lp-co {
+  color: var(--l-muted);
+  text-decoration: line-through;
+}
+.lp-pick--gone .lp-tag {
+  background: var(--l-ink);
+  color: var(--l-on-dark);
+}
+.lp-lane .g {
+  display: none;
+}
+.lp-lane__empty {
+  color: var(--l-muted);
+}
+.lp-lanes:has(.lp-pick__in:not(:checked)) .lp-lane__empty {
+  display: none;
+}
+.lp-lane__none {
+  display: none;
+  color: var(--l-muted);
+}
+.lp-lanes:has(#c-airtable:not(:checked)) .lp-lane__none--air,
+.lp-lanes:has(#c-coda:not(:checked)):has(#c-clickup:not(:checked)):has(#c-confluence:not(:checked)):has(#c-obsidian:not(:checked)) .lp-lane__none--all {
+  display: block;
+}
+.lp-pick__in:checked {
+  counter-increment: kept;
+}
+.lp-lane .g {
+  counter-increment: gone; /* only counts while shown: display none elements never increment */
+}
+.lp-lanes__sum {
+  grid-column: 1 / -1;
+  padding-inline: var(--space-2);
+  color: var(--l-muted);
+  font-weight: 500;
+}
+.lp-lanes__sum::before {
+  content: "In the report: " counter(kept) ". Removed by you: " counter(gone) ".";
+}
+.lp-lanes:has(#c-coda:not(:checked)) .k-coda {
+  display: none;
+}
+.lp-lanes:has(#c-coda:not(:checked)) .g-coda {
+  display: block;
+}
+.lp-lanes:has(#c-clickup:not(:checked)) .k-clickup {
+  display: none;
+}
+.lp-lanes:has(#c-clickup:not(:checked)) .g-clickup {
+  display: block;
+}
+.lp-lanes:has(#c-confluence:not(:checked)) .k-confluence {
+  display: none;
+}
+.lp-lanes:has(#c-confluence:not(:checked)) .g-confluence {
+  display: block;
+}
+.lp-lanes:has(#c-obsidian:not(:checked)) .k-obsidian {
+  display: none;
+}
+.lp-lanes:has(#c-obsidian:not(:checked)) .g-obsidian {
+  display: block;
+}
+.lp-lanes:has(#c-airtable:not(:checked)) .k-airtable {
+  display: none;
+}
+.lp-lanes:has(#c-airtable:not(:checked)) .g-airtable {
+  display: block;
+}
+
+/* Sample report: each row opens to the evidence behind it (native details) */
+.lp-doc {
+  padding: var(--space-2);
+  border-radius: var(--l-r-panel);
+  background: var(--l-surface);
+}
+.lp-sample__head {
+  display: none;
+}
+.lp-sample {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.lp-row {
+  border-radius: var(--l-r-btn);
+  background: var(--l-canvas);
+}
+.lp-row summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--space-4);
+  min-block-size: var(--space-16);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+.lp-row summary::-webkit-details-marker {
+  display: none;
+}
+.lp-row summary::after {
+  content: "+";
+  inline-size: var(--space-6);
+  font-size: 1.375rem;
+  font-weight: 400;
+  text-align: center;
+  color: var(--l-muted);
+}
+.lp-row[open] summary::after {
+  content: "\2212";
+}
+.lp-row__pos {
+  display: none;
+  font-weight: 400;
+  color: var(--l-muted);
+}
+.lp-row summary .lp-tag {
+  justify-self: start;
+}
+.lp-tag__x {
+  display: none;
+}
+.lp-row__body {
+  display: grid;
+  gap: var(--space-6);
+  padding: var(--space-2) var(--space-4) var(--space-6);
+}
+.lp-row__body dl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.lp-row__body dt {
+  font-weight: 600;
+}
+.lp-row__body dd {
+  max-width: 34rem;
+  margin: 0; /* browsers indent dd by 40px */
+  color: var(--l-muted);
+}
+.lp-row__srch {
+  margin-block-end: var(--space-2);
+  font-weight: 600;
+}
+.lp-row__warn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+  color: var(--ant-gold-8);
+}
+.lp-row__warn .i {
+  flex: none;
+  margin-block-start: var(--space-1);
+}
+.lp-row__src ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.lp-row__src a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--space-6);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+@media (pointer: coarse) {
+  .lp-row__src a {
+    min-block-size: var(--tap-min);
+  }
+}
+.lp-doc__foot {
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  font-size: var(--ant-font-size);
+  color: var(--l-muted);
+}
+
+/* FAQ: space only, native details */
+.lp-faq {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.lp-faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-block-size: var(--space-12);
+  cursor: pointer;
+  font-size: 1.125rem;
+  font-weight: 500;
+  list-style: none;
+}
+.lp-faq summary::-webkit-details-marker {
+  display: none;
+}
+.lp-faq summary::after {
+  content: "+";
+  flex: none;
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: var(--l-muted);
+}
+.lp-faq details[open] summary::after {
+  content: "\2212";
+}
+.lp-faq details p {
+  max-width: 34rem;
+  padding-block-end: var(--space-4);
+  color: var(--l-muted);
+}
+
+/* The one dark moment (V9) */
+.lp-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  margin-block-start: var(--l-section);
+  padding: var(--space-16) var(--inset-md);
+  border-radius: var(--l-r-panel);
+  background: var(--l-ink);
+  color: var(--l-on-dark);
+  text-align: center;
+}
+.lp-cta h2 {
+  max-width: none;
+}
+.lp-cta p {
+  margin-block-start: calc(var(--space-4) * -1);
+  color: var(--l-on-dark-soft);
+  font-size: 1.1875rem;
+}
+.lp-cta :where(a):focus-visible {
+  outline-color: var(--l-on-dark);
+}
+
+/* Footer */
+.lp-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-block: var(--space-12) 0;
+  font-size: var(--ant-font-size);
+  color: var(--l-muted);
+}
+.lp-foot nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-6);
+}
+.lp-foot nav a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-min);
+}
+
+/* ---- Breakpoints (mobile-first) ---- */
+@media (pointer: coarse) {
+  .lp-btn--sm {
+    min-block-size: var(--tap-min);
+  }
+}
+
+@media (min-width: 576px) {
+  .lp-doc {
+    padding: var(--space-4);
+  }
+  .lp-tag__x {
+    display: inline;
+  }
+}
+
+@media (min-width: 768px) {
+  .lp-nav__links {
+    display: flex;
+    gap: var(--space-6);
+  }
+  .lp-nav__end {
+    gap: var(--space-8);
+  }
+  .lp-hero {
+    padding-block-start: var(--space-20);
+  }
+  .lp-stage {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+    gap: var(--space-8);
+    margin-block-start: var(--space-16);
+    padding: var(--space-8);
+  }
+  .lp-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-8);
+    row-gap: var(--space-12);
+  }
+  .lp-step__link {
+    display: block;
+  }
+  .lp-step:nth-child(2n) .lp-step__link {
+    display: none;
+  }
+  .lp-checks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-12);
+  }
+  .lp-points {
+    flex-direction: row;
+    gap: var(--space-8);
+  }
+  .lp-points li {
+    flex: 1;
+  }
+  .lp-sample__head,
+  .lp-row summary {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 14rem var(--space-6);
+  }
+  .lp-sample__head {
+    display: grid;
+    column-gap: var(--space-4);
+    padding: 0 var(--space-4) var(--space-2);
+    color: var(--l-muted);
+    font-weight: 500;
+  }
+  .lp-row__pos {
+    display: block;
+  }
+  .lp-row__body {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    column-gap: var(--space-8);
+  }
+  .lp-lanes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lp-section--surface {
+    padding: var(--space-16) var(--space-12);
+  }
+  .lp-cta {
+    padding: var(--space-24) var(--space-12);
+  }
+  .lp-foot {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 992px) {
+  .lp-flow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .lp-step:nth-child(2n) .lp-step__link {
+    display: block;
+  }
+  .lp-step:nth-child(3n) .lp-step__link {
+    display: none;
+  }
+  .lp-checks {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .lp-split {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    align-items: center;
+    gap: var(--space-16);
+  }
+  .lp-split--even {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .lp-section--surface {
+    padding: var(--space-20) var(--space-16);
+  }
+}
+
+/* ======================= Motion (DESIGN.md M4) =======================
+   Hero entrance is pure CSS (no flash, works without JS). Scroll reveals and the flow connector
+   drawing in live in static/landing.js. Only transform and opacity animate. */
+@keyframes lp-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes lp-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.lp-hero__copy > *,
+.lp-stage {
+  animation: lp-rise 450ms var(--l-ease-out) both;
+}
+.lp-hero__copy > :nth-child(2) { animation-delay: 40ms; }
+.lp-hero__copy > :nth-child(3) { animation-delay: 80ms; }
+.lp-hero__copy > :nth-child(4) { animation-delay: 120ms; }
+.lp-hero__copy > :nth-child(5) { animation-delay: 160ms; }
+.lp-stage { animation-delay: 180ms; }
+
+@media (hover: hover) and (pointer: fine) {
+  .lp-btn:hover { background: color-mix(in srgb, var(--l-ink) 82%, var(--l-canvas)); }
+  .lp-btn--light:hover { background: color-mix(in srgb, var(--l-canvas) 88%, var(--l-ink)); }
+  .lp-link:hover .i { transform: translateX(3px); }
+  .lp-nav__links a:hover { color: var(--l-ink); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero__copy > *,
+  .lp-stage {
+    animation: lp-fade 200ms ease both;
+    animation-delay: 0s;
+  }
+  .lp-btn,
+  .lp-link .i {
+    transition: none;
+  }
+}
+
+/* ---- Signed-in nav: the account (first name + Google photo) replaces "Try it free" ---- */
+.lp-user {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-min);
+  font-size: var(--ant-font-size);
+  font-weight: 600;
+  color: var(--l-ink);
+}
+.lp-user__av {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--space-8);
+  block-size: var(--space-8);
+  overflow: hidden;
+  background: var(--l-surface);
+  box-shadow: inset 0 0 0 1px var(--l-hair);
+  font-size: var(--ant-font-size-sm);
+}
+.lp-user__av img {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover; /* if the photo fails to load, the initial underneath shows */
+}
+.lp-user__name {
+  max-inline-size: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

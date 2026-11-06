@@ -1,0 +1,128 @@
+/* Component layer for the Streamlit UI. Spacing/targets/focus only: colors, fonts, radius and
+   heading sizes come from .streamlit/config.toml (see DESIGN.md §13). Variables only, no hex, no
+   inline styles. Selectors use data-testid (stable) never Streamlit's hashed classes.
+   Mobile-first: base = phone, min-width queries add. Light mode only. */
+
+/* ---- Page: gutters, reading width, vertical room (S7, L4) ---- */
+[data-testid="stMainBlockContainer"] {
+  box-sizing: border-box;
+  max-width: calc(var(--content-max) + 2 * var(--gutter));
+  padding-inline: var(--gutter);
+  padding-block: var(--space-24) var(--space-20);
+}
+
+/* ---- Text: long URLs wrap instead of overflowing (T7) ---- */
+[data-testid="stMarkdownContainer"],
+[data-testid="stCaptionContainer"] {
+  overflow-wrap: anywhere;
+}
+
+/* ---- Captions: Streamlit fades them to 60% opacity (~4.3:1, fails AA). Use Ant's secondary text (7:1) (C4) ---- */
+[data-testid="stCaptionContainer"] {
+  opacity: 1;
+  color: var(--ant-color-text-secondary);
+}
+
+/* ---- Section rhythm: a heading sits closer to what it introduces (S4) ---- */
+[data-testid="stHeading"] h3 {
+  padding-block: var(--stack-group) var(--stack-label);
+}
+
+/* ---- Form card: border over shadow, one inset, quiet border (R2, S5) ---- */
+[data-testid="stForm"] {
+  padding: var(--inset-sm);
+  border-color: var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+}
+
+@media (min-width: 576px) {
+  [data-testid="stForm"] {
+    padding: var(--inset-md);
+  }
+}
+
+/* ---- Labels sit closer to their field than fields to each other (S4) ---- */
+[data-testid="stWidgetLabel"] {
+  margin-bottom: var(--stack-label);
+}
+
+/* ---- Controls: never shorter than --control-h (44px on touch) (A5) ---- */
+[data-testid="stTextInputRootElement"],
+[data-testid^="stBaseButton"] {
+  min-height: var(--control-h);
+}
+[data-testid^="stBaseButton"] {
+  padding-inline: var(--space-4);
+  font-weight: var(--ant-font-weight-strong);
+}
+
+/* ---- Actions: full width on phones, content width from 576px (L5).
+   Streamlit shrink-wraps the element container, so widen that, not just the button. ---- */
+[data-testid="stElementContainer"]:has([data-testid="stButton"], [data-testid="stFormSubmitButton"], [data-testid="stDownloadButton"]),
+[data-testid="stFormSubmitButton"] button,
+[data-testid="stButton"] button,
+[data-testid="stDownloadButton"] button {
+  width: 100%;
+}
+@media (min-width: 576px) {
+  [data-testid="stElementContainer"]:has([data-testid="stButton"], [data-testid="stFormSubmitButton"], [data-testid="stDownloadButton"]),
+  [data-testid="stFormSubmitButton"] button,
+  [data-testid="stButton"] button,
+  [data-testid="stDownloadButton"] button {
+    width: auto;
+  }
+}
+
+/* ---- Review checkboxes: whole row is a comfortable target (A5) ---- */
+[data-testid="stCheckbox"] label {
+  min-height: var(--control-h);
+  align-items: center;
+  gap: var(--cluster-tight);
+}
+
+/* ---- Expanders and alerts: same inset scale, quiet borders (S5, S10) ---- */
+[data-testid="stExpander"] {
+  border-color: var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+}
+[data-testid="stExpander"] summary {
+  min-height: var(--control-h);
+  padding-inline: var(--inset-sm);
+}
+[data-testid="stAlertContainer"] {  /* the colored box; the stAlert wrapper must stay unpadded */
+  padding: var(--inset-sm);
+  border-radius: var(--ant-border-radius-lg);
+}
+
+/* ---- Page links (header, footer, legal links): touch-sized hit area (A5) ---- */
+[data-testid="stPageLink"] a {
+  min-height: var(--control-h);
+  align-items: center;
+  padding-inline: var(--space-2);
+}
+
+/* ---- Focus: always visible, 3:1 against the page (A1) ---- */
+:where(a, button, input, textarea, summary, [role="checkbox"]):focus-visible {
+  outline: 2px solid var(--ant-color-primary-active); /* AA-safe primary, same as the theme */
+  outline-offset: 2px;
+}
+
+/* ---- Touch: 16px in inputs prevents iOS zoom-on-focus (T2) ---- */
+@media (pointer: coarse) {
+  [data-testid="stTextInputRootElement"] input,
+  [data-testid="stTextArea"] textarea {
+    font-size: 16px;
+  }
+}
+
+/* ---- Reduced motion (M2). !important is deliberate: it must beat any library transition. ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

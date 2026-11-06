@@ -1,0 +1,87 @@
+/* Spacing system. One knob (--space-unit), everything else derives from it.
+   Unit = Ant Design sizeUnit (4px). Primary rhythm is the 8px grid: use EVEN steps.
+   Odd steps (1, 3) are half-steps for tight internal gaps only. Rules: DESIGN.md §2.
+   Requires tokens/tokens.css for the --ant-* fallback; works alone via the 4px default. */
+
+:root {
+  /* ---- 1. Primitives: step N = N * unit. Names match Tailwind (p-4 = 16px). ---- */
+  --space-unit: var(--ant-size-unit, 4px);
+  --space-0: 0;
+  --space-1: calc(var(--space-unit) * 1);   /*   4  half-step  Ant sizeXXS */
+  --space-2: calc(var(--space-unit) * 2);   /*   8             Ant sizeXS  */
+  --space-3: calc(var(--space-unit) * 3);   /*  12  half-step  Ant sizeSM  */
+  --space-4: calc(var(--space-unit) * 4);   /*  16             Ant size    */
+  --space-6: calc(var(--space-unit) * 6);   /*  24             Ant sizeLG  */
+  --space-8: calc(var(--space-unit) * 8);   /*  32             Ant sizeXL  */
+  --space-10: calc(var(--space-unit) * 10); /*  40                         */
+  --space-12: calc(var(--space-unit) * 12); /*  48             Ant sizeXXL */
+  --space-16: calc(var(--space-unit) * 16); /*  64                         */
+  --space-20: calc(var(--space-unit) * 20); /*  80                         */
+  --space-24: calc(var(--space-unit) * 24); /*  96                         */
+  --space-32: calc(var(--space-unit) * 32); /* 128  marketing section padding (DESIGN V7) */
+  /* No step 5 (20px) or 7 (28px): off the 8px grid. Ant's "MD = 20px" is deliberately not exposed. */
+
+  /* ---- 2. Semantic aliases: components use THESE, never primitives directly. ---- */
+  /* Inset: padding inside a container */
+  --inset-xs: var(--space-2);
+  --inset-sm: var(--space-4);
+  --inset-md: var(--space-6);
+  --inset-lg: var(--space-8);
+  /* Stack: vertical gap between siblings */
+  --stack-label: var(--space-2);     /* label -> its field; heading -> its body */
+  --stack-field: var(--space-4);     /* field -> field */
+  --stack-group: var(--space-6);     /* group -> group inside a card/form */
+  --stack-section: var(--space-8);   /* section -> section */
+  --stack-page: var(--space-12);     /* major page regions */
+  /* Cluster: horizontal gap between inline siblings */
+  --cluster-tight: var(--space-2);   /* icon + text, badge + text */
+  --cluster-base: var(--space-4);    /* buttons in a row, chips */
+  --cluster-loose: var(--space-6);
+  /* Touch and control sizing */
+  --tap-min: 44px;                   /* min interactive target on touch (WCAG AA is 24; we use 44) */
+  --control-h: 40px;                 /* default control height, mobile-first (Ant desktop is 32) */
+  /* Page gutter: mobile-first, grows with viewport */
+  --gutter: var(--space-4);
+  --content-wide: 1196px;            /* marketing pages (landing) only; 15% wider than the first 1040px */
+  --radius-pill: 9999px;             /* pills and tags: always fully rounded */
+  /* Card surface: the quiet tint under white rows and tiles (DESIGN R2). Lightness is the one knob; Ant colorBgLayout (96%) read too heavy. */
+  --surface-card-l: 98%;
+  --surface-card: hsl(0 0% var(--surface-card-l));
+  --content-max: 720px;              /* reading width for report text; ~65-75ch at 16px */
+}
+
+/* ---- 3. Responsive gutters. Mobile-first: min-width only, breakpoints = Ant screens. ---- */
+@media (min-width: 768px) {  /* md */
+  :root { --gutter: var(--space-6); --control-h: 36px; }
+}
+@media (min-width: 1200px) { /* xl */
+  :root { --gutter: var(--space-8); --control-h: 32px; }
+}
+/* Touch devices keep big targets regardless of width. */
+@media (pointer: coarse) {
+  :root { --control-h: var(--tap-min); }
+}
+
+/* ---- 4. Layout helpers: spacing via gap, not margins on children. ---- */
+.stack { display: flex; flex-direction: column; gap: var(--stack-field); }
+.stack--label   { gap: var(--stack-label); }
+.stack--group   { gap: var(--stack-group); }
+.stack--section { gap: var(--stack-section); }
+.stack--page    { gap: var(--stack-page); }
+
+.cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cluster-base); }
+.cluster--tight { gap: var(--cluster-tight); }
+.cluster--loose { gap: var(--cluster-loose); }
+
+.inset-xs { padding: var(--inset-xs); }
+.inset-sm { padding: var(--inset-sm); }
+.inset-md { padding: var(--inset-md); }
+.inset-lg { padding: var(--inset-lg); }
+
+.page {
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}

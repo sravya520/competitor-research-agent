@@ -98,6 +98,30 @@ class BootWithoutADatabase(unittest.TestCase):
         self.assertEqual(self.boot(VERCEL="1").returncode, 0)
 
 
+class SignInAcrossInstances(unittest.TestCase):
+    """The login-state cookie used to be signed with a key random to each process, so a callback that
+    reached a different instance than the login lost its state and the user landed back on sign-in,
+    with no error anywhere they could see."""
+
+    def assert_login_survives_a_change_of_instance(self, env):
+        started = last_json(run_instance(env, "login"))
+        self.assertEqual(started["redirect_uri"], "https://moatcra.vercel.app/oauth2callback")
+
+        finished = last_json(run_instance(env, "callback", json.dumps(started)))
+        self.assertTrue(finished["signed_in"], finished)
+        self.assertEqual(finished["location"], "/app")
+
+    def test_with_both_secrets_set_as_documented(self):
+        self.assert_login_survives_a_change_of_instance(
+            instance_env(AUTH_COOKIE_SECRET=SECRET, STREAMLIT_SERVER_COOKIE_SECRET=SECRET))
+
+    def test_with_only_auth_cookie_secret_set(self):
+        self.assert_login_survives_a_change_of_instance(instance_env(AUTH_COOKIE_SECRET=SECRET))
+
+    def test_with_only_the_streamlit_variable_set(self):
+        self.assert_login_survives_a_change_of_instance(instance_env(STREAMLIT_SERVER_COOKIE_SECRET=SECRET))
+
+
 class OneDatabaseStaysThrowaway(unittest.TestCase):
     def test_these_tests_never_use_the_real_database(self):
         self.assertTrue(web_setup.DATABASE_URL.startswith("sqlite:///"))

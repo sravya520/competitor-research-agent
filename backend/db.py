@@ -10,7 +10,12 @@ _engine = None
 
 # Columns that held data we must no longer keep. Dropping one erases what it held, for good, the first
 # time a new deployment connects. team_invites: email addresses of people who never signed up or agreed.
-RETIRED_COLUMNS = (("users", "team_invites"),)
+# *_key_enc: users' own API keys. Live credentials we no longer use are only a risk to their owners.
+RETIRED_COLUMNS = (
+    ("users", "team_invites"),
+    ("users", "gemini_key_enc"),
+    ("users", "tavily_key_enc"),
+)
 
 
 def get_engine():

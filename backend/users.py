@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import delete, select, update
 
-from backend import config, vault
+from backend import config
 from backend.db import session
 from backend.models import ResearchJob, UsageDaily, User
 
@@ -15,17 +15,10 @@ class UserInfo:
     name: str | None
     accepted_current_terms: bool
     onboarded: bool = False
-    has_own_keys: bool = False
     free_runs_left: int = 0
     use_case: str | None = None
     team_size: str | None = None
     unlimited: bool = False  # on the allow list: runs on our keys with no limit
-
-
-@dataclass(frozen=True)
-class OwnKeys:
-    gemini: str
-    tavily: str
 
 
 def _info(u: User) -> UserInfo:
@@ -35,7 +28,6 @@ def _info(u: User) -> UserInfo:
         name=u.name,
         accepted_current_terms=u.terms_version == config.LEGAL_VERSION,
         onboarded=u.onboarded_at is not None,
-        has_own_keys=bool(u.gemini_key_enc and u.tavily_key_enc),
         free_runs_left=max(config.FREE_RUNS - (u.free_runs_used or 0), 0),
         use_case=u.use_case,
         team_size=u.team_size,
@@ -90,38 +82,6 @@ def finish_onboarding(user_id: int) -> None:
         u = s.get(User, user_id)
         if u.onboarded_at is None:
             u.onboarded_at = datetime.now(timezone.utc)
-
-
-# ---- Own API keys. Parked: the feature is hidden and no page or job reaches these (tests/test_moat_app.py). ----
-
-def save_keys(user_id: int, gemini: str, tavily: str) -> None:
-    """Encrypt and store the user's keys. Raises vault.VaultUnavailable if encryption isn't set up."""
-    g, t = vault.encrypt(gemini.strip()), vault.encrypt(tavily.strip())
-    with session() as s:
-        u = s.get(User, user_id)
-        u.gemini_key_enc, u.tavily_key_enc = g, t
-
-
-def clear_keys(user_id: int) -> None:
-    with session() as s:
-        u = s.get(User, user_id)
-        u.gemini_key_enc = u.tavily_key_enc = None
-
-
-def load_keys(user_id: int) -> OwnKeys | None:
-    """The user's decrypted keys, or None if they have none (or they can no longer be read)."""
-    with session() as s:
-        u = s.get(User, user_id)
-        if not (u and u.gemini_key_enc and u.tavily_key_enc):
-            return None
-        g, t = vault.decrypt(u.gemini_key_enc), vault.decrypt(u.tavily_key_enc)
-    return OwnKeys(g, t) if g and t else None
-
-
-def key_hints(user_id: int) -> tuple[str, str] | None:
-    """('...abcd', '...wxyz') so the Account page can show WHICH keys are saved without revealing them."""
-    keys = load_keys(user_id)
-    return (f"…{keys.gemini[-4:]}", f"…{keys.tavily[-4:]}") if keys else None
 
 
 # ---- Free run on our keys ----

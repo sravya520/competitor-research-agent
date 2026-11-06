@@ -15,12 +15,13 @@ This policy explains what personal data Moat ("the Service") collects, why, who 
 | Which version of the Terms and Privacy Policy you accepted, and when | To keep proof of your consent | You, when you accept |
 | How many research runs you started each day, and how many free runs you have used | To enforce limits and protect the shared service quota | Our systems |
 | Your answers to the two onboarding questions (what you use Moat for, team size) | To understand who uses the Service and what to build next | You |
-| Google Gemini and Tavily API keys, only if you saved them with an earlier version of the Service | We do not use them. They stay **encrypted** until you delete your account or ask us to delete them | You |
 | The company name and URL you enter, and the working data of your recent researches (interim findings, and the report text once you generate it) | So a run survives a dropped connection and you can reopen your last researches (see section 2) | You, and the research providers |
 
 We do **not** receive your Google password. We do not request access to your Gmail, Drive, contacts or any other Google service.
 
 ## 2. What we do not store
+
+We do not store API keys. If you saved your own with an earlier version of the Service, we have permanently deleted them.
 
 We do not keep a permanent history of your searches or your finished reports. For your 10 most recent researches we keep their working data (the company name and URL, the interim findings and, once you generate it, the report text) in our database so a run survives a dropped connection and you can reopen it from the left rail. We delete each one when you delete it and when you delete your account. After 24 hours it can no longer be opened, and it is erased the next time anyone uses the Service, because the erasing happens when the Service is in use rather than on a timer. The report you download is yours; we keep no copy beyond that. (If we add saved reports in the future, we will update this policy and ask you again before using it.)
 
@@ -51,13 +52,13 @@ We use only what sign-in needs: a session cookie set by the Service to keep you 
 
 ## 6. How long we keep it
 
-Account data, onboarding answers and any API keys saved with an earlier version are kept until you delete your account or ask us to delete them. Daily usage counts are deleted with the account. Research working data is deleted as described in section 2. Technical logs are kept by our providers for a limited period under their own policies.
+Account data and onboarding answers are kept until you delete your account. Daily usage counts are deleted with the account. Research working data is deleted as described in section 2. Technical logs are kept by our providers for a limited period under their own policies.
 
 ## 7. Your rights and choices
 
 You can:
 
-- **Delete your account** yourself at any time on the Account page. This removes your account record, any API keys saved with an earlier version, usage history and your saved researches.
+- **Delete your account** yourself at any time on the Account page. This removes your account record, usage history and your saved researches.
 - **Ask for a copy, a correction, or deletion** of your data, or withdraw your consent, by emailing {{EMAIL}}. We will reply within a reasonable time and in any case within the period your local law requires.
 - **Nominate another person** to exercise these rights for you if you die or become unable to (a right under India's Digital Personal Data Protection Act, 2023), by emailing {{EMAIL}}.
 - **Complain** to us first at {{EMAIL}} and, if we don't resolve it, to the Data Protection Board of India or your local data protection authority.

@@ -53,12 +53,11 @@ UNLIMITED_EMAILS = frozenset(
     if e.strip()
 )
 
-# Parked with backend/vault.py: own API keys are hidden for now, and nothing in the UI saves or reads them.
-# It still protects any key saved by an earlier version. Rotating it makes those unreadable.
+# Parked with backend/vault.py, for the day research can run on a user's own keys. Nothing reads it today.
 KEY_VAULT_SECRET = os.environ.get("KEY_VAULT_SECRET", "").strip()
 
 # Bump when Terms or Privacy change in a way users must re-accept.
-LEGAL_VERSION = "2026-11-06.3"
+LEGAL_VERSION = "2026-11-06.4"
 
 # Shown in the legal pages. Unset => the legal pages show a "fill these in" warning.
 OPERATOR_NAME = os.environ.get("OPERATOR_NAME", "").strip()

@@ -189,7 +189,7 @@ The Moat web app (`moat_app.py`, served through `index.py`) runs at **https://mo
 | `JURISDICTION` | Before launch | Same |
 | `RETRIEVAL_PROVIDER` | Optional | `tavily` (default), `firecrawl`, `firecrawl_scrape` or `hybrid` |
 | `FIRECRAWL_API_KEY` | Only for Firecrawl | Needed when `RETRIEVAL_PROVIDER` uses Firecrawl |
-| `KEY_VAULT_SECRET` | Leave as it is | Own API keys are hidden for now and nothing reads this. If it is already set, keep it: it encrypts keys saved by an earlier version |
+| `KEY_VAULT_SECRET` | No | Nothing reads it: own API keys are hidden, and keys saved earlier are erased on the first connection. Safe to remove |
 | `CRA_DEV_AUTH` | Never | The local sign-in bypass. It refuses to work unless host, origin and client are all local, but it has no business in production |
 
 **Redirect URI.** The app sends `SITE_URL` + `/oauth2callback` to Google. In Google Cloud, under the OAuth client's **Authorized redirect URIs**, add exactly:

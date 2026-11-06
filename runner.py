@@ -42,7 +42,7 @@ def _run(job_id: str) -> None:
     threading.Thread(target=beat, daemon=True, name=f"beat-{job_id[:8]}").start()
     try:
         if job.key_mode == "own":
-            # Moat no longer creates these, but a row from before own keys were hidden can still be open
+            # Moat no longer creates these, but a row from before own keys were removed can still be open
             # (kept up to 24 h). Say so instead of spending the house keys on a run nobody asked them to pay for.
             jobs.update_job(job_id, status="failed", fail_reason="own_keys_unsupported")
             return

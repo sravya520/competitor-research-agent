@@ -24,8 +24,8 @@ st.caption(
 
 st.subheader("Delete your account")
 st.write(
-    "This permanently deletes your account, your saved researches and anything else we hold about you, including "
-    "any API key you saved with an earlier version. You can sign up again later, "
+    "This permanently deletes your account, your saved researches and anything else we hold about you. "
+    "You can sign up again later, "
     "but you will start fresh. It can't be undone."
 )
 with st.expander("Delete my account"):

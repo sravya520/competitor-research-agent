@@ -29,9 +29,6 @@ class User(Base):
     use_case: Mapped[str | None] = mapped_column(String(120))
     team_size: Mapped[str | None] = mapped_column(String(32))
     onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # The user's own API keys, encrypted (backend/vault.py). Never stored in the clear.
-    gemini_key_enc: Mapped[str | None] = mapped_column(Text)
-    tavily_key_enc: Mapped[str | None] = mapped_column(Text)
     # Runs spent on OUR keys, for life. Compared with config.FREE_RUNS.
     free_runs_used: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 

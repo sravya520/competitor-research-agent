@@ -22,9 +22,9 @@ web_setup.require_web_packages()
 
 from sqlalchemy import func, select  # noqa: E402
 
-from backend import config, jobs, usage, users  # noqa: E402
+from backend import config, jobs, usage, users, vault  # noqa: E402
 from backend.db import session  # noqa: E402
-from backend.models import ResearchJob, UsageDaily, User  # noqa: E402
+from backend.models import Base, ResearchJob, UsageDaily, User  # noqa: E402
 
 DAY = date(2026, 1, 1)
 
@@ -101,31 +101,15 @@ class BackendTests(unittest.TestCase):
         assert users.consume_free_run(u.id) is True
 
 
-    def test_own_keys_are_encrypted_at_rest_and_round_trip(self):
-        u = users.upsert_login("sub-k", "k@example.com", None)
-        assert users.load_keys(u.id) is None and users.get_info(u.id).has_own_keys is False
-        users.save_keys(u.id, " AIzaGEMINI1234 ", "tvly-SEARCH5678")
-        with session() as s:
-            row = s.get(User, u.id)
-            assert "AIzaGEMINI1234" not in row.gemini_key_enc and "tvly-SEARCH5678" not in row.tavily_key_enc
-        keys = users.load_keys(u.id)
-        assert (keys.gemini, keys.tavily) == ("AIzaGEMINI1234", "tvly-SEARCH5678")
-        assert users.key_hints(u.id) == ("…1234", "…5678")
-        assert users.get_info(u.id).has_own_keys is True
-        users.clear_keys(u.id)
-        assert users.load_keys(u.id) is None
+    def test_the_parked_vault_still_encrypts_and_round_trips(self):
+        token = vault.encrypt("AIzaGEMINI1234")
+        assert "AIzaGEMINI1234" not in token
+        assert vault.decrypt(token) == "AIzaGEMINI1234"
 
-
-    def test_keys_unreadable_after_secret_rotation_do_not_crash(self):
-        u = users.upsert_login("sub-r", "r@example.com", None)
-        users.save_keys(u.id, "g-key", "t-key")
-        old = config.KEY_VAULT_SECRET
-        try:
-            config.KEY_VAULT_SECRET = "a-different-secret"
-            assert users.load_keys(u.id) is None
-        finally:
-            config.KEY_VAULT_SECRET = old
-
+    def test_a_vault_token_is_unreadable_after_secret_rotation(self):
+        token = vault.encrypt("g-key")
+        with patch.object(config, "KEY_VAULT_SECRET", "a-different-secret"):
+            assert vault.decrypt(token) is None
 
     def test_allow_listed_emails_are_unlimited_everyone_else_is_not(self):
         owner = users.upsert_login("sub-al1", "Owner@Example.COM", None)
@@ -226,25 +210,25 @@ class BackendTests(unittest.TestCase):
         assert len(kept) == jobs.KEEP_LAST == 10 and ids[-1] in kept and ids[0] not in kept and ids[1] not in kept
 
 
-    def _database_with_teammate_emails(self, name):
+    def _database_with_retired_data(self, name):
         from sqlalchemy import create_engine, text
         url = f"sqlite:///{Path(web_setup.TMP, name).as_posix()}"
         eng = create_engine(url)
         with eng.begin() as c:
             c.execute(text("CREATE TABLE users (id INTEGER PRIMARY KEY, google_sub VARCHAR(255), email VARCHAR(320), "
-                           "team_size VARCHAR(32), team_invites TEXT)"))
-            c.execute(text("INSERT INTO users (id, google_sub, email, team_size, team_invites) "
-                           "VALUES (1, 's', 'e@x.y', '2 to 5', '[\"ada@example.com\"]')"))
+                           "team_size VARCHAR(32), team_invites TEXT, gemini_key_enc TEXT, tavily_key_enc TEXT)"))
+            c.execute(text("INSERT INTO users (id, google_sub, email, team_size, team_invites, gemini_key_enc, tavily_key_enc) "
+                           "VALUES (1, 's', 'e@x.y', '2 to 5', '[\"ada@example.com\"]', 'encrypted-g', 'encrypted-t')"))
         return url, eng
 
-    def test_saved_teammate_emails_are_erased_and_the_rest_of_the_user_is_kept(self):
+    def test_saved_teammate_emails_and_api_keys_are_erased_and_the_rest_of_the_user_is_kept(self):
         from sqlalchemy import inspect, text
 
         from backend.db import _drop_retired_columns
 
-        _, eng = self._database_with_teammate_emails("invites.db")
+        _, eng = self._database_with_retired_data("invites.db")
         _drop_retired_columns(eng)
-        assert "team_invites" not in {c["name"] for c in inspect(eng).get_columns("users")}
+        assert not {"team_invites", "gemini_key_enc", "tavily_key_enc"} & {c["name"] for c in inspect(eng).get_columns("users")}
         with eng.connect() as c:
             assert c.execute(text("SELECT email, team_size FROM users WHERE id = 1")).one() == ("e@x.y", "2 to 5")
         _drop_retired_columns(eng)  # every later start runs it again and must not fail
@@ -254,10 +238,16 @@ class BackendTests(unittest.TestCase):
 
         from backend import db
 
-        url, _ = self._database_with_teammate_emails("invites-start.db")
+        url, _ = self._database_with_retired_data("invites-start.db")
         with patch.object(db, "_engine", None), patch.object(config, "DATABASE_URL", url):
             engine = db.get_engine()
-            assert "team_invites" not in {c["name"] for c in inspect(engine).get_columns("users")}
+            assert not {"team_invites", "gemini_key_enc", "tavily_key_enc"} & {c["name"] for c in inspect(engine).get_columns("users")}
+
+    def test_nothing_in_the_models_can_bring_the_retired_columns_back(self):
+        from backend.db import RETIRED_COLUMNS
+
+        for table, column in RETIRED_COLUMNS:
+            assert column not in Base.metadata.tables[table].columns
 
     def test_postgres_drop_tolerates_two_instances_starting_at_once(self):
         from backend.db import RETIRED_COLUMNS, _drop_retired_columns
@@ -295,7 +285,7 @@ class BackendTests(unittest.TestCase):
                            "heartbeat_at DATETIME, created_at DATETIME)"))
         _add_missing_columns(eng)
         cols = {c["name"] for c in inspect(eng).get_columns("users")}
-        assert {"use_case", "team_size", "onboarded_at", "gemini_key_enc", "tavily_key_enc", "free_runs_used"} <= cols
+        assert {"use_case", "team_size", "onboarded_at", "free_runs_used"} <= cols
         with eng.connect() as c:
             assert c.execute(text("SELECT free_runs_used FROM users WHERE id = 1")).scalar() == 0  # old rows start at 0
             c.execute(text("INSERT INTO research_jobs (id, user_id) VALUES ('old', 1)"))

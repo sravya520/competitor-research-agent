@@ -234,9 +234,8 @@ class OwnKeysAreHidden(SignedInCase):
         app.button(key="run").click().run()
         return app
 
-    def test_a_user_who_saved_keys_runs_on_the_free_run_and_is_not_refused(self):
+    def test_a_run_uses_the_free_run_on_our_keys(self):
         user = self.signed_in_as("sub-keys", use_case="x", team_size="Just me", onboarded=True)
-        users.save_keys(user.id, "g-key", "t-key")
         with patch.object(runner, "start") as start:
             app = self.start_research(open_page("app").run())
 
@@ -263,6 +262,13 @@ class OwnKeysAreHidden(SignedInCase):
             text = path.read_text(encoding="utf-8")
             for name in reached:
                 self.assertNotIn(name, text, f"{path.name} reaches {name}")
+
+    def test_the_privacy_policy_says_saved_keys_were_deleted_and_none_are_stored(self):
+        policy = (ROOT / "legal" / "privacy.md").read_text(encoding="utf-8")
+
+        self.assertIn("We do not store API keys.", policy)
+        self.assertIn("permanently deleted", policy)
+        self.assertNotIn("**encrypted**", policy)
 
     def test_nothing_the_user_reads_says_their_own_keys_are_used(self):
         files = [ROOT / "legal" / "privacy.md", ROOT / "legal" / "terms.md", ROOT / "ui" / "landing.html",

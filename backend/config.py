@@ -3,8 +3,11 @@
 Nothing here is secret except DATABASE_URL (it may embed a password), so never log it.
 """
 
+import ipaddress
 import os
+from collections.abc import Mapping
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
@@ -59,5 +62,49 @@ CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "").strip()
 JURISDICTION = os.environ.get("JURISDICTION", "").strip()
 
 # Local-only sign-in bypass so the app can be developed without Google credentials.
-# Off unless explicitly set; NEVER set in production.
+# Off unless explicitly set; NEVER set in production. Setting it is not enough: see dev_auth_allowed.
 DEV_AUTH = os.environ.get("CRA_DEV_AUTH", "") == "1"
+
+_LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+# Any of these means a proxy is in front of us, so the connection only looks local to this process.
+_PROXY_HEADERS = ("forwarded", "x-forwarded-for", "x-forwarded-host", "x-forwarded-proto", "x-real-ip", "x-vercel-id")
+
+
+def _is_local_name(authority: str | None) -> bool:
+    """True only for a bare loopback name. localhost.evil.com, localhost@evil.com and 0.0.0.0 are not."""
+    if not authority:
+        return False
+    try:
+        return urlsplit(f"//{authority.strip()}").hostname in _LOCAL_HOSTS
+    except ValueError:
+        return False
+
+
+def dev_auth_allowed(headers: Mapping[str, str], client_ip: str | None) -> bool:
+    """Whether this connection may use the sign-in bypass: only if the flag is on AND it is truly local.
+
+    All three must be local. Host and Origin come from the client, so either alone could be forged, but a
+    remote attacker cannot also forge the socket's address; a browser cannot forge Origin; and a reverse proxy
+    on the same machine connects from loopback, which is why its forwarding headers count against it too.
+    Anything missing counts as not local. client_ip is None for a loopback socket (st.context.ip_address).
+    """
+    if not DEV_AUTH:
+        return False
+    seen = {key.lower(): value for key, value in headers.items()}
+    if any(name in seen for name in _PROXY_HEADERS):
+        return False
+    if not _is_local_name(seen.get("host")):
+        return False
+    origin = seen.get("origin", "")
+    try:
+        parts = urlsplit(origin)
+    except ValueError:
+        return False
+    if parts.scheme not in ("http", "https") or not _is_local_name(parts.netloc):
+        return False
+    if client_ip is None:
+        return True
+    try:
+        return ipaddress.ip_address(client_ip).is_loopback
+    except ValueError:
+        return False

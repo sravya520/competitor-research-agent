@@ -20,7 +20,7 @@ from unittest.mock import patch  # noqa: E402
 from streamlit.testing.v1 import AppTest, app_test  # noqa: E402
 
 import runner  # noqa: E402
-from backend import jobs, users  # noqa: E402
+from backend import config, jobs, users  # noqa: E402
 from views import auth, chrome  # noqa: E402
 
 ROOT = HERE.parent
@@ -69,6 +69,96 @@ class SignedInCase(unittest.TestCase):
         self.addCleanup(patcher.stop)
         chrome.forget_recent()
         return users.get_info(user.id)
+
+
+LOCAL = {"Host": "localhost:4000", "Origin": "http://localhost:4000"}
+
+
+class SignInBypassDecision(unittest.TestCase):
+    """The rule itself, on the headers a real connection would carry."""
+
+    def setUp(self):
+        patcher = patch.object(config, "DEV_AUTH", True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_a_truly_local_browser_is_allowed(self):
+        for host, origin in (("localhost:4000", "http://localhost:4000"), ("127.0.0.1:4000", "http://127.0.0.1:4000"),
+                             ("[::1]:4000", "http://[::1]:4000"), ("localhost", "https://localhost")):
+            self.assertTrue(config.dev_auth_allowed({"Host": host, "Origin": origin}, None), host)
+        self.assertTrue(config.dev_auth_allowed(LOCAL, "127.0.0.1"))
+
+    def test_the_flag_being_off_refuses_even_a_local_connection(self):
+        with patch.object(config, "DEV_AUTH", False):
+            self.assertFalse(config.dev_auth_allowed(LOCAL, None))
+
+    def test_a_public_or_lookalike_host_is_refused(self):
+        for host in ("moatcra.vercel.app", "localhost.evil.example", "127.0.0.1.nip.io", "localhost@evil.example",
+                     "0.0.0.0:4000", "192.168.1.5:4000", "", "[bad"):
+            self.assertFalse(config.dev_auth_allowed({"Host": host, "Origin": "http://localhost:4000"}, None), host)
+
+    def test_a_public_or_missing_origin_is_refused(self):
+        for origin in ("https://moatcra.vercel.app", "http://localhost.evil.example", "null", "", "http://[bad"):
+            self.assertFalse(config.dev_auth_allowed({"Host": "localhost:4000", "Origin": origin}, None), origin)
+        self.assertFalse(config.dev_auth_allowed({"Host": "localhost:4000"}, None))
+
+    def test_a_remote_client_is_refused_even_with_forged_local_headers(self):
+        for ip in ("203.0.113.9", "192.168.1.5", "2001:db8::1", "not-an-ip"):
+            self.assertFalse(config.dev_auth_allowed(LOCAL, ip), ip)
+
+    def test_any_sign_of_a_proxy_is_refused(self):
+        for header in ("X-Forwarded-For", "x-forwarded-host", "Forwarded", "X-Real-IP", "x-vercel-id"):
+            self.assertFalse(config.dev_auth_allowed({**LOCAL, header: "203.0.113.9"}, None), header)
+
+    def test_no_headers_at_all_is_refused(self):
+        self.assertFalse(config.dev_auth_allowed({}, None))
+
+
+class SignInBypassOnThePage(unittest.TestCase):
+    """The pages obey the rule. The connection is what is faked here, not the rule."""
+
+    def setUp(self):
+        patcher = patch.object(config, "DEV_AUTH", True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.dev_buttons = lambda app: [b for b in app.button if b.key == "dev_login"]
+
+    def connect_as(self, headers, client_ip=None):
+        patcher = patch.object(auth, "_dev_auth_on", lambda: config.dev_auth_allowed(headers, client_ip))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_from_a_public_address_the_button_is_not_offered(self):
+        self.connect_as({"Host": "moatcra.vercel.app", "Origin": "https://moatcra.vercel.app"}, "203.0.113.9")
+        app = open_page("app").run()
+
+        self.assertEqual(self.dev_buttons(app), [])
+        self.assertFalse(any("Local development mode" in w.value for w in app.warning))
+
+    def test_from_a_public_address_a_session_already_marked_signed_in_gets_nothing(self):
+        """Refusal has to hold on the sign-in check itself, not only by hiding the button."""
+        self.connect_as({"Host": "moatcra.vercel.app", "Origin": "https://moatcra.vercel.app"}, "203.0.113.9")
+        app = open_page("app")
+        app.session_state["dev_signed_in"] = True
+        app.run()
+
+        self.assertNotIn("Who are we researching", page_html(app))
+        self.assertIn("Find competitors", page_html(app))
+
+    def test_a_real_session_with_no_connection_details_is_refused(self):
+        """AppTest has no connection, so st.context is empty: the real check, failing closed."""
+        app = open_page("app")
+        app.session_state["dev_signed_in"] = True
+        app.run()
+
+        self.assertEqual(self.dev_buttons(app), [])
+        self.assertIn("Find competitors", page_html(app))
+
+    def test_from_this_machine_the_button_is_offered(self):
+        self.connect_as(LOCAL)
+        app = open_page("app").run()
+
+        self.assertEqual(len(self.dev_buttons(app)), 1)
 
 
 class TeammateEmailsAreGone(SignedInCase):

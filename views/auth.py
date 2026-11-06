@@ -12,9 +12,14 @@ from backend import config, users, usage
 from backend.users import UserInfo
 from views import onboarding, session
 
-DEV_SUB = "dev-local"  # only reachable when CRA_DEV_AUTH=1
+DEV_SUB = "dev-local"  # only reachable through _dev_auth_on()
 
 LOGO = '<img class="si-logo" src="/app/static/brand/mark.svg" width="40" height="40" alt="Moat">'
+
+
+def _dev_auth_on() -> bool:
+    """The sign-in bypass applies to this connection: CRA_DEV_AUTH=1 and host, origin and client are all local."""
+    return config.dev_auth_allowed(st.context.headers, st.context.ip_address)
 
 
 def _auth_configured() -> bool:
@@ -40,7 +45,7 @@ def profile() -> tuple[str, str | None] | None:
     never the database, so the public landing page can show who is signed in at no cost."""
     ident = _google_identity()
     if ident is None:
-        if config.DEV_AUTH and st.session_state.get("dev_signed_in"):
+        if st.session_state.get("dev_signed_in") and _dev_auth_on():
             return "Local", None
         return None
     _, email, name = ident
@@ -55,7 +60,7 @@ def profile() -> tuple[str, str | None] | None:
 def current_user() -> UserInfo | None:
     """The signed-in user (created in the database on first sign-in), or None."""
     ident = _google_identity()
-    if ident is None and config.DEV_AUTH and st.session_state.get("dev_signed_in"):
+    if ident is None and st.session_state.get("dev_signed_in") and _dev_auth_on():
         ident = (DEV_SUB, "dev@localhost", "Local Dev")
     if ident is None:
         session.clear()
@@ -89,14 +94,14 @@ def _sign_in_card() -> None:
             st.button("Continue with Google", on_click=st.login, key="si_google")
             if st.user.get("is_logged_in", False) and not st.user.get("email_verified", False):
                 st.error("Google says this email address isn't verified, so we can't sign you in with it.")
-        elif not config.DEV_AUTH:
+        elif not _dev_auth_on():
             st.error("Sign-in isn't set up on this server yet. The site owner needs to add Google credentials.")
         st.html(
             '<p class="si-fine">We use your Google email and name to create your account, and we never see '
             'your password. First time here? You will confirm the <a href="/terms">Terms of Use</a> and '
             '<a href="/privacy">Privacy Policy</a> next.</p>'
         )
-        if config.DEV_AUTH:
+        if _dev_auth_on():
             st.warning("Local development mode: sign-in is bypassed. This must never be on in production.")
             if st.button("Continue as local dev user", key="dev_login"):
                 st.session_state["dev_signed_in"] = True

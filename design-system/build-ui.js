@@ -85,6 +85,8 @@ gatherUsageStats = false
 [client]
 # Hide Streamlit's developer toolbar (Deploy button, rerun/settings menu) everywhere, not just in production.
 toolbarMode = "minimal"
+# Visitors never see a traceback: one can carry SQL parameters or the database host. It still goes to the server log.
+showErrorDetails = "none"
 
 [server]
 # Serves ./static at /app/static (vendored GSAP + landing.js).

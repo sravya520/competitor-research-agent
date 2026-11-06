@@ -5,6 +5,7 @@ tokens defined, and every other test still passed, because nothing else reads th
 """
 
 import re
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -25,6 +26,16 @@ class GeneratedBundle(unittest.TestCase):
         for source in ("components.css", "icons.css", "landing.css", "signin.css", "workspace.css", "neon.css", "motion.css"):
             text = (ROOT / "ui" / source).read_text(encoding="utf-8").replace("\r\n", "\n")
             self.assertIn(text, bundle.replace("\r\n", "\n"), f"app.css is stale: run node design-system/build-ui.js ({source})")
+
+
+class GeneratedConfig(unittest.TestCase):
+    def test_visitors_are_never_shown_a_traceback(self):
+        with open(ROOT / ".streamlit" / "config.toml", "rb") as handle:
+            settings = tomllib.load(handle)
+
+        self.assertEqual(settings["client"]["showErrorDetails"], "none")
+        self.assertIn('showErrorDetails = "none"', (ROOT / "design-system" / "build-ui.js").read_text(encoding="utf-8"),
+                      "set it in the generator, or the next build removes it")
 
 
 class LandingPageNames(unittest.TestCase):

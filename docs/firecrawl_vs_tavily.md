@@ -106,13 +106,13 @@ The pattern that matters is not which vendor won. It is that **runs that
 consulted few sources had far more rejected citations**, with the model, prompts
 and temperature held constant.
 
-For `firecrawl_scrape` this counts the 9 scored runs that returned research; its
-other 9 scored runs hit the tool budget and returned nothing, with no rejections.
-For `tavily` it counts all 20 scored runs, one of which returned nothing:
+Both rows count only the scored runs that returned research. That excludes 9
+`firecrawl_scrape` runs and 1 `tavily` run, which hit the tool budget and returned
+nothing, with no rejections:
 
 | mode | median sources consulted | citations rejected |
 |---|---|---|
-| tavily (20 scored runs, 10 companies) | 30.5 | 4 |
+| tavily (19 runs that returned research, 10 companies) | 30 | 4 |
 | firecrawl_scrape (9 runs that returned research, 7 companies) | 5 | 48 |
 
 Cutting the same data by breadth rather than by vendor makes the pattern
@@ -140,26 +140,29 @@ which I did not do. What the data supports is that the two move together.
 its docs intend the endpoint to be used. It looks terrible in that table: half
 the runs exhausted the tool budget and the median run kept 1 competitor.
 
-**That is my cost decision showing up, not Firecrawl's quality.** I set
-`limit=3`, so each search returned 3 scraped results against Tavily's 5 plain
-results. The agent saw less breadth per call, spent more calls searching, and hit
-the 9-call ceiling. A higher limit would very likely fix it and would cost more
-credits. I did not test that, so I am not claiming it.
+**This may be my cost decision showing up, but the data does not isolate it.** I
+set `limit=3`, so each search returned 3 scraped results against Tavily's 5 plain
+results. One possible reading is that the agent saw less breadth per call, spent
+more calls searching, and hit the 9-call ceiling. A higher limit might change
+that and would cost more credits. I did not test it, so I am not claiming it.
 
-The clearest evidence that the limit is the variable comes from comparing
-Firecrawl's two configurations on the 4 companies both covered:
+Firecrawl's two configurations show the same association on the 4 companies both
+covered. This table counts every scored run, including the 4 `firecrawl_scrape`
+runs that returned nothing, because budget exhaustion is one of its columns. The
+other 4 `firecrawl_scrape` runs had a median of 5 sources and 5 kept.
 
 | | runs | median sources | median kept | budget exhausted | citations rejected | credits/run |
 |---|---|---|---|---|---|---|
 | firecrawl_bare (10 results/search) | 4 | **31** | 5 | **0/4** | **1** | **14** |
-| firecrawl_scrape (3 results/search) | 8 | 7 | 5 | 4/8 | 30 | 37 |
+| firecrawl_scrape (3 results/search) | 8 | 6.5 | 2.5 | 4/8 | 30 | 37 |
 
-Plain Firecrawl search, which returns 10 results for 2 credits, beat the scraped
-variant on every axis: 4.4 times the sources, no budget exhaustion, far fewer
-rejected citations, and 2.6 times cheaper. Read this as "breadth per tool call
-matters more than depth per result for this agent", not as a ranking of Firecrawl
-endpoints. `firecrawl_bare` is 5 runs on 5 companies with one run each, and I
-could not fully reconcile it with an earlier single run that failed (see
+Plain Firecrawl search, which returns 10 results for 2 credits, did better than
+the scraped variant on every measure: 4.8 times the sources, no budget exhaustion,
+far fewer rejected citations, and 2.6 times cheaper. This is an association, not
+evidence that the limit is the variable: the two configurations differ in both
+result count and page scraping, so this data cannot separate them. It is also not
+a ranking of Firecrawl endpoints. `firecrawl_bare` is 5 runs on 5 companies with
+one run each, and I could not fully reconcile it with an earlier single run that failed (see
 limitations).
 
 ### Hybrid was not worth it

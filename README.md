@@ -358,10 +358,11 @@ The end-to-end runs showed a pattern: **runs that consulted few sources had far
 more rejected citations**, meaning citations of pages the agent had not fetched
 in that run, with model, prompts and temperature held constant. The 9
 `firecrawl_scrape` runs that returned research consulted a median of 5 sources
-and account for all 48 of its rejected citations; its other 9 scored runs hit the
-tool budget and returned nothing. `tavily` consulted a median of 30.5 sources
-over its 20 scored runs, one of which returned nothing, and had 4 rejected. A run
-is scored if it did not stop on a Gemini quota error, which excluded 12 of 30
+and account for all 48 of its rejected citations. The 19 `tavily` runs that
+returned research consulted a median of 30 and account for all 4 of its rejected
+citations. Both counts exclude the scored runs that hit the tool budget and
+returned nothing: 9 for `firecrawl_scrape` and 1 for `tavily`. A run is scored
+if it did not stop on a Gemini quota error, which excluded 12 of 30
 `firecrawl_scrape` runs and 4 of 24 `tavily` runs.
 
 This is an association, not a demonstrated cause. Every scored run with few

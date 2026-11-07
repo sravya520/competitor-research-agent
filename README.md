@@ -356,9 +356,13 @@ three facts. 68 is the number of checks, not the number of distinct facts.
 
 The end-to-end runs produced a more transferable result: **the number of
 citations the agent had not fetched in that run tracks how many sources it
-managed to consult**, with model, prompts and temperature held constant. The
-mode that consulted a median of 6 sources had 48 citations rejected; the mode
-that consulted 31 had 4. Starve an agent of sources and it starts citing pages
+managed to consult**, with model, prompts and temperature held constant.
+`firecrawl_scrape` consulted a median of 5.5 sources per run and had 48 citations
+rejected across 18 runs on 9 companies; `tavily` consulted a median of 30.5 and
+had 4 rejected across 20 runs on 10 companies. Those medians cover every recorded
+run that did not stop on a Gemini quota error, which excluded 12 of 30
+`firecrawl_scrape` runs and 4 of 24 `tavily` runs. They include the runs whose
+research step returned nothing: 9 of the 18 and 1 of the 20. Starve an agent of sources and it starts citing pages
 that are not in the ledger of what it retrieved, which looks like a
 hallucination problem but is a retrieval problem.
 
@@ -483,7 +487,7 @@ Stated plainly here and in every generated report:
 
 - **Source quality is improved but not solved.** Search results are still dominated by "best agencies for X" content by construction. That's what ranks for those queries. Labelling roundup content and giving the research step a way to verify candidates against their own site (see Design decisions) measurably raised the primary-source share in testing (roughly 85-90% on the reference cases, versus the earlier reports where nearly every citation traced to a listicle), but it is a mitigation, not a fix. The underlying bias in what the web publishes about small companies hasn't gone away.
 - **Scale comparison is a judgment call.** Verification catches obvious mismatches but not every borderline one.
-- **A very small target can end up with no competitors at all.** Search tends to surface the big names in a category, so for an early-stage company the research step sometimes proposes only companies an order of magnitude larger. Verification then cuts them, correctly: on the `small-startup-scale-match` eval case, a seed-stage target with about $1.3M raised drew five candidates ranging from roughly 366 staff to a public company, and all five were rejected on three consecutive passes over identical input. The verifier is behaving; there is simply no comparable company to report. In the CLI and the demo the report is still written in that case: it opens by saying no competitors of comparable scale were found, then lists the candidates that were considered with the verifier's reason for refusing each and their sources, so the search can be checked. The web app does not do this yet: it stops with a message and writes no report. Those candidates are never counted as competitors, the competitor count stays zero, and that eval case still fails its minimum-competitor gate, deliberately: it is a true signal, not a flaky test. Fixing it needs scale-aware search, meaning queries that aim at peers of the target's size rather than at the category, which is not implemented. Note also that an oversized candidate can still reach the proposal stage, which an earlier commit message claimed had stopped happening: a later run proposed Braze for that same case.
+- **A very small target can end up with no competitors at all.** Search tends to surface the big names in a category, so for an early-stage company the research step sometimes proposes only companies an order of magnitude larger. Verification then cuts them, correctly: on the `small-startup-scale-match` eval case, a seed-stage target with about $1.3M raised drew five candidates ranging from roughly 366 staff to a public company, and all five were rejected on three consecutive passes over identical input. The verifier is behaving; there is simply no comparable company to report. In the CLI and the demo the report is still written in that case: it opens by saying no competitors of comparable scale were found, then lists the candidates that were considered with the verifier's reason for refusing each and their sources, so the search can be checked. The web app does not do this yet: it stops with a message and writes no report. Those candidates are never counted as competitors, the competitor count stays zero, and that eval case still fails its minimum-competitor gate, deliberately: it is a true signal, not a flaky test. Fixing it needs scale-aware search, meaning queries that aim at peers of the target's size rather than at the category, which is not implemented. An oversized candidate can still reach the proposal stage: a later run proposed Braze for that same case.
 - **Coverage is not guaranteed.** The tool finds competitors that are findable; a strong competitor with no web presence will be missed.
 - **Small companies remain hard.** Without a URL, a company with a common name and thin web presence may be unidentifiable. By design, the tool stops rather than guessing.
 

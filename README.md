@@ -354,19 +354,21 @@ The denominator is **34 facts, each fetched twice per provider, so 68 fact
 checks** per backend: 20 pages were fetched twice each, and a page carries one to
 three facts. 68 is the number of checks, not the number of distinct facts.
 
-The end-to-end runs produced a more transferable result: **the number of
-citations the agent had not fetched in that run tracks how many sources it
-managed to consult**, with model, prompts and temperature held constant.
-`firecrawl_scrape` consulted a median of 5.5 sources per run and had 48 citations
-rejected across 18 runs on 9 companies; `tavily` consulted a median of 30.5 and
-had 4 rejected across 20 runs on 10 companies. Those medians cover every recorded
-run that did not stop on a Gemini quota error, which excluded 12 of 30
-`firecrawl_scrape` runs and 4 of 24 `tavily` runs. They include the runs whose
-research step returned nothing: 9 of the 18 and 1 of the 20. Starve an agent of sources and it starts citing pages
-that are not in the ledger of what it retrieved, which looks like a
-hallucination problem but is a retrieval problem.
+The end-to-end runs showed a pattern: **runs that consulted few sources had far
+more rejected citations**, meaning citations of pages the agent had not fetched
+in that run, with model, prompts and temperature held constant. The 9
+`firecrawl_scrape` runs that returned research consulted a median of 5 sources
+and account for all 48 of its rejected citations; its other 9 scored runs hit the
+tool budget and returned nothing. `tavily` consulted a median of 30.5 sources
+over its 20 scored runs, one of which returned nothing, and had 4 rejected. A run
+is scored if it did not stop on a Gemini quota error, which excluded 12 of 30
+`firecrawl_scrape` runs and 4 of 24 `tavily` runs.
 
-One limit on that reading: the benchmark recorded the counts but not the
+This is an association, not a demonstrated cause. Every scored run with few
+sources was `firecrawl_scrape` with `limit=3`, so source count and backend
+configuration cannot be separated in this data.
+
+A second limit: the benchmark recorded the counts but not the
 rejected URLs themselves, so it cannot say how many were invented outright,
 recalled from the model's training data, or the same page in a different URL
 format.

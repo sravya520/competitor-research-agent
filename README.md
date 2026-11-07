@@ -4,9 +4,15 @@ An agentic AI tool that researches a startup's competitive landscape and produce
 
 Give it a company name, and optionally a URL, and it identifies the company, decides for itself what to search, finds comparable competitors, independently verifies them, asks you to approve the result, and writes a report that cites where every claim came from.
 
-**🔗 Live app: [competitor-research-agent.onrender.com](https://competitor-research-agent.onrender.com)** (Docker) · [also on Streamlit Cloud](https://competitor-research-agent-application.streamlit.app/)
+**🔗 Web app: [moatcra.vercel.app](https://moatcra.vercel.app)**
 
-*Both are free tiers and sleep when idle. The first request after a quiet spell takes 30–60 seconds to wake.*
+Moat is the web app. Sign in with Google, run a research, review the competitors it found and remove any you disagree with, then read the report in tabs or download it as Markdown. Each account gets one free research.
+
+Web interface built by [@smit-build](https://github.com/smit-build).
+
+**Demo, no account needed: [competitor-research-agent.onrender.com](https://competitor-research-agent.onrender.com)** (Docker) · [also on Streamlit Cloud](https://competitor-research-agent-application.streamlit.app/)
+
+*Both demos are free tiers and sleep when idle. The first request after a quiet spell takes 30–60 seconds to wake.*
 
 ![Demo: the agent researching a startup's competitors and producing a sourced report](assets/demo.gif)
 
@@ -124,21 +130,57 @@ Passing a URL is optional but strongly recommended for small or common-named com
 
 A full generated report is committed as [`example-report.md`](example-report.md).
 
-### Web UI
+### The demo
 
 ```bash
 streamlit run app.py
 ```
 
-Same pipeline, browser-based: a form for the company and URL, live progress while it searches, checkboxes to remove competitors during review, and a download button for the finished report. `app.py` is the only file that imports Streamlit. The pipeline itself (`pipeline.py`, `evaluate.py`, `report.py`, `tools.py`) has no idea a UI exists, which is what lets both entry points share it.
+Same pipeline, on one browser page with no accounts: a form for the company and URL, live progress while it searches, checkboxes to remove competitors during review, and a download button for the finished report. The pipeline itself (`pipeline.py`, `evaluate.py`, `report.py`, `tools.py`) has no idea a UI exists, which is what lets the CLI, the demo and the web app share it.
 
 **Live:** [Docker on Render](https://competitor-research-agent.onrender.com) · [Streamlit Cloud](https://competitor-research-agent-application.streamlit.app/)
 
 ---
 
+## Run the web app locally
+
+Do [Setup](#setup) first, including the `.env` file with your API keys. Then, from the project root with the virtual environment active:
+
+**Windows (PowerShell)**
+
+```powershell
+pip install -r requirements.txt -r requirements-web.txt
+$env:CRA_DEV_AUTH = "1"
+streamlit run moat_app.py --server.port 4000
+```
+
+**Windows (Command Prompt)**
+
+```bat
+pip install -r requirements.txt -r requirements-web.txt
+set CRA_DEV_AUTH=1
+streamlit run moat_app.py --server.port 4000
+```
+
+**macOS / Linux**
+
+```bash
+pip install -r requirements.txt -r requirements-web.txt
+CRA_DEV_AUTH=1 streamlit run moat_app.py --server.port 4000
+```
+
+Open [http://localhost:4000/app](http://localhost:4000/app) and choose **Continue as local dev user**.
+
+- **`CRA_DEV_AUTH=1`** skips Google sign-in for local testing. It works only when the host, origin and client are all local, and it must never be set in production.
+- **Free run limit:** the local dev user gets one free research like any other account. For more, add `UNLIMITED_EMAILS=dev@localhost` to `.env`.
+- **Local data:** accounts and researches are stored in `data/cra.db`, which git ignores.
+- **Real Google sign-in:** leave `CRA_DEV_AUTH` unset and add `.streamlit/secrets.toml` and the redirect URI, as described under [Vercel](#vercel-production-moatcravercelapp). Port 4000 is the one that redirect URI expects.
+
+---
+
 ## Deployment
 
-Deployed two ways, which is deliberate: the same application, packaged for a platform-specific host and for any container host.
+The demo is deployed two ways, which is deliberate: the same application, packaged for a platform-specific host and for any container host. The web app has its own deployment on Vercel, further down.
 
 ### Docker (Render)
 
@@ -217,7 +259,7 @@ Asked about a two-person studio called "Sprout Design," the system repeatedly pr
 **When identity is ambiguous, it stops.**
 An earlier version asked the user "is this the company you meant?" and continued on a yes. That was unsafe: confirming a description that said *"no entity could be verified"* let the research step latch onto the wrong company and spend its whole budget there. Now, low confidence is a hard stop with an explanation. **Refusing to answer is a feature.**
 
-**Run state belongs to the run, not to the process.** The source ledger, the progress sink, the model versions and the benchmark counters all live on a `RunState` created once per run and passed explicitly: one per CLI invocation, one per web research (kept in `st.session_state`, because the report is written in a later rerun), one per eval case, one per benchmark case. `tools.make_tools(run)` builds that run's `search_web` and `extract_company_page` as closures over it.
+**Run state belongs to the run, not to the process.** The source ledger, the progress sink, the model versions and the benchmark counters all live on a `RunState` created once per run and passed explicitly: one per CLI invocation, one per demo research (kept in `st.session_state`, because the report is written in a later rerun), one per web app research job, one per eval case, one per benchmark case. `tools.make_tools(run)` builds that run's `search_web` and `extract_company_page` as closures over it.
 
 This started as a CLI, where one run per process made module-level state correct and simpler. It is wrong for the deployed app: Streamlit gives each browser session its own script-runner thread inside one process, so a module-level ledger is shared by every visitor at once. One visitor submitting cleared another's ledger mid-run, and because `evaluate.drop_fabricated_sources` treats that ledger as proof a URL was really fetched, the second visitor's genuine citations were then stripped from their report as fabricated. The anti-hallucination check was deleting true evidence. Two further symptoms: model versions mixed between runs, making a stored record untrue for both, and the progress sink printed one visitor's searches into a stranger's status panel.
 
@@ -312,15 +354,22 @@ The denominator is **34 facts, each fetched twice per provider, so 68 fact
 checks** per backend: 20 pages were fetched twice each, and a page carries one to
 three facts. 68 is the number of checks, not the number of distinct facts.
 
-The end-to-end runs produced a more transferable result: **the number of
-citations the agent had not fetched in that run tracks how many sources it
-managed to consult**, with model, prompts and temperature held constant. The
-mode that consulted a median of 6 sources had 48 citations rejected; the mode
-that consulted 31 had 4. Starve an agent of sources and it starts citing pages
-that are not in the ledger of what it retrieved, which looks like a
-hallucination problem but is a retrieval problem.
+The end-to-end runs showed a pattern: **runs that consulted few sources had far
+more rejected citations**, meaning citations of pages the agent had not fetched
+in that run, with model, prompts and temperature held constant. The 9
+`firecrawl_scrape` runs that returned research consulted a median of 5 sources
+and account for all 48 of its rejected citations. The 19 `tavily` runs that
+returned research consulted a median of 30 and account for all 4 of its rejected
+citations. Both counts exclude the scored runs that hit the tool budget and
+returned nothing: 9 for `firecrawl_scrape` and 1 for `tavily`. A run is scored
+if it did not stop on a Gemini quota error, which excluded 12 of 30
+`firecrawl_scrape` runs and 4 of 24 `tavily` runs.
 
-One limit on that reading: the benchmark recorded the counts but not the
+This is an association, not a demonstrated cause. Every scored run with few
+sources was `firecrawl_scrape` with `limit=3`, so source count and backend
+configuration cannot be separated in this data.
+
+A second limit: the benchmark recorded the counts but not the
 rejected URLs themselves, so it cannot say how many were invented outright,
 recalled from the model's training data, or the same page in a different URL
 format.
@@ -344,9 +393,13 @@ python -m benchmarks.retrieval_compare --rescore          # re-score, no network
 
 ```
 main.py        CLI orchestration and human review: reads as the workflow
-app.py         Streamlit UI for the same pipeline: the only file that
-               imports Streamlit; pipeline/evaluate/report/tools stay
-               framework-agnostic so this and main.py can share them
+app.py         The demo: one Streamlit page for the same pipeline, no accounts
+moat_app.py    The web app's router: which page each address shows
+index.py       The web app's entry point on Vercel
+runner.py      Runs a web app research as a background job, outside any page
+views/         The web app's pages, sign-in and left rail
+backend/       Accounts, usage limits and research jobs, with no Streamlit
+legal/         Terms of Use and Privacy Policy text
 pipeline.py    The three LLM steps: identify, research, verify
 prompts.py     All prompt text, with comments on why each constraint exists
 retrieval.py   The provider protocol and its backends: Tavily, Firecrawl,
@@ -371,13 +424,15 @@ recall.py      Where memory meets the pipeline: which remembered websites
                step, and how this run compares with the previous one
 ```
 
+Only `app.py`, `moat_app.py` and `views/` use Streamlit's page API. The pipeline stays framework-agnostic so the CLI, the demo and the web app can share it.
+
 Prompts live in their own file deliberately: in an LLM application, most iteration happens in prompt text rather than code, so it should be easy to read and compare.
 
 ---
 
 ## Memory
 
-Memory is **off unless you switch it on**, and it is off in the hosted demo. Set `MEMORY_PATH` to a file and the tool starts keeping a ledger of finished runs; leave it unset and nothing is read, nothing is written, and no file appears.
+Memory is **off unless you switch it on**, and it is off in the hosted demo. The web app does not use it at all. Set `MEMORY_PATH` to a file and the tool starts keeping a ledger of finished runs; leave it unset and nothing is read, nothing is written, and no file appears.
 
 ```bash
 MEMORY_PATH=memory.jsonl python main.py
@@ -399,9 +454,9 @@ Two things, both of which the user can see and overrule.
 
 **It offers a website you used before.** Runs are filed under a domain, but someone typing a name alone can only ask about a name, so a name-only run can never find its own history by key. Instead the ledger is matched by normalised company name, and any websites that name resolved to before are offered with their dates. Nothing is chosen automatically, even when there is only one match: two unrelated companies can share a name, and which one is meant is not a judgement to make on someone's behalf. Accept one and the run continues exactly as if that URL had been typed.
 
-**It reuses a recent identity.** Establishing which company is meant costs an LLM call and up to two searches, and for a company already researched under its own domain that answer exists. It is reused only when the key is strong, meaning it came from a domain, and only when the identity was *established* less than `RECALL_MAX_AGE_DAYS` (30) ago. Age counts from the live lookup, not from the last run that reused it: every completed run writes a record, so measuring from the record date let each reuse reset the clock and an identity could survive indefinitely while every report claimed it was established that day. An unparseable timestamp counts as unknown age and is refused. Pass `--fresh-identity` in the CLI, or tick **Re-establish identity** in the web UI, to force a live lookup regardless: no age limit knows that a company rebranded last week, and the person asking usually does.
+**It reuses a recent identity.** Establishing which company is meant costs an LLM call and up to two searches, and for a company already researched under its own domain that answer exists. It is reused only when the key is strong, meaning it came from a domain, and only when the identity was *established* less than `RECALL_MAX_AGE_DAYS` (30) ago. Age counts from the live lookup, not from the last run that reused it: every completed run writes a record, so measuring from the record date let each reuse reset the clock and an identity could survive indefinitely while every report claimed it was established that day. An unparseable timestamp counts as unknown age and is refused. Pass `--fresh-identity` in the CLI, or tick **Re-establish identity** in the demo, to force a live lookup regardless: no age limit knows that a company rebranded last week, and the person asking usually does.
 
-Anything taken from an earlier run is disclosed with that run's date, in the terminal, in the web UI and as a line in the report. A cached claim otherwise reads exactly like one checked today, which is the opposite of what these reports are for.
+Anything taken from an earlier run is disclosed with that run's date, in the terminal, in the demo and as a line in the report. A cached claim otherwise reads exactly like one checked today, which is the opposite of what these reports are for.
 
 ### Since your last run
 
@@ -435,7 +490,7 @@ Stated plainly here and in every generated report:
 
 - **Source quality is improved but not solved.** Search results are still dominated by "best agencies for X" content by construction. That's what ranks for those queries. Labelling roundup content and giving the research step a way to verify candidates against their own site (see Design decisions) measurably raised the primary-source share in testing (roughly 85-90% on the reference cases, versus the earlier reports where nearly every citation traced to a listicle), but it is a mitigation, not a fix. The underlying bias in what the web publishes about small companies hasn't gone away.
 - **Scale comparison is a judgment call.** Verification catches obvious mismatches but not every borderline one.
-- **A very small target can end up with no competitors at all.** Search tends to surface the big names in a category, so for an early-stage company the research step sometimes proposes only companies an order of magnitude larger. Verification then cuts them, correctly: on the `small-startup-scale-match` eval case, a seed-stage target with about $1.3M raised drew five candidates ranging from roughly 366 staff to a public company, and all five were rejected on three consecutive passes over identical input. The verifier is behaving; there is simply no comparable company to report. The report is still written in that case: it opens by saying no competitors of comparable scale were found, then lists the candidates that were considered with the verifier's reason for refusing each and their sources, so the search can be checked. Those candidates are never counted as competitors, the competitor count stays zero, and that eval case still fails its minimum-competitor gate, deliberately: it is a true signal, not a flaky test. Fixing it needs scale-aware search, meaning queries that aim at peers of the target's size rather than at the category, which is not implemented. Note also that an oversized candidate can still reach the proposal stage, which an earlier commit message claimed had stopped happening: a later run proposed Braze for that same case.
+- **A very small target can end up with no competitors at all.** Search tends to surface the big names in a category, so for an early-stage company the research step sometimes proposes only companies an order of magnitude larger. Verification then cuts them, correctly: on the `small-startup-scale-match` eval case, a seed-stage target with about $1.3M raised drew five candidates ranging from roughly 366 staff to a public company, and all five were rejected on three consecutive passes over identical input. The verifier is behaving; there is simply no comparable company to report. In the CLI and the demo the report is still written in that case: it opens by saying no competitors of comparable scale were found, then lists the candidates that were considered with the verifier's reason for refusing each and their sources, so the search can be checked. The web app does not do this yet: it stops with a message and writes no report. Those candidates are never counted as competitors, the competitor count stays zero, and that eval case still fails its minimum-competitor gate, deliberately: it is a true signal, not a flaky test. Fixing it needs scale-aware search, meaning queries that aim at peers of the target's size rather than at the category, which is not implemented. An oversized candidate can still reach the proposal stage: a later run proposed Braze for that same case.
 - **Coverage is not guaranteed.** The tool finds competitors that are findable; a strong competitor with no web presence will be missed.
 - **Small companies remain hard.** Without a URL, a company with a common name and thin web presence may be unidentifiable. By design, the tool stops rather than guessing.
 
@@ -444,13 +499,12 @@ Stated plainly here and in every generated report:
 ## Possible improvements
 
 - A dedicated company-search API (e.g. Crunchbase-style data) instead of general web search, to attack what labelling and extraction alone can't fix
-- A Streamlit interface so a non-technical founder can use it
 - Caching, so re-running a company doesn't re-spend search quota
 
 ---
 
 ## Built with
 
-Python · [Google Gemini API](https://ai.google.dev) (`google-genai`) · [Tavily](https://tavily.com) search · Pydantic · Tenacity
+Python · [Google Gemini API](https://ai.google.dev) (`google-genai`) · [Tavily](https://tavily.com) search · Pydantic · Tenacity · [Streamlit](https://streamlit.io) · SQLAlchemy
 
 No agent framework. The tool-calling loop, structured outputs, and verification step are wired directly against the API. The goal was to understand the mechanics rather than inherit them.

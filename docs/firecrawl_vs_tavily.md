@@ -82,7 +82,7 @@ everywhere it worked, and 404'd on a page basic read fine.
 The useful conclusion is the boring one: Tavily was not handicapped by running
 on basic extract, so the headline comparison stands.
 
-## Experiment B: retrieval breadth governs grounding
+## Experiment B: fewer sources went with more rejected citations
 
 | mode | runs scored | excluded (LLM quota) | budget hit | completed | kept (median) | verification pass | citations rejected | time p50 (per run) | credits |
 |---|---|---|---|---|---|---|---|---|---|
@@ -102,16 +102,18 @@ same page in a different URL format. The breadth pattern below is what the data
 supports; the mechanism behind each individual rejection is not recoverable from
 it.
 
-The pattern that matters is not which vendor won. It is that **the number of
-rejected citations tracks how many sources the agent managed to consult**, with
-the model, prompts and temperature held constant:
+The pattern that matters is not which vendor won. It is that **runs that
+consulted few sources had far more rejected citations**, with the model, prompts
+and temperature held constant.
 
-Across all scored runs of each mode:
+Both rows count only the scored runs that returned research. That excludes 9
+`firecrawl_scrape` runs and 1 `tavily` run, which hit the tool budget and returned
+nothing, with no rejections:
 
 | mode | median sources consulted | citations rejected |
 |---|---|---|
-| tavily (20 runs, 10 companies) | 31 | 4 |
-| firecrawl_scrape (18 runs, 9 companies) | 6 | 48 |
+| tavily (19 runs that returned research, 10 companies) | 30 | 4 |
+| firecrawl_scrape (9 runs that returned research, 7 companies) | 5 | 48 |
 
 Cutting the same data by breadth rather than by vendor makes the pattern
 clearer. Pooling every mode and counting only runs that produced competitors, so
@@ -125,16 +127,12 @@ that a run which produced nothing cannot score zero rejections by default:
 That is an 18x difference in rejected citations, with the model, prompts and
 temperature identical throughout.
 
-**This shows association, not isolated causation.** All 9 of the low-source runs
-are `firecrawl_scrape` runs, which is the mode I configured with `limit=3`. Low
-breadth and that one configuration are therefore confounded in this data, and I
-cannot separate "few sources causes poor grounding" from "this configuration
-causes poor grounding" without a run that varies the limit, which I did not do.
-What the data supports is that the two move together.
-
-Starve an agent of sources and it starts citing things it did not retrieve. That
-is a retrieval problem presenting as a hallucination problem, and it is the most
-transferable thing I learned here.
+**This is an association, not a demonstrated cause.** Low-source runs had far more
+rejected citations, but every one of them was `firecrawl_scrape`, the mode I
+configured with `limit=3`, so source count and backend configuration cannot be
+separated in this data. I cannot tell "few sources causes poor grounding" from
+"this configuration causes poor grounding" without a run that varies the limit,
+which I did not do. What the data supports is that the two move together.
 
 ### firecrawl_scrape is a finding about my configuration, not about Firecrawl
 
@@ -142,26 +140,29 @@ transferable thing I learned here.
 its docs intend the endpoint to be used. It looks terrible in that table: half
 the runs exhausted the tool budget and the median run kept 1 competitor.
 
-**That is my cost decision showing up, not Firecrawl's quality.** I set
-`limit=3`, so each search returned 3 scraped results against Tavily's 5 plain
-results. The agent saw less breadth per call, spent more calls searching, and hit
-the 9-call ceiling. A higher limit would very likely fix it and would cost more
-credits. I did not test that, so I am not claiming it.
+**This may be my cost decision showing up, but the data does not isolate it.** I
+set `limit=3`, so each search returned 3 scraped results against Tavily's 5 plain
+results. One possible reading is that the agent saw less breadth per call, spent
+more calls searching, and hit the 9-call ceiling. A higher limit might change
+that and would cost more credits. I did not test it, so I am not claiming it.
 
-The clearest evidence that the limit is the variable comes from comparing
-Firecrawl's two configurations on the 4 companies both covered:
+Firecrawl's two configurations show the same association on the 4 companies both
+covered. This table counts every scored run, including the 4 `firecrawl_scrape`
+runs that returned nothing, because budget exhaustion is one of its columns. The
+other 4 `firecrawl_scrape` runs had a median of 5 sources and 5 kept.
 
 | | runs | median sources | median kept | budget exhausted | citations rejected | credits/run |
 |---|---|---|---|---|---|---|
 | firecrawl_bare (10 results/search) | 4 | **31** | 5 | **0/4** | **1** | **14** |
-| firecrawl_scrape (3 results/search) | 8 | 7 | 5 | 4/8 | 30 | 37 |
+| firecrawl_scrape (3 results/search) | 8 | 6.5 | 2.5 | 4/8 | 30 | 37 |
 
-Plain Firecrawl search, which returns 10 results for 2 credits, beat the scraped
-variant on every axis: 4.4 times the sources, no budget exhaustion, far fewer
-rejected citations, and 2.6 times cheaper. Read this as "breadth per tool call
-matters more than depth per result for this agent", not as a ranking of Firecrawl
-endpoints. `firecrawl_bare` is 5 runs on 5 companies with one run each, and I
-could not fully reconcile it with an earlier single run that failed (see
+Plain Firecrawl search, which returns 10 results for 2 credits, did better than
+the scraped variant on every measure: 4.8 times the sources, no budget exhaustion,
+far fewer rejected citations, and 2.6 times cheaper. This is an association, not
+evidence that the limit is the variable: the two configurations differ in both
+result count and page scraping, so this data cannot separate them. It is also not
+a ranking of Firecrawl endpoints. `firecrawl_bare` is 5 runs on 5 companies with
+one run each, and I could not fully reconcile it with an earlier single run that failed (see
 limitations).
 
 ### Hybrid was not worth it
@@ -243,8 +244,9 @@ instructions.
   is a large gap, and 1.4 seconds does not matter if you cache.
 - **Latency-bound or high-volume?** Tavily. 250ms and a 5x per-page cost
   advantage when batched are hard to argue with, and 82% recall is respectable.
-- **Either way, give your agent breadth.** The grounding failures here came from
-  too few sources per tool call, not from the model.
+- **Either way, test how many sources your agent gets per call.** The rejected
+  citations here clustered in low-source runs, but those runs were all one
+  configuration, so this is worth testing rather than a proven cause.
 - **If you use `only_main_content`, check where your facts live.** It is free
   until it silently is not.
 

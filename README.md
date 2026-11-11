@@ -327,15 +327,29 @@ The suite needs no API keys and makes no network calls. With only `requirements.
 
 ---
 
-## Retrieval is pluggable, and both backends are benchmarked
+## Retrieval is pluggable, and two of the backends are benchmarked
 
 Retrieval sits behind a provider protocol (`retrieval.py`), so the fetcher is a
 swappable part rather than something welded into the tools. Tavily is the
 default and the deployed behaviour is unchanged; `RETRIEVAL_PROVIDER` selects
-`tavily`, `firecrawl`, `firecrawl_scrape` or `hybrid`.
+`tavily`, `parallel`, `firecrawl`, `firecrawl_scrape` or `hybrid`. Nothing picks
+a backend implicitly: an unset value is `tavily`, an unrecognised value warns and
+falls back to `tavily`, and a missing credential fails rather than switching
+backend behind your back.
+
+`parallel` is [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp),
+reached over the official MCP client's Streamable HTTP transport at
+`https://search.parallel.ai/mcp`. It is the one backend that needs no account and
+no API key, which makes it the cheapest way to try the tool, so it has to be asked
+for by name (`RETRIEVAL_PROVIDER=parallel`) rather than appearing on its own when
+another key is absent. Search excerpts and full-page fetches feed the existing tool
+callbacks and source ledger unchanged, calls carry a 45-second deadline, and a
+service error propagates instead of retrying against a different provider. A Gemini
+key is still required to run the agent.
 
 Adding a second backend is only interesting if you can say which one is better,
-so there is a benchmark rather than an opinion. It runs at two levels: a
+so there is a benchmark rather than an opinion. The numbers below compare Tavily
+and Firecrawl; Parallel is not in them. It runs at two levels: a
 deterministic retrieval comparison with no LLM in the loop, and a full
 end-to-end comparison where the backend is the only variable.
 
@@ -402,8 +416,11 @@ backend/       Accounts, usage limits and research jobs, with no Streamlit
 legal/         Terms of Use and Privacy Policy text
 pipeline.py    The three LLM steps: identify, research, verify
 prompts.py     All prompt text, with comments on why each constraint exists
-retrieval.py   The provider protocol and its backends: Tavily, Firecrawl,
-               hybrid, plus the credit meter and the disk response cache
+retrieval.py   The provider protocol and its backends: Tavily, Parallel,
+               Firecrawl, hybrid, plus the credit meter and the disk
+               response cache
+parallel_mcp.py
+               Anonymous search and page fetch over the official MCP client
 failures.py    Secret bridging and the user-facing failure messages, with
                no heavy imports so it can run before the clients exist
 tools.py       make_tools(run): the two functions the agent can call,
@@ -505,6 +522,6 @@ Stated plainly here and in every generated report:
 
 ## Built with
 
-Python · [Google Gemini API](https://ai.google.dev) (`google-genai`) · [Tavily](https://tavily.com) search · Pydantic · Tenacity · [Streamlit](https://streamlit.io) · SQLAlchemy
+Python · [Google Gemini API](https://ai.google.dev) (`google-genai`) · [Tavily](https://tavily.com) search · [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp) · Firecrawl · Pydantic · Tenacity · [Streamlit](https://streamlit.io) · SQLAlchemy
 
 No agent framework. The tool-calling loop, structured outputs, and verification step are wired directly against the API. The goal was to understand the mechanics rather than inherit them.

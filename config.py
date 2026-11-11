@@ -3,6 +3,7 @@
 import os
 
 import httpx
+import httpx2
 from dotenv import load_dotenv
 from google import genai
 from google.genai import errors
@@ -24,7 +25,12 @@ You research companies and produce clear, structured competitor analysis
 for startup founders making strategic decisions."""
 
 gemini_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-tavily_client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+# None rather than a KeyError when the key is absent, so RETRIEVAL_PROVIDER can
+# name a backend that does not use Tavily. TavilyProvider raises its own error
+# if it is selected without a key, which says what is wrong; an import-time
+# KeyError from this line would not.
+tavily_client = (TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+                 if os.environ.get("TAVILY_API_KEY") else None)
 
 
 # A provider error can carry RetryInfo saying how long to wait. Waiting
@@ -134,6 +140,10 @@ def is_retryable_error(exception: BaseException) -> bool:
     via eval: RemoteProtocolError during a Tavily call). It carries no HTTP
     status to check, but a dropped connection is inherently transient, so
     it's always worth one more attempt.
+
+    httpx2 is listed beside it because the MCP SDK ships its own HTTP client:
+    the Parallel backend's connection drops are httpx2.TransportError and would
+    otherwise be the one transport failure in the codebase nobody retries.
     """
     if isinstance(exception, errors.APIError):
         if exception.code not in (429, 500, 502, 503, 504):
@@ -152,7 +162,7 @@ def is_retryable_error(exception: BaseException) -> bool:
         suggested = retry_after_seconds(exception)
         return suggested is None or suggested <= MAX_SUGGESTED_WAIT_SECONDS
 
-    return isinstance(exception, httpx.TransportError)
+    return isinstance(exception, (httpx.TransportError, httpx2.TransportError))
 
 
 def log_retry(retry_state) -> None:

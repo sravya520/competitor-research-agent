@@ -1,0 +1,5 @@
+# Everything needed to run the test suite (python -m pytest tests): the pipeline and
+# demo requirements, the web layer, and pytest. The Dockerfile and Vercel do not read this file.
+-r requirements.txt
+-r requirements-web.txt
+pytest>=8.0

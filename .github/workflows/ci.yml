@@ -1,0 +1,40 @@
+name: ci
+
+# Offline test suite for the pipeline, the web layer and the demo. No API keys, no
+# network calls to Gemini, Tavily or Firecrawl, and no secrets are used. The live
+# regression evals (run_eval.py) and the retrieval benchmark spend quota and are
+# deliberately not run here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"   # pyproject.toml requires >=3.12
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Tests (offline)
+        run: python -m pytest tests -q

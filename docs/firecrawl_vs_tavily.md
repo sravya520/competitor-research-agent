@@ -9,11 +9,16 @@ estimated or recalled. The raw rows, the scoring code and the answer key are all
 committed, and the limitations at the end are not boilerplate: read them before
 quoting any figure.
 
-**The short version.** Firecrawl retrieved noticeably more of what I asked for.
-It was also about 5.6 times slower per page and about 5 times more expensive per
-page. Which of those matters depends on whether your agent is latency-bound or
-accuracy-bound. Mine is accuracy-bound, so Firecrawl is now a supported backend,
-but Tavily stays the default.
+**The short version.** The two dated snapshots disagree on accuracy. On pages
+fetched on 2026-10-01, Firecrawl retrieved more of the scored facts (97% against
+82%). On the same 20 pages and the same answer key re-measured on 2026-11-12,
+Firecrawl retrieved fewer (76% against 79%). I have not determined why, and both
+results are kept below, each labelled with its date. Firecrawl was about 5.5 to 7
+times slower per page in both snapshots. In credits, my implementation paid the
+same for both (1 credit per page); a 5x gap exists only against Tavily's batched
+rate, which my code does not use. Which of these matters depends on whether your
+agent is latency-bound or accuracy-bound. Mine is accuracy-bound, so Firecrawl is
+a supported backend, but Tavily stays the default.
 
 ## What was measured
 
@@ -30,7 +35,16 @@ retrieval backend. Same model, same prompts, same schemas, same 9-call tool
 budget. This measures whether better retrieval produces a better report, which
 is not the same question.
 
-## Experiment A: the headline
+## Experiment A, October 2026 snapshot (pages fetched 2026-10-01)
+
+> **Historical snapshot.** This is the result the first version of this write-up
+> reported. Its raw rows are preserved in
+> `benchmarks/results/raw_retrieval_2026-10-01.jsonl` (the same rows that
+> `benchmarks/results/raw_retrieval.jsonl` held when committed on 2026-10-01; a
+> re-run of the harness overwrites that second file, hence the dated copy). A
+> re-measurement on 2026-11-12 follows in its own section below and ranks the
+> backends differently. Everything from here to that section describes the
+> October snapshot. Do not quote the October figures without the November ones.
 
 20 pages, 2 runs each. The answer key holds **34 distinct facts**, and each is scored once per fetch, so every arm has **68 fact checks** (34 facts x 2 runs). Recall below is over those 68 checks, not over 68 separate facts.
 
@@ -48,18 +62,23 @@ against 6%, though its worst page was dirtier (23% against 15%).
 The cost of that recall is speed and money:
 
 - **Latency:** 1,390ms against 250ms at p50 **per page fetched**, about 5.6 times slower. Firecrawl
-  was more predictable at the tail, though, with a p95 of 1,797ms against
-  Tavily's 1,125ms spread.
+  was more predictable at the tail in this snapshot, with a p95 of 1,797ms
+  against Tavily's 1,125ms spread. The November re-measure does not repeat that
+  (p95 4,985ms against 858ms).
 - **Credits:** Firecrawl bills 1 credit per page. Tavily's basic extract bills 1
-  credit per 5 URLs, so a batched implementation pays 0.2 credits per page. That
-  is a 5x difference per page. My code fetches one URL per call and so does not
-  take Tavily's batching discount, which is my inefficiency rather than a
-  property of either vendor, and the benchmark reports both figures.
+  credit per 5 URLs when batched, so a batched implementation would pay 0.2
+  credits per page, and that is where a 5x figure comes from. My code fetches one
+  URL per call, so **as implemented both backends cost 1 credit per page**: the
+  Experiment A accounting is 80 credits as implemented (40 Tavily fetches plus 40
+  Firecrawl fetches) against 48 if Tavily were batched. The 5x is therefore a
+  hypothetical built from published rates, not a measured or implemented
+  difference, and Tavily's extract endpoint reported 0 credits, so its cost here
+  is documented rather than observed.
 
 Firecrawl's only two misses were the same fact in both runs, and that fact is
 worth its own section below.
 
-### A surprise in Tavily's higher tier
+### A surprise in Tavily's higher tier (October snapshot)
 
 I nearly published this comparison with Tavily on its cheaper tier while
 Firecrawl ran its full scrape. That would have credited Firecrawl for a
@@ -81,6 +100,65 @@ everywhere it worked, and 404'd on a page basic read fine.
 
 The useful conclusion is the boring one: Tavily was not handicapped by running
 on basic extract, so the headline comparison stands.
+
+## Experiment A, November 2026 re-measure (pages fetched 2026-11-12)
+
+Same design as the October snapshot: 20 pages, fetched twice by each backend, no
+LLM, 34 facts and so 68 checks per arm, the same answer key
+(`benchmarks/answer_key.json`, unchanged since 2026-10-01). Arms: Tavily basic,
+Tavily advanced, Firecrawl with `only_main_content=True`. Parallel is not in either
+snapshot. The raw rows and summary of this snapshot are **not committed yet**: they are held
+uncommitted for the author's review. SHA-256 of the November `raw_retrieval.jsonl`:
+`39666a26adc2139841733beefaa0491b2798396cf89527560079834f1d619ce2`; of its `summary.md`: `741fdb5329b5decb61be5ccb0218af79aec93844f7cf05a804e1e798f765b8a7`
+(files as stored in the working tree). They are intended to be added as
+`benchmarks/results/raw_retrieval_2026-11-12.jsonl` and `summary_2026-11-12.md`.
+The tables below are copied from that summary.
+
+| backend | success | latency p50 (per page) | latency p95 (per page) | median chars | boilerplate | fact recall |
+|---|---|---|---|---|---|---|
+| Tavily (basic extract) | 95% | 288ms | 858ms | 16,810 | 6% | 79% (54/68) |
+| Tavily (advanced extract) | 100% | 274ms | 1,639ms | 16,624 | 5% | 82% (56/68) |
+| Firecrawl (`only_main_content=True`) | 100% | 1,944ms | 4,985ms | 20,341 | 4% | 76% (52/68) |
+
+Hits out of 68 in the two snapshots:
+
+| backend | 2026-10-01 | 2026-11-12 |
+|---|---|---|
+| Tavily (basic) | 56 | 54 |
+| Tavily (advanced) | 52 | 56 |
+| Firecrawl | 66 | 52 |
+
+What the raw rows show, and nothing beyond it:
+
+- Firecrawl missed 7 facts in November that it found in October, each missed in
+  both runs, on 5 pages: brickanta.com (product category), composio.dev (product
+  category, tools/integrations count), composio.dev/pricing (free tier exists),
+  mobbin.com (product category) and nango.dev (product category, pre-built
+  integrations count). It recovered none of its October misses.
+- Firecrawl returned more text per page than in October (median 20,341 against
+  16,258 characters) while finding fewer of the scored facts.
+- Tavily basic returned no extractable content for dataleap.ai in both runs, so
+  its success rate was 95%. In October that failure appeared on Tavily advanced
+  (docs.firecrawl.dev/billing) instead.
+- Firecrawl was about 6.7 times slower per page at the median (1,944ms against
+  288ms), against 5.6 times in October.
+
+**The cause of the difference between the two snapshots is not known.** Possible
+explanations include that the pages changed in the six weeks between them, that
+Firecrawl's extraction changed, and that scoring by literal text is sensitive to
+small wording changes. None has been tested. Facts missed in both runs on the
+same day show the change is not noise between two runs within a day, but two runs
+on one day are not independent evidence, and no interval was computed.
+
+Methodology change between the snapshots: the copy of
+`benchmarks/retrieval_compare.py` used for the November run (an uncommitted
+working-tree change, so not the version in this branch) gained an `--arms` option
+and a Parallel import. The answer key file did not change. A
+line-by-line check that the scoring logic is identical has not been done.
+
+**How to read the two snapshots.** Neither supports a general claim about which
+backend retrieves more. They are two dated measurements of live pages. Where this
+document says "97% against 82%", that is the 2026-10-01 snapshot.
 
 ## Experiment B: fewer sources went with more rejected citations
 
@@ -240,10 +318,13 @@ instructions.
 
 ## What I would tell someone choosing between them
 
-- **Accuracy-bound and reading a page once?** Firecrawl. 97% against 82% recall
-  is a large gap, and 1.4 seconds does not matter if you cache.
-- **Latency-bound or high-volume?** Tavily. 250ms and a 5x per-page cost
-  advantage when batched are hard to argue with, and 82% recall is respectable.
+- **Accuracy-bound and reading a page once?** Measure on your own pages. In my
+  October snapshot Firecrawl found 97% against 82%, in my November re-measure
+  76% against 79%, so I would not choose on my numbers alone. 1.4 to 1.9 seconds
+  per page does not matter if you cache.
+- **Latency-bound or high-volume?** Tavily. 250 to 290ms per page against 1.4 to
+  1.9 seconds is a consistent gap, and a batched Tavily is also cheaper in
+  credits (0.2 per page at the published rate, which my code does not use).
 - **Either way, test how many sources your agent gets per call.** The rejected
   citations here clustered in low-source runs, but those runs were all one
   configuration, so this is worth testing rather than a proven cause.
@@ -254,6 +335,11 @@ instructions.
 
 These are the ones that would change how you read the numbers.
 
+- **Two dated snapshots of live pages that disagree.** Experiment A was measured
+  on 2026-10-01 and again on 2026-11-12 with the same answer key, and the
+  accuracy ranking of Firecrawl and Tavily reversed. The cause is not known (see
+  the November section). Experiment B was run in October and was not repeated.
+  The Experiment B rejected-citation counts were not re-measured.
 - **n = 10 companies**, 1 to 2 runs per mode. Directional, not significant. No
   error bars, and none claimed.
 - **The modes do not cover identical company sets.** `firecrawl_scrape` excludes
@@ -304,8 +390,10 @@ pip install -r requirements.txt
 python -m benchmarks.retrieval_compare --experiment all
 ```
 
-Retrieved page content is saved to disk, so `--rescore` recomputes fact matching
-with no network calls and no credits. I needed that: my first scoring pass
+A fresh run measures the pages as they are today, so it will not reproduce either
+snapshot; the raw rows are the snapshots: `raw_retrieval_2026-10-01.jsonl` (a byte copy of the rows committed on 2026-10-01) and
+`raw_retrieval_2026-11-12.jsonl` (to be added after review). Retrieved page content is saved to
+disk, so `--rescore` recomputes fact matching with no network calls and no credits. I needed that: my first scoring pass
 compared raw substrings and counted a line break as a miss, which penalised
 fetchers for formatting. Those numbers are archived under
 `benchmarks/results/archive/` with a note, rather than deleted.

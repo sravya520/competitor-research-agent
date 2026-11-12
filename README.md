@@ -323,6 +323,8 @@ pip install -r requirements.txt -r requirements-web.txt
 python -m unittest discover -s tests
 ```
 
+Recorded result, 2026-11-12, on a clean export of commit `9f8085b` with Python 3.12, the full requirements and no API keys set: `python -m pytest tests` collected 427 tests, 427 passed, 0 skipped, 0 failed (137 subtests also passed; 22 seconds). A run on the working tree with placeholder keys gave the same 427 passed. The count changes as tests are added; rerun the command rather than trusting this figure. The test dependencies, including pytest, are listed in `requirements-dev.txt` (`pip install -r requirements-dev.txt`). A GitHub Actions workflow (`.github/workflows/ci.yml`) runs the same command.
+
 The suite needs no API keys and makes no network calls. With only `requirements.txt` installed, which is all the demo needs, the web tests skip and print this install command. The regression cases above are separate: `run_eval.py` calls the live APIs and spends quota.
 
 ---
@@ -353,16 +355,27 @@ and Firecrawl; Parallel is not in them. It runs at two levels: a
 deterministic retrieval comparison with no LLM in the loop, and a full
 end-to-end comparison where the backend is the only variable.
 
-**Headline, from 20 pages fetched twice by each backend with no LLM involved:**
+**Headline, from 20 pages fetched twice by each backend with no LLM involved,
+measured twice (two dated snapshots that disagree):**
 
-| backend | success | latency p50 (per page) | median chars | boilerplate | fact recall |
-|---|---|---|---|---|---|
-| Tavily (basic extract) | 100% | 250ms | 11,735 | 6% | 82% (56/68) |
-| Firecrawl (`only_main_content=True`) | 100% | 1,390ms | 16,258 | 4% | **97%** (66/68) |
+| backend | 2026-10-01 fact recall | 2026-11-12 fact recall | latency p50 per page, Oct / Nov |
+|---|---|---|---|
+| Tavily (basic extract) | 82% (56/68) | 79% (54/68) | 250ms / 288ms |
+| Firecrawl (`only_main_content=True`) | **97%** (66/68) | 76% (52/68) | 1,390ms / 1,944ms |
 
-Firecrawl found 97% of the fact checks against Tavily's 82%, at about 5.6x the
-per-page latency and about 5x the per-page credit cost. Facts come from an answer
-key read off each official page by a plain HTTP request that used neither vendor.
+On the October pages Firecrawl found more of the scored facts; on the November
+re-measure, with the same answer key, it found fewer. The cause of the difference
+is not known, so neither snapshot is presented as the current truth. Firecrawl was
+about 5.6x (October) and 6.7x (November) slower per page. In credits, my code
+fetches one URL per call, so both backends cost 1 credit per page as implemented;
+a 5x gap exists only against Tavily's batched published rate, which this code does
+not use. Facts come from an answer key read off each official page by a plain HTTP
+request that used neither vendor. Full tables, methodology and limitations:
+[docs/firecrawl_vs_tavily.md](docs/firecrawl_vs_tavily.md). Raw rows:
+`benchmarks/results/raw_retrieval_2026-10-01.jsonl` (October, a byte copy of the
+rows committed on 2026-10-01); the
+November rows are held uncommitted pending review. The end-to-end experiment
+below was run in October and was not repeated.
 
 The denominator is **34 facts, each fetched twice per provider, so 68 fact
 checks** per backend: 20 pages were fetched twice each, and a page carries one to

@@ -18,6 +18,8 @@ dependencies = [
   "psycopg[binary]>=3.2",
   "cryptography>=42",
   "firecrawl-py",
+  "mcp==2.3.0",
+  "httpx2",
 ]
 
 [tool.vercel]
